@@ -1,6 +1,6 @@
 ## Python API with C++ Implementation (Experimental)
 
-支持64位Linux/Windows的Python 3.4~3.7版本，可以使用`pip install dolphindb`来安装
+支持64位Linux/Windows的Python 3.4~3.7版本，可以使用`pip install dolphindb` 安装
 
 *注意*：底层基于DolphinDB C++ API，由于实现原因，暂时无法与Linux平台Jupyter Notebook共同使用，将在后续解决这个问题。
 
