@@ -368,6 +368,7 @@ import dolphindb.settings as keys
 if s.existsDatabase(WORK_DIR+"/valuedb"):
     s.dropDatabase(WORK_DIR+"/valuedb")
 s.database('db', partitionType=keys.VALUE, partitions=["AMZN","NFLX", "NVDA"], dbPath=WORK_DIR+"/valuedb")
+
 trade = s.loadTextEx("db",  tableName='trade',partitionColumns=["TICKER"], filePath=WORK_DIR + "/example.csv")
 print(trade.toDF())
 
@@ -662,14 +663,13 @@ s.run("tableInsert{tdglobal}",tb)
 
 - 若表中有时间列
 
-由于Python pandas中所有有关时间的数据类型均为datetime64，DolphinDB中的所有时间类型数据[均会被转换为datetime64类型](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)，因此在追加一个带有时间列的表时，我们需要先将DataFrame上传到服务端，通select语句将表内的每一列都选出来，并进行时间类型转换，组成一个新的表，将这个新的表追加到内存表中，具体如下：
+由于Python pandas中所有[有关时间的数据类型均为datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)，上传一个DataFrame到DolphinDB以后所有时间类型的列均为nanotimestamp类型，因此在追加一个带有时间列的DataFrame时，我们需要在DolphinDB服务端对时间列进行数据类型转换：先将该DataFrame上传到服务端，通过select语句将表内的每一列都选出来，并进行时间类型转换（该例子将nanotimestamp类型转换为date类型），再追加到内存表中，具体如下：
 
 ```Python
 import pandas as pd
 tb=pd.DataFrame(createDemoDict())
 s.upload({'tb':tb})
-s.run("tb1=table((exec id from tb) as id, (exec date(date) from tb) as date, (exec ticker from tb) as ticker, (exec price from tb) as price)")
-s.run("tableInsert(tglobal,tb1)")
+s.run("tableInsert(tglobal,(select id, date(date) as date, ticker, price from tb))")
 ```
 
 把数据保存到内存表，还可以使用`append!`函数，它可以把一张表追加到另一张表。但是，一般不建议通过`append!`函数保存数据，因为`append!`函数会返回一个表的schema，增加通信量。
@@ -697,8 +697,7 @@ s.run("append!{tdglobal}",tb)
 import pandas as pd
 tb=pd.DataFrame(createDemoDict())
 s.upload({'tb':tb})
-s.run("tb1=table((exec id from tb) as id, (exec date(date) from tb) as date, (exec ticker from tb) as ticker, (exec price from tb) as price)")
-s.run("append!(tglobal,tb1)")
+s.run("append!(tglobal, (select id, date(date) as date, ticker, price from tb))")
 ```
 
 #### 7.2 追加数据到本地磁盘表
@@ -714,10 +713,10 @@ s = ddb.session()
 s.connect(host, port, "admin", "123456")
 
 # 生成磁盘表
-dbPath="'/home/user/dbtest/testPython'"
+dbPath="/home/user/dbtest/testPython"
 tableName='dt'
 script = """t = table(100:0, `id`date`ticker`price, [INT,DATE,STRING,DOUBLE]); 
-db = database({db}); 
+db = database('{db}'); 
 saveTable(db, t, `{tb}); 
 share t as tDiskGlobal;""".format(db=dbPath,tb=tableName)
 s.run(script)
@@ -756,10 +755,10 @@ s = ddb.session()
 s.connect(host, port, "admin", "123456")
 
 # 生成分布式表
-dbPath="'dfs://testPython'"
+dbPath="dfs://testPython"
 tableName='t1'
 script = """
-dbPath={db}
+dbPath='{db}'
 if(existsDatabase(dbPath))
 	dropDatabase(dbPath)
 db = database(dbPath, VALUE, 0..100)
@@ -774,14 +773,14 @@ DolphinDB提供`loadTable`方法来加载分布式表，通过`tableInsert`方�
 
 ```Python
 tb = createDemoDataFrame()
-s.run("tableInsert{{loadTable({db}, `{tb})}}".format(db=dbPath,tb=tableName), tb)
+s.run("tableInsert{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName), tb)
 ```
 
 把数据保存到分布式表，还可以使用`append!`函数，它可以把一张表追加到另一张表。但是，一般不建议通过append!函数保存数据，因为`append!`函数会返回一个表结构，增加通信量。
 
 ```Python
 tb = createDemoDataFrame()
-s.run("append!{{loadTable({db}, `{tb})}}".format(db=dbPath,tb=tableName),tb)
+s.run("append!{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName),tb)
 ```
 
 ### 8 操作数据库和表
@@ -889,11 +888,11 @@ import numpy as np
 
 s = ddb.session()
 s.connect(HOST, PORT, "admin", "123456")
-dbPath="'dfs://testDB'"
+dbPath="dfs://testDB"
 tableName='tb'
 testDict=pd.DataFrame(createDemoDict())
 script="""
-dbPath={db}
+dbPath='{db}'
 if(existsDatabase(dbPath))
     dropDatabase(dbPath)
 db=database(dbPath, VALUE, ["AAPL", "AMZN", "A"])
@@ -901,8 +900,8 @@ testDictSchema=table(5:0, `id`date`ticker`price, [INT,DATE,STRING,DOUBLE])
 db.createPartitionedTable(testDictSchema, `{tb}, `ticker)""".format(db=dbPath,tb=tableName)
 s.run(script)
 # s.run("append!{{loadTable({db}, `{tb})}}".format(db=dbPath,tb=tableName),testDict)
-s.run("tableInsert{{loadTable({db}, `{tb})}}".format(db=dbPath,tb=tableName),testDict)
-s.run("select * from loadTable({db}, `{tb})".format(db=dbPath,tb=tableName))
+s.run("tableInsert{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName),testDict)
+s.run("select * from loadTable('{db}', `{tb})".format(db=dbPath,tb=tableName))
 ```
 
 上述两个例子等价于在DolphinDB服务端执行以下脚本，创建分布式数据库和表，并向表中追加数据。
@@ -977,7 +976,44 @@ print(trade.select("distinct TICKER").toDF())
 
 #### 8.3.2 数据表添加数据
 
-请参考[第7节](#7-追加数据到dolphindb数据表)。
+我们可以通过`append`方法追加数据。
+
+下面的例子把数据追加到磁盘上的分区表。如果需要使用追加数据后的表，需要重新把它加载到内存中。
+
+```py
+trade = s.loadTable(tableName="trade",dbPath=WORK_DIR+"/valuedb")
+print(trade.rows)
+
+# output
+13136
+
+# take the top 10 rows of table "trade" on the DolphinDB server
+t = trade.top(10).executeAs("top10")
+
+trade.append(t)
+
+# table "trade" needs to be reloaded in order to see the appended records
+trade = s.loadTable(tableName="trade",dbPath=WORK_DIR+"/valuedb")
+print (trade.rows)
+
+# output
+13146
+```
+
+下面的例子把数据追加到内存表中。
+
+```py
+trade=s.loadText(WORK_DIR+"/example.csv")
+t = trade.top(10).executeAs("top10")
+t1=trade.append(t)
+
+print(t1.rows)
+
+# output
+13146
+```
+
+关于追加表的具体介绍请参考[第7节](#7-追加数据到dolphindb数据表)。
 
 #### 8.3.3 更新表
 
@@ -1288,7 +1324,7 @@ print(df)
 
 ```Python
 trade = s.loadTable(dbPath=WORK_DIR+"/valuedb", tableName="trade")
-t1 = s.table(data={'TICKER': ['AMZN', 'AMZN', 'AMZN'], 'date': ['2015.12.31', '2015.12.30', '2015.12.29'], 'open': [695, 685, 674]})
+t1 = s.table(data={'TICKER': ['AMZN', 'AMZN', 'AMZN'], 'date': np.array(['2015-12-31', '2015-12-30', '2015-12-29'], dtype='datetime64[D]'), 'open': [695, 685, 674]})
 print(trade.merge(t1,on=["TICKER","date"]).toDF())
 
 # output
@@ -1373,39 +1409,40 @@ quotes = s.loadTextEx("db",  tableName='quotes',partitionColumns=["Symbol"], fil
 print(trades.top(5).toDF())
 
 # output
-                 Time Symbol  Trade_Volume  Trade_Price
-0  09:30:00.087488712   AAPL        370466      117.100
-1  09:30:00.087681843   AAPL        370466      117.100
-2  09:30:00.103645440   AAPL           100      117.100
-3  09:30:00.213850801   AAPL            20      117.100
-4  09:30:00.264854448   AAPL            17      117.095
+                        Time  Exchange  Symbol  Trade_Volume  Trade_Price
+0 1970-01-01 08:00:00.022239        75    AAPL           300        27.00
+1 1970-01-01 08:00:00.022287        75    AAPL           500        27.25
+2 1970-01-01 08:00:00.022317        75    AAPL           335        27.26
+3 1970-01-01 08:00:00.022341        75    AAPL           100        27.27
+4 1970-01-01 08:00:00.022368        75    AAPL            31        27.40
 
 print(quotes.where("second(Time)>=09:29:59").top(5).toDF())
 
 # output
-                 Time Symbol  Bid_Price  Bid_Size  Offer_Price  Offer_Size
-0  09:29:59.300399073   AAPL     117.07         1       117.09           1
-1  09:29:59.300954263   AAPL     117.07         1       117.09           1
-2  09:29:59.301594217   AAPL     117.05         1       117.19          10
-3  09:30:00.499924044   AAPL     117.09        46       117.10           3
-4  09:30:00.500005573   AAPL     116.86        53       117.37          64
+                         Time  Exchange  Symbol  Bid_Price  Bid_Size  Offer_Price  Offer_Size
+0  1970-01-01 09:30:00.005868        90    AAPL      26.89         1        27.10           6
+1  1970-01-01 09:30:00.011058        90    AAPL      26.89        11        27.10           6
+2  1970-01-01 09:30:00.031523        90    AAPL      26.89        13        27.10           6
+3  1970-01-01 09:30:00.284623        80    AAPL      26.89         8        26.98           8
+4  1970-01-01 09:30:00.454066        80    AAPL      26.89         8        26.98           1
 
 print(trades.merge_asof(quotes,on=["Symbol","Time"]).select(["Symbol","Time","Trade_Volume","Trade_Price","Bid_Price", "Bid_Size","Offer_Price", "Offer_Size"]).top(5).toDF())
 
 # output
-  Symbol                Time  Trade_Volume  Trade_Price  Bid_Price  Bid_Size  \
-0   AAPL  09:30:00.087488712        370466      117.100     117.05         1   
-1   AAPL  09:30:00.087681843        370466      117.100     117.05         1   
-2   AAPL  09:30:00.103645440           100      117.100     117.05         1   
-3   AAPL  09:30:00.213850801            20      117.100     117.05         1   
-4   AAPL  09:30:00.264854448            17      117.095     117.05         1   
+  Symbol                        Time          Trade_Volume  Trade_Price  Bid_Price  Bid_Size  \
+0   AAPL  1970-01-01 08:00:00.022239                   300        27.00       26.9         1   
+1   AAPL  1970-01-01 08:00:00.022287                   500        27.25       26.9         1   
+2   AAPL  1970-01-01 08:00:00.022317                   335        27.26       26.9         1   
+3   AAPL  1970-01-01 08:00:00.022341                   100        27.27       26.9         1   
+4   AAPL  1970-01-01 08:00:00.022368                    31        27.40       26.9         1   
 
    Offer_Price  Offer_Size  
-0       117.19          10  
-1       117.19          10  
-2       117.19          10  
-3       117.19          10  
-4       117.19          10  
+0       27.49           10  
+1       27.49           10  
+2       27.49           10  
+3       27.49           10  
+4       27.49           10  
+[5 rows x 8 columns]
 ```
 
 使用asof join计算交易成本：
@@ -1414,9 +1451,9 @@ print(trades.merge_asof(quotes,on=["Symbol","Time"]).select(["Symbol","Time","Tr
 print(trades.merge_asof(quotes, on=["Symbol","Time"]).select("sum(Trade_Volume*abs(Trade_Price-(Bid_Price+Offer_Price)/2))/sum(Trade_Volume*Trade_Price)*10000 as cost").groupby("Symbol").toDF())
 
 # output
-  Symbol      cost
-0   AAPL  0.899823
-1     FB  2.722923
+  Symbol       cost
+0   AAPL   6.486813
+1     FB  35.751041
 ```
 
 #### 9.6.3 `merge_window`
@@ -1426,34 +1463,34 @@ print(trades.merge_asof(quotes, on=["Symbol","Time"]).select("sum(Trade_Volume*a
 window join和prevailing window join的唯一区别是，如果右表中没有与窗口左边界时间（即t+w1）匹配的值，prevailing window join会选择(t+w1)之前的最近时间。如果要使用prevailing window join，需将prevailing参数设置为True。
 
 ```Python
-print(trades.merge_window(quotes, -5000000000, 0, aggFunctions=["avg(Bid_Price)","avg(Offer_Price)"], on=["Symbol","Time"]).where("Time>=15:59:59").top(10).toDF())
+print(trades.merge_window(quotes, -5000000000, 0, aggFunctions=["avg(Bid_Price)","avg(Offer_Price)"], on=["Symbol","Time"]).where("Time>=07:59:59").top(10).toDF())
 
 # output
-                 Time Symbol  Trade_Volume  Trade_Price  avg_Bid_Price  \
-0  15:59:59.003095025   AAPL           250      117.620     117.603714   
-1  15:59:59.003748103   AAPL           100      117.620     117.603714   
-2  15:59:59.011092788   AAPL            95      117.620     117.603714   
-3  15:59:59.011336471   AAPL           200      117.620     117.603714   
-4  15:59:59.022841207   AAPL           144      117.610     117.603689   
-5  15:59:59.028169703   AAPL           130      117.615     117.603544   
-6  15:59:59.035357411   AAPL          1101      117.610     117.603544   
-7  15:59:59.035360176   AAPL           799      117.610     117.603544   
-8  15:59:59.035602676   AAPL           130      117.610     117.603544   
-9  15:59:59.036929307   AAPL          2201      117.610     117.603544   
+                        Time  Exchange Symbol  Trade_Volume \
+0 1970-01-01 08:00:00.022239        75   AAPL           300
+1 1970-01-01 08:00:00.022287        75   AAPL           500
+2 1970-01-01 08:00:00.022317        75   AAPL           335
+3 1970-01-01 08:00:00.022341        75   AAPL           100
+4 1970-01-01 08:00:00.022368        75   AAPL            31
+5 1970-01-01 08:00:02.668076        68   AAPL          2434
+6 1970-01-01 08:02:20.116025        68   AAPL            66
+7 1970-01-01 08:06:31.149930        75   AAPL           100
+8 1970-01-01 08:06:32.826399        75   AAPL           100
+9 1970-01-01 08:06:33.168833        75   AAPL            74
 
-   avg_Offer_Price  
-0       117.626816  
-1       117.626816  
-2       117.626816  
-3       117.626816  
-4       117.626803  
-5       117.626962  
-6       117.626962  
-7       117.626962  
-8       117.626962  
-9       117.626962  
+   avg_Bid_Price  avg_Offer_Price
+0          26.90            27.49
+1          26.90            27.49
+2          26.90            27.49
+3          26.90            27.49
+4          26.90            27.49
+5          26.75            27.36
+6            NaN              NaN
+7            NaN              NaN
+8            NaN              NaN
+9            NaN              NaN
 
-...
+[10 rows x 6 columns]
 ```
 
 使用window join计算交易成本：
@@ -1464,9 +1501,9 @@ trades.merge_window(quotes,-1000000000, 0, aggFunctions="[wavg(Offer_Price, Offe
 print(s.loadTable(tableName="tradingCost").toDF())
 
 # output
-  Symbol      cost
-0   AAPL  0.953315
-1     FB  1.077876
+  Symbol       cost
+0   AAPL   6.367864
+1     FB  35.751041
 ```
 
 #### 9.7 `executeAs`
@@ -1521,7 +1558,7 @@ print(z["Coefficient"])
 print(z["Coefficient"].beta[1])
 
 # output
-0.6053065019659698
+0.6053065014691369
 ```
 
 下面的例子在分区数据库中执行回归运算。请注意，在DolphinDB中，两个整数整除的运算符为“/”，恰好是Python的转移字符，因此在`select`中使用VOL\SHROUT。
@@ -1646,9 +1683,11 @@ print(result.top(10).toDF())
 Python Streaming API
 ---
 
+## 1 流数据订阅方法说明
+
 Python API支持流数据订阅的功能，下面简单介绍一下流数据订阅的相关方法与使用示例。
 
-### 1. 指定客户端的订阅端口号
+### 1.1 指定客户端的订阅端口号
 
 使用Python API提供的`enableStreaming`函数启用流数据功能：
 ```Python
@@ -1667,7 +1706,7 @@ s = ddb.session()
 s.enableStreaming(8000)
 ```
 
-### 2. 调用订阅函数
+### 1.2 调用订阅函数
 
 使用`subscribe`函数来订阅DolphinDB中的流数据表，语法如下：
 
@@ -1713,7 +1752,7 @@ s.subscribe("192.168.1.103",8921,handler,"trades","action",0,False,np.array(['ab
 [numpy.datetime64('2019-10-16T11:50:02.217'), 'ab', 26.7, 3]
 ```
 
-### 3. 获取订阅主题
+### 1.3 获取订阅主题
 
 通过`getSubscriptionTopics`函数可以获取所有订阅主题，主题的构成方式是：host/port/tableName/actionName，每个session的所有主题互不相同。
 
@@ -1723,7 +1762,7 @@ s.getSubscriptionTopics()
 ['192.168.1.103/8921/trades/action']
 ```
 
-### 4. 取消订阅
+### 1.4 取消订阅
 
 使用`unsubscribe`取消订阅，语法如下：
 ```Python
@@ -1742,3 +1781,136 @@ from threading import Event     # 加在第一行
 Event().wait()                  # 加在最后一行
 ```
 否则订阅线程会在主线程退出前立刻终止，导致无法收到订阅消息。
+
+## 2 流数据订阅实例
+
+下面的例子中，我们在Python客户端订阅第三方数据到多个DataFrame中，通过DolphinDB的流数据订阅功能将多个表中的数据写入到分布式表中。
+
+首先，我们创建数据库和表：
+
+```Python
+import dolphindb as ddb
+import pandas as pd
+import numpy as np
+
+s = ddb.session()
+s.connect(host, port, "admin", "123456")
+
+dbDir="dfs://ticks"
+tableName='tick'
+
+script="""
+login('admin','123456')
+
+// 定义表结构
+n=20000000
+colNames =`Code`Date`DiffAskVol`DiffAskVolSum`DiffBidVol`DiffBidVolSum`FirstDerivedAskPrice`FirstDerivedAskVolume`FirstDerivedBidPrice`FirstDerivedBidVolume
+colTypes = [SYMBOL,DATE,INT,INT,INT,INT,FLOAT,INT,FLOAT,INT]
+
+// 创建数据库与分布式表
+dbPath= '{dbPath}'
+if(existsDatabase(dbPath))
+   dropDatabase(dbPath)
+db=database(dbPath,VALUE, 2000.01.01..2030.12.31)
+dfsTB=db.createPartitionedTable(table(n:0, colNames, colTypes),`{tbName},`Date)
+""".format(dbPath=dbDir,tbName=tableName)
+```
+
+下面，我们将定义两个流数据表`mem_stream_d`和`mem_stream_f`，客户端往流数据表写入数据，由服务端订阅数据。
+
+```Python
+script+="""
+// 定义mem_tb_d表,并开启流数据持久化，将共享表命名为mem_stream_d
+mem_tb_d=streamTable(n:0, colNames, colTypes)
+enableTableShareAndPersistence(mem_tb_d,'mem_stream_d',false,true,n)
+
+// 定义mem_tb_f表,并开启流数据持久化，将共享表命名为mem_stream_f
+mem_tb_f=streamTable(n:0,colNames, colTypes)
+enableTableShareAndPersistence(mem_tb_f,'mem_stream_f',false,true,n)
+"""
+```
+
+**请注意**，由于表的分区字段是按照日期进行分区，而客户端往`mem_stream_d`和`mem_stream_f`表中写的数据会有日期上的重叠， 若直接由分布式表`tick`同时订阅这两个表的数据，就会造成这两个表同时往同一个日期分区写数据，最终会写入失败。因此，我们需要定义另一个流表`ticks_stream`来订阅`mem_stream_d`和`mem_stream_f`表的数据，再让分布式表`tick`单独订阅这一个流表，这样就形成了一个二级订阅模式。
+
+```Python
+script+="""
+// 定义ftb表,并开启流数据持久化，将共享表命名为ticks_stream
+ftb=streamTable(n:0, colNames, colTypes)
+enableTableShareAndPersistence(ftb,'ticks_stream',false,true,n)
+go
+
+// ticks_stream订阅mem_stream_d表的数据
+def saveToTicksStreamd(mutable TB, msg): TB.append!(select Code,Date,DiffBidVol,DiffBidVolSum,FirstDerivedBidPrice,FirstDerivedBidVolume from msg)
+subscribeTable(, 'mem_stream_d', 'action_to_ticksStream_tde', 0, saveToTicksStreamd{ticks_stream}, true, 100)
+
+// ticks_stream同时订阅mem_stream_f表的数据
+def saveToTicksStreamf(mutable TB, msg): TB.append!(select Code,Date,DiffAskVol,DiffAskVolSum,FirstDerivedAskPrice,FirstDerivedAskVolume from msg)
+subscribeTable(, 'mem_stream_f', 'action_to_ticksStream_tfe', 0, saveToTicksStreamf{ticks_stream}, true, 100)
+
+// dfsTB订阅ticks_stream表的数据
+def saveToDFS(mutable TB, msg): TB.append!(select * from msg)
+subscribeTable(, 'ticks_stream', 'action_to_dfsTB', 0, saveToDFS{dfsTB}, true, 100, 5)
+"""
+s.run(script)
+```
+
+上述几个步骤中，我们定义了一个数据库并创建分布式表`tick`，以及三个流数据表，分别为`mem_stream_d`、`mem_stream_f`和`ticks_stream`。客户端将第三方订阅而来的数据不断地追加到`mem_stream_d`和`mem_stream_f`表中，而写入这两个表的数据会自动由`ticks_stream`表订阅。最后，`ticks_stream`表内的数据会被顺序地写入分布式表`tick`中。
+
+下面，我们将第三方订阅到的数据上传到DolphinDB，通过DolphinDB流数据订阅功能将数据追加到分布式表。我们假定Python客户端从第三方订阅到的数据已经保存在两个名为`dfd`和`dff`的DataFrame中：
+
+```Python
+n = 10000
+dfd = pd.DataFrame({'Code': np.repeat(['a', 'b', 'c', 'd', 'e', 'QWW', 'FEA', 'FFW', 'DER', 'POD'], n/10),
+                    'Date': np.repeat(pd.date_range('2000.01.01', periods=10000, freq='D'), n/10000),
+                    'DiffAskVol': np.random.choice(100, n),
+                    'DiffAskVolSum': np.random.choice(100, n),
+                    'DiffBidVol': np.random.choice(100, n),
+                    'DiffBidVolSum': np.random.choice(100, n),
+                    'FirstDerivedAskPrice': np.random.choice(100, n)*0.9,
+                    'FirstDerivedAskVolume': np.random.choice(100, n),
+                    'FirstDerivedBidPrice': np.random.choice(100, n)*0.9,
+                    'FirstDerivedBidVolume': np.random.choice(100, n)})
+
+n = 20000
+dff = pd.DataFrame({'Code': np.repeat(['a', 'b', 'c', 'd', 'e', 'QWW', 'FEA', 'FFW', 'DER', 'POD'], n/10),
+                    'Date': np.repeat(pd.date_range('2000.01.01', periods=10000, freq='D'), n/10000),
+                    'DiffAskVol': np.random.choice(100, n),
+                    'DiffAskVolSum': np.random.choice(100, n),
+                    'DiffBidVol': np.random.choice(100, n),
+                    'DiffBidVolSum': np.random.choice(100, n),
+                    'FirstDerivedAskPrice': np.random.choice(100, n)*0.9,
+                    'FirstDerivedAskVolume': np.random.choice(100, n),
+                    'FirstDerivedBidPrice': np.random.choice(100, n)*0.9,
+                    'FirstDerivedBidVolume': np.random.choice(100, n)})
+```
+
+**请注意**，在向流数据表追加一个带有时间列的表时，我们需要对时间列进行时间类型转换：首先将整个DataFrame上传到DolphinDB服务器，再通过select语句将其中的列取出，并转换时间类型列的数据类型，最后通过`tableInsert`语句追加表。具体原因与向内存表追加一个DataFrame类似，请参见[第7.1.3小节](#713-使用tableinsert函数追加表)。
+
+```Python
+s.upload({'dfd': dfd, 'dff': dff})
+inserts = """tableInsert(mem_stream_d,select Code,date(Date) as Date,DiffAskVol,DiffAskVolSum,DiffBidVol,DiffBidVolSum,FirstDerivedAskPrice,FirstDerivedAskVolume,FirstDerivedBidPrice,FirstDerivedBidVolume from dfd);
+tableInsert(mem_stream_f,select Code,date(Date) as Date,DiffAskVol,DiffAskVolSum,DiffBidVol,DiffBidVolSum,FirstDerivedAskPrice,FirstDerivedAskVolume,FirstDerivedBidPrice,FirstDerivedBidVolume from dff)"""
+s.run(inserts)
+s.run("select count(*) from loadTable('{dbPath}', `{tbName})".format(dbPath=dbDir,tbName=tableName))
+
+# output
+   count
+0  30000
+```
+
+我们可以执行以下脚本结束订阅：
+
+```Python
+clear="""
+def clears(tbObj,tbName,action)
+{
+	unsubscribeTable(, tbName, action)
+	undef(tbName,SHARED)
+	clearTablePersistence(tbObj)
+}
+clears(ftb, `ticks_stream, `action_to_dfsTB)
+clears(mem_tb_d,`mem_stream_d,`action_to_ticksStream_tde)
+clears(mem_tb_f,`mem_stream_f,`action_to_ticksStream_tfe)
+"""
+s.run(clear)
+```
