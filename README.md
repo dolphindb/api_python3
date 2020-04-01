@@ -55,7 +55,7 @@ DolphinDB默认的管理员用户名为“admin”，密码为“123456”，并
 
 ### 2 运行DolphinDB脚本
 
-通过`run(script)`方法运行DolphinDB脚本,如果脚本在DolphinDB中返回对象，`run`会把DolphinDB对象转换成Python中的对象。
+通过`run(script)`方法运行DolphinDB脚本，如果脚本在DolphinDB中返回对象，`run`会把DolphinDB对象转换成Python中的对象。脚本运行失败的话，会有相应的错误提示。
 
 ```Python
 a=s.run("`IBM`GOOG`YHOO")
@@ -64,16 +64,24 @@ repr(a)
 # output
 "array(['IBM', 'GOOG', 'YHOO'], dtype='<U4')"
 ```
+通过`run`方法可以定义用户自定义函数。如果定义函数成功的话，返回值为空。
+
+```Python
+s.run("def getTypeStr(input){ \nreturn typestr(input)\n}")
+
+```
 
 需要注意的是，脚本的最大长度为65,535字节。
 
 ### 3 运行DolphinDB函数
 
-除了运行脚本之外，`run`命令可以直接在远程DolphinDB服务器上执行DolphinDB内置或用户自定义函数。`run`方法的第一个参数DolphinDB中的函数名，第二个参数是要在DolphinDB中调用的函数的参数。
+除了运行脚本之外，`run`命令可以直接在远程DolphinDB服务器上执行DolphinDB内置或用户自定义函数。`run`方法的第一个参数DolphinDB中的函数名，之后的参数是要在DolphinDB中调用的函数的参数。
+
+#### 3.1 不同参数存储位置的调用方式
 
 下面的示例展示Python程序通过`run`调用DolphinDB内置的`add`函数。`add`函数有两个参数x和y。参数的存储位置不同，也会导致调用方式的不同。可能有以下三种情况：
 
-* 所有参数都在DolphinDB Server端
+- 所有参数都在DolphinDB Server端
 
 若变量x和y已经通过Python程序在服务器端生成，
 
@@ -91,7 +99,7 @@ repr(a)
 'array([ 3,  7, 11], dtype=int32)'
 ```
 
-* 仅有一个参数在DolphinDB Server端存在
+- 仅有一个参数在DolphinDB Server端存在
 
 若变量x已经通过Python程序在服务器端生成，
 
@@ -107,14 +115,15 @@ import numpy as np
 y=np.array([1,2,3])
 result=s.run("add{x,}", y)
 repr(result)
-result.dtype
-
 # output
 'array([2, 5, 8])'
+
+result.dtype
+# output
 dtype('int64')
 ```
 
-* 两个参数都待由Python客户端赋值
+- 两个参数都待由Python客户端赋值
 
 ```Python
 import numpy as np
@@ -123,12 +132,160 @@ x=np.array([1.5,2.5,7])
 y=np.array([8.5,7.5,3])
 result=s.run("add", x, y)
 repr(result)
-result.dtype
-
 # output
 'array([10., 10., 10.])'
+
+result.dtype
+# output
 dtype('float64')
 ```
+
+#### 3.2 参数支持的数据类型与形式
+
+通过`run`调用DolphinDB的内置函数时，客户端可以上传的参数形式可以是scalar，list，dict，numpy的对象，pandas的DataFrame和Series等等。
+
+> 需要注意的是：
+> 
+> 1. numpy array的维度不能超过二维。
+> 2. pandas的DataFrame和Series若有index，在上传到DolphinDB以后会丢失。
+> 3. 如果DolphinDB函数的参数是时间或日期类型，Python客户端上传的时候参数应该先转换为numpy.datetime64类型。
+
+下面具体介绍不同的Python对象作为参数参与运算的例子。
+
+- 将list对象作为参数
+
+  例如，使用DolphinDB的`add`函数对两个python的list进行相加。
+
+  ```Python
+  s.run("add",[1,2,3,4],[1,2,1,1])
+
+  # output
+  array([2, 4, 4, 5])
+  ```
+
+- 将numpy对象作为参数
+
+  除了numpy的array对象之外，numpy的数值型标量也可以作为参数参与运算，例如，将np.int，np.datetime64等对象上传到DolphinDB作为函数参数.
+
+  - np.int作为参数
+
+    ```Python
+    import numpy as np
+    s.run("add{1,}",np.int(4))
+
+    # output
+    5
+    ```
+
+  - np.datetime64作为参数
+   
+    Python API根据datetime64实际的数据转换成对应的DolphinDB中的时间数据类型。格式对应关系如下表。
+  
+    |DolphinDB Type        | datetime64  |
+    |:------------- |:-------------|
+    |DATE|'2019-01-01'|
+    |MONTH|'2019-01'|
+    |DATETIME|'2019-01-01T20:01:01'|
+    |TIMESTAMP|'2019-01-01T20:01:01.122'|
+    |NANOTIMESTAMP|'2019-01-01T20:01:01.122346100'|
+
+    ```Python
+    import numpy as np
+    s.run("typestr",np.datetime64('2019-01-01'))
+    # output
+    'DATE'
+    
+    s.run("typestr",np.datetime64('2019-01'))
+    # output
+    'MONTH'
+    
+    s.run("typestr",np.datetime64('2019-01-01T20:01:01'))
+    # output
+    'DATETIME'
+    
+    s.run("typestr",np.datetime64('2019-01-01T20:01:01.122'))
+    # output
+    'TIMESTAMP'
+    
+    s.run("typestr",np.datetime64('2019-01-01T20:01:01.1223461'))
+    # output
+    'NANOTIMESTAMP'
+    ```
+    
+    DolphinDB中的TIME, MINUTE, SECOND, NANOTIME等类型无法根据datetime64类型由Python API转换。我们可以采用先将含有对应数据信息的datetime64数据对象上传到DolphinDB Server，然后后转换获得。上传数据方法可参见[上传本地对象到DolphinDB服务器](#4-上传本地对象到dolphindb服务器)。数据对应关系参见下表。
+    
+    |DolphinDB Type | datetime64  |说明|
+    |:------------- |:-------------|:-------------|
+    |TIME|'1970-01-01T20:01:01.122'|TIME不含日期信息，日期可以填写任意日期|
+    |MINUTE|'1970-01-01T20:01'|MINUTE类型仅包含小时和分钟数据，其他信息可以用任意日期时间|
+    |SECOND|'1970-01-01T20:01:01'|SECOND类型仅包含时分秒数据，其他信息可以用任意的日期时间|
+    |NANOTIME|'1970-01-01T20:01:01.122346100'|NANOTIME类型仅包含时间信息，日期可以用任意日期|
+    
+    ```Python
+    import numpy as np
+    ts = np.datetime64('2019-01-01T20:01:01.1223461')
+    s.upload({'ts':ts})
+    s.run('a=nanotime(ts)')
+    
+    s.run('typestr(a)')
+    # output
+    'NANOTIME'
+    
+    s.run('a')
+    # output
+    numpy.datetime64('1970-01-01T20:01:01.122346100')
+    ```
+    
+  - np.datetime64对象的list作为参数
+
+    ```Python
+    import numpy as np
+    a=[np.datetime64('2019-01-01T20:00:00.000000001'), np.datetime64('2019-01-01T20:00:00.000000001')]
+    s.run("add{1,}",a)
+
+    # output
+    array(['2019-01-01T20:00:00.000000002', '2019-01-01T20:00:00.000000002'], dtype='datetime64[ns]')
+    ```
+
+- 将pandas的对象作为参数
+
+  pandas的DataFrame和Series若有index，在上传到DolphinDB以后会丢失。
+
+  - Series作为参数：
+
+    ```Python
+    import pandas as pd
+    import numpy as np
+    a = pd.Series([1,2,3,1,5],index=np.arange(1,6,1))
+    s.run("add{1,}",a)
+
+    # output
+    array([2, 3, 4, 2, 6])
+    ```
+
+  - DataFrame作为参数
+
+    ```Python
+    import pandas as pd
+    data = {
+            '性别':['男','女','女','男','男'],
+            '姓名':['小明','小红','小芳','小黑','小绿'],
+            '年龄':[20,21,25,24,29]}
+    a = pd.DataFrame(data,index=['one','two','three','four','five'],
+                  columns=['姓名','性别','年龄'])
+    s.run("typestr",a)
+    # output
+    'IN-MEMORY TABLE'
+    
+    s.run("print",a)
+    # output
+       姓名 性别 年龄
+    0  小明  男  20   
+    1  小红  女  21   
+    2  小芳  女  25   
+    3  小黑  男  24   
+    4  小绿  男  29   
+    ```
 
 ### 4 上传本地对象到DolphinDB服务器
 
@@ -136,7 +293,7 @@ dtype('float64')
 
 Python API提供`upload`函数将Python对象上传到DolphinDB服务器。`upload`函数的输入是Python的字典对象，它的key对应的是DolphinDB中的变量名，value对应的是Python对象，可以是Numbers，Strings，Lists，DataFrame等数据对象。
 
-* 上传 Python list
+- 上传 Python list
 
 ```Python
 a = [1,2,3.0]
@@ -144,16 +301,17 @@ s.upload({'a':a})
 a_new = s.run("a")
 a_type = s.run("typestr(a)")
 print(a_new)
-print(a_type)
-
 # output
 [1. 2. 3.]
+
+print(a_type)
+# output
 ANY VECTOR
 ```
 
 注意，Python中像a=[1,2,3.0]这种类型的内置list，上传到DolphinDB后，会被识别为any vector。这种情况下，建议使用numpy.array代替内置list，即通过a=numpy.array([1,2,3.0],dtype=numpy.double)指定统一的数据类型，这样上传a以后，a会被识别为double类型的向量。
 
-* 上传 NumPy array
+- 上传 NumPy array
 
 ```Python
 import numpy as np
@@ -163,14 +321,15 @@ s.upload({'arr':arr})
 arr_new = s.run("arr")
 arr_type = s.run("typestr(arr)")
 print(arr_new)
-print(arr_type)
-
 # output
 [1. 2. 3.]
+
+print(arr_type)
+# output
 FAST DOUBLE VECTOR
 ```
 
-* 上传pandas DataFrame
+- 上传pandas DataFrame
 
 ```Python
 import pandas as pd
@@ -183,6 +342,7 @@ print(s.run("t1.value.avg()"))
 # output
 5.44
 ```
+
 #### 4.2 使用`table`函数上传
 
 在Python中使用`table`函数创建DolphinDB表对象，并上传到server端，`table`函数的输入可以是字典、DataFrame或DolphinDB中的表名。
