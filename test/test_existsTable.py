@@ -4,8 +4,8 @@ from setup import HOST, PORT, WORK_DIR
 
 
 class DBInfo:
-    dfsDBName = 'dfs://testDropTable'
-    diskDBName = WORK_DIR + '/testDropTable'
+    dfsDBName = 'dfs://testExistsTable'
+    diskDBName = WORK_DIR + '/testExistsTable'
     table1 = 'tb1'
     table2 = 'tb2'
 
@@ -230,13 +230,13 @@ def create_disk_compo_range_range_db():
     s.close()
 
 
-def existsTB(dbName, tbName):
+def dropTB(dbName, tbName):
     s = ddb.session()
     s.connect(HOST, PORT, "admin", "123456")
-    return s.run("existsTable('{db}', '{tb}')".format(db=dbName, tb=tbName))
+    return s.run("db=database('{db}');dropTable(db, '{tb}')".format(db=dbName, tb=tbName))
 
 
-class DropTableTest(unittest.TestCase):
+class ExistsTableTest(unittest.TestCase):
     @classmethod
     def setUp(cls):
         cls.s = ddb.session()
@@ -265,197 +265,197 @@ class DropTableTest(unittest.TestCase):
             """.format(dbPath=dbPath)
             cls.s.run(script)
 
-    def test_dropTable_dfs_dimension(self):
+    def test_existsTable_dfs_dimension(self):
         dbName = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_dfs_dimension_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_dfs_range(self):
+    def test_existsTable_dfs_range(self):
         dbName = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_dfs_range_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_dfs_hash(self):
+    def test_existsTable_dfs_hash(self):
         dbName = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_dfs_hash_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_dfs_value(self):
+    def test_existsTable_dfs_value(self):
         dbName = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_dfs_value_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_dfs_list(self):
+    def test_existsTable_dfs_list(self):
         dbName = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_dfs_list_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_dfs_compo_range_range(self):
+    def test_existsTable_dfs_compo_range_range(self):
         dbName = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_dfs_compo_range_range_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_disk_unpartitioned(self):
+    def test_existsTable_disk_unpartitioned(self):
         dbName = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_disk_unpartitioned_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_disk_range(self):
+    def test_existsTable_disk_range(self):
         dbName = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_disk_range_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_disk_hash(self):
+    def test_existsTable_disk_hash(self):
         dbName = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_disk_hash_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_disk_value(self):
+    def test_existsTable_disk_value(self):
         dbName = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_disk_value_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_disk_list(self):
+    def test_existsTable_disk_list(self):
         dbName = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_disk_list_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
-    def test_dropTable_disk_compo_range_range(self):
+    def test_existsTable_disk_compo_range_range(self):
         dbName = DBInfo.diskDBName
         tbName1 = DBInfo.table1
         tbName2 = DBInfo.table2
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
         create_disk_compo_range_range_db()
-        self.assertEqual(existsTB(dbName, tbName1), True)
-        self.assertEqual(existsTB(dbName, tbName2), True)
-        self.s.dropTable(dbName, tbName1)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), True)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
+        dropTB(dbName, tbName1)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), True)
         self.s.dropTable(dbName, tbName2)
-        self.assertEqual(existsTB(dbName, tbName1), False)
-        self.assertEqual(existsTB(dbName, tbName2), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName1), False)
+        self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
 
 if __name__ == '__main__':
