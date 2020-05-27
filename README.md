@@ -267,24 +267,24 @@ dtype('float64')
 
     ```Python
     import pandas as pd
-    data = {
-            '性别':['男','女','女','男','男'],
-            '姓名':['小明','小红','小芳','小黑','小绿'],
-            '年龄':[20,21,25,24,29]}
-    a = pd.DataFrame(data,index=['one','two','three','four','five'],
-                  columns=['姓名','性别','年龄'])
+    import numpy as np
+    a=pd.DataFrame({'id': np.int32([1, 2, 3, 4, 3]), 
+                    'value':  np.double([7.8, 4.6, 5.1, 9.6, 0.1]), 
+                    'x': np.int32([5, 4, 3, 2, 1])},
+                    index={'one','two','three','four','five'})
+    s.upload({'a':a})
     s.run("typestr",a)
     # output
     'IN-MEMORY TABLE'
     
-    s.run("print",a)
+    s.run('a')
     # output
-       姓名 性别 年龄
-    0  小明  男  20   
-    1  小红  女  21   
-    2  小芳  女  25   
-    3  小黑  男  24   
-    4  小绿  男  29   
+        id  value x
+    0   1    7.8  5
+    1   2    4.6  4
+    2   3    5.1  3
+    3   4    9.6  2
+    4   3    0.1  1 
     ```
 
 ### 4 上传本地对象到DolphinDB服务器
