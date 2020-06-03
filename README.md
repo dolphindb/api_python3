@@ -1,5 +1,55 @@
 ## DolphinDB Python API
 
+
+内容介绍：
+- [1 数据库连接以及脚本和函数运行](#1-数据库连接以及脚本和函数运行)
+    - [1.1 建立DolphinDB连接](#11-建立dolphindb连接)
+    - [1.2 运行DolphinDB脚本](#12-运行dolphindb脚本)
+    - [1.3 运行DolphinDB函数](#13-运行dolphindb函数)
+- [2  上传本地对象到DolphinDB服务器](#2-上传本地对象到dolphindb服务器)
+    - [2.1 使用upload函数上传](#21-使用upload函数上传)
+    - [2.2 使用table函数上传](#22-使用table函数上传) 
+- [3 导入数据到DolphinDB服务器](#3-导入数据到dolphindb服务器)
+    - [3.1 把数据导入到内存表中](#31-把数据导入到内存表中)
+    - [3.2 把数据导入到分区数据库中](#32-把数据导入到分区数据库中)
+    - [3.3 把数据导入到内存的分区表中](#33-把数据导入到内存的分区表中)
+- [4 从DolphinDB数据库中加载数据](#4-从dolphindb数据库中加载数据)
+    - [4.1 使用loadTable函数](#41-使用loadtable函数) 
+    - [4.2 使用loadTableBySQL函数](#42-使用loadtablebysql函数) 
+    - [4.3 从DolphinDB下载数据到Python时的数据转换](#43-从dolphindb下载数据到python时的数据转换) 
+    - [4.4 缺失值处理](#44-缺失值处理)
+- [5 追加数据到DolphinDB数据表](#5-追加数据到dolphindb数据表)
+    - [5.1 追加数据到DolphinDB内存表](#51-追加数据到dolphindb内存表)
+    - [5.2 追加数据到本地磁盘表](#52-追加数据到本地磁盘表)
+    - [5.3 追加数据到分布式表](#53-追加数据到分布式表)
+- [6 数据库和表操作](#6-数据库和表操作)
+    - [6.1 数据库和表的操作方法说明](#61-数据库和表的操作方法说明) 
+    - [6.2 数据库操作](#62-数据库操作)
+    - [6.3 表操作](#63-表操作)
+- [7 SQL查询](#7-sql查询)
+    - [7.1 Select](#71-select)
+    - [7.2 top](#72-top)
+    - [7.3 where](#73-where)
+    - [7.4 groupby](#74-groupby)
+    - [7.5 contextby](#75-contextby)
+    - [7.6 表连接](#76-表连接)
+    - [7.7 executeAs](#77-executeas)
+    - [7.8 回归运算](#78-回归运算)
+- [8 更多实例](#8-更多实例)
+    - [8.1 动量交易策略](#81-动量交易策略) 
+    - [8.2 时间序列操作](#82-时间序列操作) 
+- [9 Python Streaming API](#9-python-streaming-api)
+    - [9.1 指定客户端的订阅端口号](#91-指定客户端的订阅端口号)  
+    - [9.2 调用订阅函数](#92-调用订阅函数)
+    - [9.3 获取订阅主题](#93-获取订阅主题)
+    - [9.4 取消订阅](#94-取消订阅)
+    - [9.5 流数据订阅实例](#95-流数据订阅实例)
+    - [9.6 使用 Python 接收实时数据，并写入DolphinDB流数据表](#96-使用-python-接收实时数据并写入dolphindb流数据表)
+    - [9.7 实时计算k线](#97-实时计算k线)
+    - [9.8 在Python中展示K线数据](#98-在python中展示k线数据)
+
+### 1 数据库连接以及脚本和函数运行
+
 DolphinDB Python API 支持Python 3.4~3.7版本。
 
 通过执行如下指令进行安装。
@@ -10,21 +60,8 @@ $ pip install dolphindb
 
 由于实现原因，Python API暂时无法与Linux平台Jupyter Notebook共同使用，将在后续解决这个问题。
 
-下面主要介绍以下内容：
 
-- [建立DolphinDB连接](#1-建立dolphindb连接)
-- [运行DolphinDB脚本](#2-运行dolphindb脚本)
-- [运行DolphinDB函数](#3-运行dolphindb函数)
-- [上传本地对象到DolphinDB服务器](#4-上传本地对象到dolphindb服务器)
-- [导入数据到DolphinDB服务器](#5-导入数据到dolphindb服务器)
-- [从DolphinDB数据库中加载数据](#6-从dolphindb数据库中加载数据)
-- [追加数据到DolphinDB数据表](#7-追加数据到dolphindb数据表)
-- [操作数据库和表](#8-操作数据库和表)
-- [SQL查询](#9-sql查询)
-- [更多实例](#10-更多实例)
-- [Python Streaming API](#python-streaming-api)
-
-### 1 建立DolphinDB连接
+### 1.1 建立DolphinDB连接
 
 Python API 提供的最核心的类是Session类。Python应用通过会话与DolphinDB服务器上执行脚本和函数，并在两者之间双向传递数据。Session类方法中，最为常用的方法如下：
 
@@ -53,7 +90,7 @@ s.connect("localhost", 8848, YOUR_USER_NAME, YOUR_PASS_WORD)
 
 DolphinDB默认的管理员用户名为“admin”，密码为“123456”，并且默认会在连接时对YOUR_USER_NAME和YOUR_PASS_WORD进行加密传输。
 
-### 2 运行DolphinDB脚本
+### 1.2 运行DolphinDB脚本
 
 通过`run(script)`方法运行DolphinDB脚本，如果脚本在DolphinDB中返回对象，`run`会把DolphinDB对象转换成Python中的对象。脚本运行失败的话，会有相应的错误提示。
 
@@ -73,11 +110,11 @@ s.run("def getTypeStr(input){ \nreturn typestr(input)\n}")
 
 需要注意的是，脚本的最大长度为65,535字节。
 
-### 3 运行DolphinDB函数
+### 1.3 运行DolphinDB函数
 
 除了运行脚本之外，`run`命令可以直接在远程DolphinDB服务器上执行DolphinDB内置或用户自定义函数。`run`方法的第一个参数DolphinDB中的函数名，之后的参数是要在DolphinDB中调用的函数的参数。
 
-#### 3.1 不同参数存储位置的调用方式
+#### 1.3.1 不同参数存储位置的调用方式
 
 下面的示例展示Python程序通过`run`调用DolphinDB内置的`add`函数。`add`函数有两个参数x和y。参数的存储位置不同，也会导致调用方式的不同。可能有以下三种情况：
 
@@ -140,7 +177,7 @@ result.dtype
 dtype('float64')
 ```
 
-#### 3.2 参数支持的数据类型与形式
+#### 1.3.2 参数支持的数据类型与形式
 
 通过`run`调用DolphinDB的内置函数时，客户端可以上传的参数形式可以是scalar，list，dict，numpy的对象，pandas的DataFrame和Series等等。
 
@@ -287,9 +324,9 @@ dtype('float64')
     4   3    0.1  1 
     ```
 
-### 4 上传本地对象到DolphinDB服务器
+### 2 上传本地对象到DolphinDB服务器
 
-#### 4.1 使用`upload`函数上传
+#### 2.1 使用`upload`函数上传
 
 Python API提供`upload`函数将Python对象上传到DolphinDB服务器。`upload`函数的输入是Python的字典对象，它的key对应的是DolphinDB中的变量名，value对应的是Python对象，可以是Numbers，Strings，Lists，DataFrame等数据对象。
 
@@ -343,7 +380,7 @@ print(s.run("t1.value.avg()"))
 5.44
 ```
 
-#### 4.2 使用`table`函数上传
+#### 2.2 使用`table`函数上传
 
 在Python中使用`table`函数创建DolphinDB表对象，并上传到server端，`table`函数的输入可以是字典、DataFrame或DolphinDB中的表名。
 
@@ -431,13 +468,13 @@ print(s.loadTable("testDataFrame").toDF())
 [3 rows x 19 columns]
 ```
 
-### 5 导入数据到DolphinDB服务器
+### 3 导入数据到DolphinDB服务器
 
 DolphinDB数据库根据存储方式可以分为3种类型：内存数据库、本地文件系统的数据库和分布式文件系统（DFS）中的数据库。DFS能够自动管理数据存储和备份，并且DolphinDB在DFS模式中性能达到最优。因此，推荐用户使用分布式文件系统，部署方式请参考[多服务器集群部署](https://github.com/dolphindb/Tutorials_CN/blob/master/multi_machine_cluster_deploy.md)。为简化起见，在本教程中也给出了本地文件系统数据库的例子。
 
 下面的例子中，我们使用了一个csv文件：[example.csv](data/example.csv)。
 
-#### 5.1 把数据导入到内存表中
+#### 3.1 把数据导入到内存表中
 
 可以使用`loadText`方法把文本文件导入到DolphinDB的内存表中。该方法会在Python中返回一个DolphinDB内存表对象。可以使用`toDF`方法把Python中的DolphinDB Table对象转换成pandas DataFrame。
 
@@ -470,11 +507,11 @@ TICKER        date       VOL        PRC        BID       ASK
 t1=s.loadText(WORK_DIR+"/t1.tsv", '\t')
 ```
 
-#### 5.2 把数据导入到分区数据库中
+#### 3.2 把数据导入到分区数据库中
 
 如果需要导入的文件比可用内存大，可把数据导入到分区数据库中。
 
-#### 5.2.1 创建分区数据库
+#### 3.2.1 创建分区数据库
 
 创建了分区数据库后，一般不能改变分区方案。唯一的例外是值分区（或者复合分区中的值分区）创建后，可以添加分区。为了保证使用的不是已经存在的数据库，需要先检查数据库valuedb是否存在。如果存在，将其删除。
 
@@ -509,7 +546,7 @@ s.database('db', partitionType=keys.VALUE, partitions=['AMZN','NFLX', 'NVDA'], d
 
 除了值分区（VALUE），DolphinDB还支持顺序分区（SEQ）、哈希分区（HASH）、范围分区（RANGE）、列表分区（LIST）与组合分区（COMPO），具体请参见[database函数](https://www.dolphindb.cn/cn/help/database1.html)。
 
-#### 5.2.2 创建分区表，并导入数据到表中
+#### 3.2.2 创建分区表，并导入数据到表中
 
 创建数据库后，可使用函数`loadTextEx`把文本文件导入到分区数据库的分区表中。如果分区表不存在，函数会自动生成该分区表并把数据追加到表中。如果分区表已经存在，则直接把数据追加到分区表中。
 
@@ -571,9 +608,9 @@ print(trade.schema)
 trade = s.table(dbPath=WORK_DIR+"/valuedb", data="trade")
 ```
 
-#### 5.3 把数据导入到内存的分区表中
+#### 3.3 把数据导入到内存的分区表中
 
-#### 5.3.1 使用`loadTextEx`
+#### 3.3.1 使用`loadTextEx`
 
 可把数据导入到内存的分区表中。由于内存分区表使用了并行计算，因此对它进行操作比对内存未分区表进行操作要快。
 
@@ -587,7 +624,7 @@ s.database('db', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], db
 trade=s.loadTextEx(dbPath="db", partitionColumns=["TICKER"], tableName='trade', filePath=WORK_DIR + "/example.csv")
 ```
 
-#### 5.3.2 使用`ploadText`
+#### 3.3.2 使用`ploadText`
 
 `ploadText`函数可以并行加载文本文件到内存分区表中。它的加载速度要比`loadText`函数快。
 
@@ -599,15 +636,15 @@ print(trade.rows)
 13136
 ```
 
-### 6 从DolphinDB数据库中加载数据
+### 4 从DolphinDB数据库中加载数据
 
-#### 6.1 使用`loadTable`函数
+#### 4.1 使用`loadTable`函数
 
 可以使用`loadTable`从数据库中加载数据。参数tableName表示分区表的名称，dbPath表示数据库的路径。如果没有指定dbPath，`loadTable`函数会加载内存中的表。
 
 对于分区表，若参数memoryMode=true且未指定partition参数，把表中的所有数据加载到内存的分区表中；若参数memoryMode=true且指定了partition参数，则只加载指定的分区数据到内存的分区表中；如果参数memoryMode=false，只把元数据加载到内存。
 
-#### 6.1.1 加载整个表的数据
+#### 4.1.1 加载整个表的数据
 
 ```Python
 trade = s.loadTable(tableName="trade",dbPath=WORK_DIR+"/valuedb")
@@ -628,7 +665,7 @@ TICKER        date       VOL        PRC        BID       ASK
 [13136 rows x 6 columns]
 ```
 
-#### 6.1.2 加载指定分区的数据
+#### 4.1.2 加载指定分区的数据
 
 只加载AMZN分区的数据：
 
@@ -648,7 +685,7 @@ print(trade.rows)
 8195
 ```
 
-#### 6.2 使用`loadTableBySQL`函数
+#### 4.2 使用`loadTableBySQL`函数
 
 `loadTableBySQL`函数把磁盘上的分区表中满足SQL语句过滤条件的数据加载到内存的分区表中。
 
@@ -668,9 +705,9 @@ print(trade.rows)
 5286
 ```
 
-#### 6.3 从DolphinDB下载数据到Python时的数据转换
+#### 4.3 从DolphinDB下载数据到Python时的数据转换
 
-#### 6.3.1 数据形式的转换
+#### 4.3.1 数据形式的转换
 
 DolphinDB Python API使用Python原生的各种形式的数据对象来存放DolphinDB服务端返回的数据，下面给出从DolphinDB的数据对象到Python的数据对象的映射关系。
 
@@ -684,7 +721,7 @@ DolphinDB Python API使用Python原生的各种形式的数据对象来存放Dol
 |dictionary|Dictionaries|dict(['IBM','MS','ORCL'], 170.5 56.2 49.5)|{'MS': 56.2, 'IBM': 170.5, 'ORCL': 49.5}|
 |table|pandas.DataFame|见[第6.1小节](#61-使用loadtable函数)|见[第6.1小节](#61-使用loadtable函数)
 
-#### 6.3.2 数据类型的转换
+#### 4.3.2 数据类型的转换
 
 下表展示了从DolphinDB数据库中通过`toDF()`函数下载数据到Python时，数据类型的转换。需要指出的是：
 - DolphinDB CHAR类型会被转换成Python int64类型。对此结果，用户可以使用Python的`chr`函数使之转换为字符。
@@ -712,11 +749,11 @@ DolphinDB Python API使用Python原生的各种形式的数据对象来存放Dol
 |NANOTIME|datetime64|[13:30:10.008007006, nanotime()]|[1970-01-01 13:30:10.008007006,NaT]|
 |NANOTIMESTAMP|datetime64|[2012.06.13 13:30:10.008007006,nanotimestamp()]|[2012-06-13 13:30:10.008007006,NaT]|
 
-#### 6.4 缺失值处理
+#### 4.4 缺失值处理
 
 从DolphinDB下载数据到Python，并使用`toDF()`方法把DolphinDB数据转换为Python的DataFrame，DolphinDB中的逻辑型、数值型和时序类型的NULL值默认情况下是NaN、NaT，字符串的NULL值为空字符串。
 
-### 7 追加数据到DolphinDB数据表
+### 5 追加数据到DolphinDB数据表
 
 使用Python API的一个重要场景是，用户从其他数据库系统或是第三方Web API中取得数据后存入DolphinDB数据表中。本节将介绍通过Python API将取到的数据上传并保存到DolphinDB的数据表中。
 
@@ -726,7 +763,7 @@ DolphinDB数据表按存储方式分为三种:
 - 本地磁盘表：数据保存在本地磁盘上。可以从磁盘加载到内存。
 - 分布式表：数据分布在不同的节点，通过DolphinDB的分布式计算引擎，仍然可以像本地表一样做统一查询。
 
-#### 7.1 追加数据到DolphinDB内存表
+#### 5.1 追加数据到DolphinDB内存表
 
 DolphinDB提供多种方式来保存数据到内存表：
 
@@ -750,7 +787,7 @@ s.run(script)
 
 上面的例子中，我们通过`table`函数在DolphinDB server端来创建表，指定了表的容量和初始大小、列名和数据类型。由于内存表是会话隔离的，所以普通内存表只有当前会话可见。为了让多个客户端可以同时访问t，我们使用`share`在会话间共享内存表。
 
-#### 7.1.1 使用`INSERT INTO`语句追加数据
+#### 5.1.1 使用`INSERT INTO`语句追加数据
 
 我们可以采用如下方式保存单条数据。
 
@@ -788,7 +825,7 @@ script = "insert into tglobal values(ids,date(dates),tickers,prices);"
 s.run(script)
 ```
 
-#### 7.1.2 使用`tableInsert`函数批量追加多条数据
+#### 5.1.2 使用`tableInsert`函数批量追加多条数据
 
 若Python程序获取的数据可以组织成List方式，且保证数据类型正确的情况下，我们可以直接使用`tableInsert`函数来批量保存多条数据。这个函数可以接受多个数组作为参数，将数组追加到数据表中。这样做的好处是，可以在一次访问服务器请求中将上传数据对象和追加数据这两个步骤一次性完成，相比7.1.1小节中的做法减少了一次访问DolphinDB服务器的请求。
 
@@ -798,7 +835,7 @@ s.run("tableInsert{tglobal}", args)
 s.run("tglobal")
 ```
 
-#### 7.1.3 使用`tableInsert`函数追加表
+#### 5.1.3 使用`tableInsert`函数追加表
 
 我可以通过`tableInsert`函数直接向内存表追加一个表，其中，时间列仍然需要特殊说明。
 
@@ -860,7 +897,7 @@ s.upload({'tb':tb})
 s.run("append!(tglobal, (select id, date(date) as date, ticker, price from tb))")
 ```
 
-#### 7.2 追加数据到本地磁盘表
+#### 5.2 追加数据到本地磁盘表
 
 本地磁盘表通用用于静态数据集的计算分析，既可以用于数据的输入，也可以作为计算的输出。它不支持事务，也不持支并发读写。
 
@@ -900,7 +937,7 @@ s.run("saveTable(db,tDiskGlobal,`{tb});".format(tb=tableName))
 
 与[追加表到内存表](#713-使用tableinsert函数追加表)类似，本地磁盘表也支持通过`tableInsert`函数和`append!`函数直接追加一个表，同样也需要区分有无时间列的情况，唯一的区别是，本地磁盘表在追加之后要执行`saveTable`函数来保存到磁盘上，具体操作过程不再赘述。
 
-#### 7.3 追加数据到分布式表
+#### 5.3 追加数据到分布式表
 
 分布式表是DolphinDB推荐在生产环境下使用的数据存储方式，它支持快照级别的事务隔离，保证数据一致性。分布式表支持多副本机制，既提供了数据容错能力，又能作为数据访问的负载均衡。下面的例子通过Python API把数据保存至分布式表。
 
@@ -943,9 +980,9 @@ tb = createDemoDataFrame()
 s.run("append!{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName),tb)
 ```
 
-### 8 操作数据库和表
+### 6 数据库和表操作
 
-#### 8.1 操作数据库和表的方法说明
+#### 6.1 数据库和表的操作方法说明
 
 除了第1节列出的常用方法之外，`Session`类还提供了一些与DolphinDB内置函数作用等同的方法，用于操作数据库和表，具体如下：
 
@@ -1079,9 +1116,9 @@ testDict=table([1, 2, 2, 3] as id, [2019.02.04,2019.02.05,2019.02.09,2019.02.13]
 tb.append!(testDict)
 ```
 
-#### 8.2 操作数据库
+#### 6.2 数据库操作
 
-#### 8.2.1 创建数据库
+#### 6.2.1 创建数据库
 
 使用`database`创建分区数据库。
 
@@ -1091,7 +1128,7 @@ import dolphindb.settings as keys
 s.database('db', partitionType=keys.VALUE, partitions=["AMZN","NFLX", "NVDA"], dbPath=WORK_DIR+"/valuedb")
 ```
 
-#### 8.2.2 删除数据库
+#### 6.2.2 删除数据库
 
 使用`dropDatabase`删除数据库。
 
@@ -1100,7 +1137,7 @@ if s.existsDatabase(WORK_DIR+"/valuedb"):
     s.dropDatabase(WORK_DIR+"/valuedb")
 ```
 
-#### 8.2.3 删除DFS数据库的分区
+#### 6.2.3 删除DFS数据库的分区
 
 使用`dropPartition`删除DFS数据库的分区。需要注意的是，若要删除的分区名称在DolphinDB中需要通过字符串的形式表示，例如本例中按照TICKER进行值分区：partitions=["AMZN","NFLX","NVDA"]，则在删除这类分区时，需要为分区名称加上引号： partitionPaths=["'AMZN'","'NFLX'"]。类似情况还有有范围分区：partitionPaths=["'/0_50'","'/50_100'"]，列表分区：partitionPaths=["'/List0'","'/List1'"]等等。
 
@@ -1128,13 +1165,13 @@ print(trade.select("distinct TICKER").toDF())
 0            NVDA
 ```
 
-#### 8.3 表操作
+#### 6.3 表操作
 
-#### 8.3.1 加载数据库中的表
+#### 6.3.1 加载数据库中的表
 
 请参考[第6节](#6-从dolphindb数据库中加载数据)。
 
-#### 8.3.2 数据表添加数据
+#### 6.3.2 数据表添加数据
 
 我们可以通过`append`方法追加数据。
 
@@ -1175,7 +1212,7 @@ print(t1.rows)
 
 关于追加表的具体介绍请参考[第7节](#7-追加数据到dolphindb数据表)。
 
-#### 8.3.3 更新表
+#### 6.3.3 更新表
 
 `update`只能用于更新内存表，并且必须和`execute`一起使用。
 
@@ -1201,7 +1238,7 @@ print(t1.toDF())
 [4951 rows x 6 columns]
 ```
 
-#### 8.3.4 删除表中的记录
+#### 6.3.4 删除表中的记录
 
 `delete`必须与`execute`一起使用来删除表中的记录。
 
@@ -1214,7 +1251,7 @@ print(trade.rows)
 3024
 ```
 
-#### 8.3.5 删除表中的列
+#### 6.3.5 删除表中的列
 
 ```Python
 trade = s.loadTable(tableName="trade", dbPath=WORK_DIR + "/valuedb", memoryMode=True)
@@ -1229,19 +1266,19 @@ print(t1.top(5).toDF())
 4   AMZN  1997.05.21  1577414  17.125
 ```
 
-#### 8.3.6 删除表
+#### 6.3.6 删除表
 
 ```Python
 s.dropTable(WORK_DIR + "/valuedb", "trade")
 ```
 
-### 9 SQL查询
+### 7 SQL查询
 
 DolphinDB提供了灵活的方法来生成SQL语句。
 
-#### 9.1 `select`
+#### 7.1 `select`
 
-#### 9.1.1 使用一系列的列名作为输入内容
+#### 7.1.1 使用一系列的列名作为输入内容
 
 ```Python
 trade = s.loadTable(tableName="trade",dbPath=WORK_DIR+"/valuedb", memoryMode=True)
@@ -1266,7 +1303,7 @@ print(trade.select(['ticker','date','bid','ask','prc','vol']).where("date=2012.0
 select ticker,date,bid,ask,prc,vol from T64afd5a6 where date=2012.09.06 and vol<10000000
 ```
 
-#### 9.1.2 使用字符串作为输入内容
+#### 7.1.2 使用字符串作为输入内容
 
 ```Python
 print(trade.select("ticker,date,bid,ask,prc,vol").where("date=2012.09.06").where("vol<10000000").toDF())
@@ -1278,7 +1315,7 @@ print(trade.select("ticker,date,bid,ask,prc,vol").where("date=2012.09.06").where
 ...
 ```
 
-#### 9.2 `top`
+#### 7.2 `top`
 
 `top`用于取表中的前n条记录。
 
@@ -1296,11 +1333,11 @@ trade.top(5).toDF()
 
 ```
 
-#### 9.3 `where`
+#### 7.3 `where`
 
 `where`用于过滤数据。
 
-#### 9.3.1 多个条件过滤
+#### 7.3.1 多个条件过滤
 
 ```Python
 trade = s.loadTable(tableName="trade",dbPath=WORK_DIR+"/valuedb", memoryMode=True)
@@ -1331,7 +1368,7 @@ print(trade.select(['date','bid','ask','prc','vol']).where('TICKER=`AMZN').where
 select date,bid,ask,prc,vol from Tff260d29 where TICKER=`AMZN and bid!=NULL and ask!=NULL and vol>10000000 order by vol desc
 ```
 
-#### 9.3.2 使用字符串作为输入内容
+#### 7.3.2 使用字符串作为输入内容
 
 `select`的输入内容可以是包含多个列名的字符串，`where`的输入内容可以是包含多个条件的字符串。
 
@@ -1352,7 +1389,7 @@ print(trade.select("ticker, date, vol").where("bid!=NULL, ask!=NULL, vol>5000000
 40   NVDA  2016.12.29   54384676
 ```
 
-#### 9.4 `groupby`
+#### 7.4 `groupby`
 
 `groupby`后面需要使用聚合函数，如`count`、`sum`、`agg`和`agg2`。
 
@@ -1402,7 +1439,7 @@ print(trade.select('count(ask)').groupby(['vol']).having('count(ask)>1').toDF())
 
 ```
 
-#### 9.5 `contextby`
+#### 7.5 `contextby`
 
 `contextby`与`groupby`相似，区别在于`groupby`为每个组返回一个标量，但是`contextby`为每个组返回一个向量。每组返回的向量长度与这一组的行数相同。
 
@@ -1474,11 +1511,11 @@ print(df)
 4515   NVDA  2016.12.30  30323259  106.7400  106.7300  106.7500
 ```
 
-#### 9.6 表连接
+#### 7.6 表连接
 
 `merge`用于内部连接、左连接和外部连接，`merge_asof`表示asof join，`merge_window`表示窗口连接。
 
-#### 9.6.1 `merge`
+#### 7.6.1 `merge`
 
 如果连接列名称相同，使用on参数指定连接列，如果连接列名称不同，使用left_on和right_on参数指定连接列。可选参数how表示表连接的类型。默认的连接类型时内部连接。
 
@@ -1546,7 +1583,7 @@ print(t1.merge(t2, how="outer", on=["TICKER","date"]).toDF())
 3  936.0  
 ```
 
-#### 9.6.2 `merge_asof`
+#### 7.6.2 `merge_asof`
 
 `merge_asof`对应DolphinDB中的asof join（aj）。asof join用于非同步连接，它与left join非常相似，主要有以下区别：
 
@@ -1616,7 +1653,7 @@ print(trades.merge_asof(quotes, on=["Symbol","Time"]).select("sum(Trade_Volume*a
 1     FB  35.751041
 ```
 
-#### 9.6.3 `merge_window`
+#### 7.6.3 `merge_window`
 
 `merge_window`对应DolphinDB中的window join，它是asof join的扩展。leftBound参数和rightBound参数用于指定窗口的边界w1和w2，对左表中最后一个连接列对应的时间为t的记录，在右表中选择(t+w1)到(t+w2)的时间并且其他连接列匹配的记录，然后对这些记录使用聚合函数。
 
@@ -1666,7 +1703,7 @@ print(s.loadTable(tableName="tradingCost").toDF())
 1     FB  35.751041
 ```
 
-#### 9.7 `executeAs`
+#### 7.7 `executeAs`
 
 `executeAs`可以把结果保存为DolphinDB中的表对象。
 
@@ -1681,7 +1718,7 @@ trade.select(['date','bid','ask','prc','vol']).where('TICKER=`AMZN').where('bid!
 t1=s.loadTable(tableName="AMZN")
 ```
 
-#### 9.8 回归运算
+#### 7.8 回归运算
 
 `ols`用于计算最小二乘回归系数。返回的结果是一个字典。
 
@@ -1733,9 +1770,9 @@ print(result["ANOVA"])
 2       Total  46701486  1.421674e+12           NaN          NaN           NaN
 ```
 
-### 10 更多实例
+### 8 更多实例
 
-#### 10.1 动量交易策略
+#### 8.1 动量交易策略
 
 下面的例子是使用动量交易策略进行回测。最常用的动量因素是过去一年扣除最近一个月的收益率。动量策略通常是一个月调整一次并且持有期也是一个月。本文的例子中，每天调整1/5的投资组合，并持有新的投资组合5天。为了简单起见，不考虑交易成本。
 
@@ -1821,7 +1858,7 @@ portPnl = stockPnL.select("pnl").groupby("date").sum().sort(bys=["date"]).execut
 print(portPnl.toDF())
 ```
 
-#### 10.2 时间序列操作
+#### 8.2 时间序列操作
 
 下面的例子计算"101 Formulaic Alphas" by Kakushadze (2015)中的98号因子。
 
@@ -1840,14 +1877,13 @@ result=alpha98(US.tableName()).where('date>2007.03.12').executeAs("result")
 print(result.top(10).toDF())
 ``` 
 
-Python Streaming API
----
 
-## 1 流数据订阅方法说明
+
+## 9 Python Streaming API
 
 Python API支持流数据订阅的功能，下面简单介绍一下流数据订阅的相关方法与使用示例。
 
-### 1.1 指定客户端的订阅端口号
+### 9.1 指定客户端的订阅端口号
 
 使用Python API提供的`enableStreaming`函数启用流数据功能：
 ```Python
@@ -1866,7 +1902,7 @@ s = ddb.session()
 s.enableStreaming(8000)
 ```
 
-### 1.2 调用订阅函数
+### 9.2 调用订阅函数
 
 使用`subscribe`函数来订阅DolphinDB中的流数据表，语法如下：
 
@@ -1912,7 +1948,7 @@ s.subscribe("192.168.1.103",8921,handler,"trades","action",0,False,np.array(['ab
 [numpy.datetime64('2019-10-16T11:50:02.217'), 'ab', 26.7, 3]
 ```
 
-### 1.3 获取订阅主题
+### 9.3 获取订阅主题
 
 通过`getSubscriptionTopics`函数可以获取所有订阅主题，主题的构成方式是：host/port/tableName/actionName，每个session的所有主题互不相同。
 
@@ -1922,7 +1958,7 @@ s.getSubscriptionTopics()
 ['192.168.1.103/8921/trades/action']
 ```
 
-### 1.4 取消订阅
+### 9.4 取消订阅
 
 使用`unsubscribe`取消订阅，语法如下：
 ```Python
@@ -1942,7 +1978,7 @@ Event().wait()                  # 加在最后一行
 ```
 否则订阅线程会在主线程退出前立刻终止，导致无法收到订阅消息。
 
-## 2 流数据订阅实例
+## 9.5 流数据订阅实例
 
 下面的例子通过流数据订阅的方式计算实时K线。
 
@@ -1967,7 +2003,7 @@ datetime| symbol | open | close | high | low | volume |
 
 以下三小节介绍实时K线计算的三个步骤：
 
-### 2.1 使用 Python 接收实时数据，并写入DolphinDB流数据表
+### 9.6 使用 Python 接收实时数据，并写入DolphinDB流数据表
 
 * DolphinDB 中建立流数据表
 
@@ -1993,7 +2029,7 @@ s.upload({"tmpData":csv_df})
 s.run("data = select Symbol, datetime(Datetime) as Datetime, Price, Volume from tmpData")
 s.run("tableInsert(Trade,data)")
 ```
-### 2.2 实时计算K线
+### 9.7 实时计算K线
 
 本例中使用时序聚合引擎实时计算K线数据，并将计算结果输出到流数据表 OHLC 中。
 
@@ -2020,7 +2056,7 @@ tsAggrKline = createTimeSeriesAggregator(name="aggr_kline", windowSize=300, step
 subscribeTable(tableName="Trade", actionName="act_tsaggr", offset=0, handler=append!{tsAggrKline}, msgAsTable=true)
 ```
 
-### 2.3 在Python中展示K线数据
+### 9.8 在Python中展示K线数据
 
 在本例中，聚合引擎的输出表也定义为流数据表，客户端可以通过Python API订阅输出表，并将计算结果展现到Python终端。
 
