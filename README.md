@@ -306,11 +306,12 @@ dtype('float64')
     import pandas as pd
     import numpy as np
     a = pd.DataFrame({'id': np.int32([1, 2, 3, 4, 3]),
-                  'value': np.double([7.8, 4.6, 5.1, 9.6, 0.1]),
-                  'x': np.int32([5, 4, 3, 2, 1]),
-                  'date':[np.datetime64('2019-02-03'),np.datetime64('2019-02-04'),np.datetime64('2019-02-05'),
-                          np.datetime64('2019-02-06'),np.datetime64('2019-02-07')]},
-                 index=[1, 2, 3, 4, 5])
+	  'value': np.double([7.8, 4.6, 5.1, 9.6, 0.1]),
+	  'x': np.int32([5, 4, 3, 2, 1]),
+	  'date': np.array(['2019-02-03','2019-02-04','2019-02-05','2019-02-06','2019-02-07'],
+			   dtype='datetime64[D]')},
+	 index=[1, 2, 3, 4, 5])
+
     s.upload({'a':a})
     s.run("typestr",a)
     # output
