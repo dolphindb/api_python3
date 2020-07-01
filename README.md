@@ -702,7 +702,7 @@ if s.existsDatabase("dfs://valuedb"  or os.path.exists("dfs://valuedb")):
 s.database(dbName='db', partitionType=keys.VALUE, partitions=["AMZN","NFLX", "NVDA"], dbPath="dfs://valuedb")
 t = s.loadTextEx("db",  tableName='trade',partitionColumns=["TICKER"], filePath=WORK_DIR + "/example.csv")
 
-trade = s.loadTableBySQL(tableName="trade", "dfs://valuedb", sql="select * from trade where date>2010.01.01")
+trade = s.loadTableBySQL(tableName="trade", dbPath="dfs://valuedb", sql="select * from trade where date>2010.01.01")
 print(trade.rows)
 
 # output
