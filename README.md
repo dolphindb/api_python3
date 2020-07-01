@@ -928,6 +928,7 @@ s.connect(host, port, "admin", "123456")
 # 生成分布式表
 dbPath="dfs://testPython"
 tableName='t1'
+
 script = """
 dbPath='{db}'
 if(existsDatabase(dbPath))
@@ -937,15 +938,18 @@ t1 = table(10000:0,`id`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`
 insert into t1 values (0,true,'a',122h,21,22l,2012.06.12,2012.06M,13:10:10.008,13:30m,13:30:10,2012.06.13 13:30:10,2012.06.13 13:30:10.008,13:30:10.008007006,2012.06.13 13:30:10.008007006,2.1f,2.1,'','')
 t = db.createPartitionedTable(t1, `{tb}, `id)
 t.append!(t1)""".format(db=dbPath,tb=tableName)
+
 s.run(script)
 ```
 
-DolphinDB提供`loadTable`方法来加载分布式表，通过`tableInsert`方式追加数据，具体的脚本示例如下。脚本中，我们通过自定义的函数`createDemoDataFrame()`创建一个DataFrame，再追加数据到DolphinDB数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时间类型自动转换的功能，因此无需显示地进行类型转换。
+DolphinDB提供`loadTable`方法来加载分布式表，通过`tableInsert`方式追加数据，具体的脚本示例如下。脚本中，我们通过自定义的函数`createDemoDataFrame()`创建一个DataFrame，
+再追加数据到DolphinDB数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时间类型自动转换的功能，因此无需进行强制类型转换。
 
 ```python
 tb = createDemoDataFrame()
 s.run("tableInsert{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName), tb)
 ```
+
 
 把数据保存到分布式表，还可以使用`append!`函数，它可以把一张表追加到另一张表。但是，一般不建议通过append!函数保存数据，因为`append!`函数会返回一个表结构，增加通信量。
 
