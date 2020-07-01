@@ -305,10 +305,11 @@ dtype('float64')
     ```python
     import pandas as pd
     import numpy as np
-    a=pd.DataFrame({'id': np.int32([1, 2, 3, 4, 3]), 
-                    'value':  np.double([7.8, 4.6, 5.1, 9.6, 0.1]), 
-                    'x': np.int32([5, 4, 3, 2, 1])},
-                    index={'one','two','three','four','five'})
+    a = pd.DataFrame({'id': np.int32([1, 2, 3, 4, 3]),
+                  'value': np.double([7.8, 4.6, 5.1, 9.6, 0.1]),
+                  'x': np.int32([5, 4, 3, 2, 1]),
+                  'date':[np.datetime64('2019-02-03'),np.datetime64('2019-02-04'),np.datetime64('2019-02-05'),np.datetime64('2019-02-06'),np.datetime64('2019-02-07')]},
+                 index=[1, 2, 3, 4, 5])
     s.upload({'a':a})
     s.run("typestr",a)
     # output
@@ -316,12 +317,12 @@ dtype('float64')
     
     s.run('a')
     # output
-        id  value x
-    0   1    7.8  5
-    1   2    4.6  4
-    2   3    5.1  3
-    3   4    9.6  2
-    4   3    0.1  1 
+	   id  value  x       date
+	1   1    7.8  5 2019-02-03
+	2   2    4.6  4 2019-02-04
+	3   3    5.1  3 2019-02-05
+	4   4    9.6  2 2019-02-06
+	5   3    0.1  1 2019-02-07
     ```
 
 ## 2 上传本地对象到DolphinDB服务器
