@@ -949,7 +949,7 @@ DolphinDB提供`loadTable`方法来加载分布式表，通过`tableInsert`方�
 tb = createDemoDataFrame()
 s.run("tableInsert{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName), tb)
 ```
-
+上述语句等同于 s.run("tableInsert{loadTable('dfs://testPython', `t1)}", tb), 即通过部分应用方法将用户端Pandas的DataFrame，追加到分布式数据库`dfs://testPython`的`t1`表。
 
 把数据保存到分布式表，还可以使用`append!`函数，它可以把一张表追加到另一张表。但是，一般不建议通过append!函数保存数据，因为`append!`函数会返回一个表结构，增加通信量。
 
