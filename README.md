@@ -793,18 +793,17 @@ DolphinDB提供以下方式来追加数据到内存表：
 
 在Python中执行以下脚本：
 ```python
-import dolphindb as ddb
-
-s = ddb.session()
-s.connect(host, port, "admin", "123456")
 
 # 生成内存表
 script = """t = table(1000:0,`id`date`ticker`price, [INT,DATE,STRING,DOUBLE])
+
 share t as tglobal"""
+
 s.run(script)
 ```
 
-上面的例子通过`table`函数在DolphinDB server端来创建内存表，指定了初始内存分配和初始长度、列名和数据类型。由于内存表是会话隔离的，所以普通内存表只有当前会话可见。若需要多个客户端可以同时访问内存表，可使用`share`在会话间共享内存表。
+上面的例子通过`table`函数在DolphinDB server端来创建内存表，指定了初始内存分配和初始长度、列名和数据类型。由于内存表是会话隔离的，所以普通内存表只有当前会话可见。
+若需要多个客户端可以同时访问内存表，可使用`share`在会话间共享内存表。
 
 
 
@@ -814,13 +813,24 @@ s.run(script)
 若Python程序获取的数据可以组织成List方式，且保证数据类型正确的情况下，可以直接使用`tableInsert`函数来批量保存多条数据。这个函数可以接受多个数组作为参数，将数组追加到数据表中。这样做的好处是，可以在一次访问服务器请求中将上传数据对象和追加数据这两个步骤一次性完成，相比5.1.3小节中的`INSERT INTO`做法减少了一次访问DolphinDB服务器的请求。
 
 ```python
+
 ids = [1,2,3]
 dates = [np.datetime64('2019-03-03'), np.datetime64('2019-03-04'), np.datetime64('2019-03-05')]
 tickers=['AAPL','GOOG','AAPL']
 prices = [302.5, 295.6, 297.5]
 args = [ids, dates, tickers, prices]
 s.run("tableInsert{tglobal}", args)
+
+#output
+3
+
 s.run("tglobal")
+
+#output
+id       date ticker  price
+0   1 2019-03-03   AAPL  302.5
+1   2 2019-03-04   GOOG  295.6
+2   3 2019-03-05   AAPL  297.5
 ```
 
 
@@ -835,13 +845,9 @@ s.run("tglobal")
 ```python
 import pandas as pd
 
-# 生成内存表
-script = """t = table(1:0,`id`ticker`price, [INT,STRING,DOUBLE])
-share t as tdglobal"""
-s.run(script)
-
 # 生成要追加的DataFrame
 tb=pd.DataFrame({'id': [1, 2, 2, 3],
+		  'date': np.array(['2019-03-06','2019-03-07','2019-03-08','2019-03-08'], dtype='datetime64[D]'),
                  'ticker': ['AAPL', 'AMZN', 'AMZN', 'A'],
                  'price': [22, 3.5, 21, 26]})
 s.run("tableInsert{tdglobal}",tb)
