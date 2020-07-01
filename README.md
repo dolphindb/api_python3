@@ -793,12 +793,14 @@ DolphinDB提供以下方式来追加数据到内存表：
 
 在Python中执行以下脚本：
 ```python
+import dolphindb as ddb
+
+s = ddb.session()
+s.connect(host, port, "admin", "123456")
 
 # 生成内存表
 script = """t = table(1000:0,`id`date`ticker`price, [INT,DATE,STRING,DOUBLE])
-
 share t as tglobal"""
-
 s.run(script)
 ```
 
@@ -847,7 +849,6 @@ import pandas as pd
 
 # 生成要追加的DataFrame
 tb=pd.DataFrame({'id': [1, 2, 2, 3],
-		  'date': np.array(['2019-03-06','2019-03-07','2019-03-08','2019-03-08'], dtype='datetime64[D]'),
                  'ticker': ['AAPL', 'AMZN', 'AMZN', 'A'],
                  'price': [22, 3.5, 21, 26]})
 s.run("tableInsert{tdglobal}",tb)
