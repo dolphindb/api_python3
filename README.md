@@ -468,11 +468,11 @@ dt = s.table(data=createDemoDataFrame(), tableAliasName="testDataFrame")
 print(s.loadTable("testDataFrame").toDF())
 
 # output
-   cid  cbool  cchar  cshort  ...    cfloat    cdouble csymbol cstring
-0    1   True      1       1  ...  2.100000   0.000000       A     abc
-1    2  False      2       2  ...  2.658956  47.456213       B     def
-2    3   True      3       3  ...       NaN        NaN                
-[3 rows x 19 columns]
+>>> print(s.loadTable("testDataFrame").toDF())
+   cid  cbool  cchar  cshort  cint  ...             cnanotimestamp    cfloat    cdouble csymbol cstring
+0    1   True      1       1     1  ... 2019-01-01 15:00:00.807060  2.100000   0.000000       A     abc
+1    2  False      2       2     2  ... 2019-01-01 15:30:00.807060  2.658956  47.456213       B     def
+2    3   True      3       3     3  ...                        NaT       NaN        NaN
 ```
 
 ### 2.3 释放变量
