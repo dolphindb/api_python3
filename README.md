@@ -308,7 +308,8 @@ dtype('float64')
     a = pd.DataFrame({'id': np.int32([1, 2, 3, 4, 3]),
                   'value': np.double([7.8, 4.6, 5.1, 9.6, 0.1]),
                   'x': np.int32([5, 4, 3, 2, 1]),
-                  'date':[np.datetime64('2019-02-03'),np.datetime64('2019-02-04'),np.datetime64('2019-02-05'),np.datetime64('2019-02-06'),np.datetime64('2019-02-07')]},
+                  'date':[np.datetime64('2019-02-03'),np.datetime64('2019-02-04'),np.datetime64('2019-02-05'),
+                          np.datetime64('2019-02-06'),np.datetime64('2019-02-07')]},
                  index=[1, 2, 3, 4, 5])
     s.upload({'a':a})
     s.run("typestr",a)
@@ -331,7 +332,8 @@ dtype('float64')
 
 ### 2.1 使用session的`upload`方法上传
 
-Python API提供`upload`函数将Python对象上传到DolphinDB服务器。`upload`函数输入一个Python的字典对象，它的key对应的是DolphinDB中的变量名，value对应的是Python对象，可为Numbers，Strings，Lists，DataFrame等数据对象。
+Python API提供`upload`函数将Python对象上传到DolphinDB服务器。`upload`函数输入一个Python的字典对象，它的key对应的是DolphinDB中的变量名，value对应的是Python对象，
+可为Numbers，Strings，Lists，DataFrame等数据对象。
 
 - 上传 Python list
 
