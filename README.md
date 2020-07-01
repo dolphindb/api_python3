@@ -648,9 +648,8 @@ print(trade.rows)
 
 参数tableName表示分区表的名称，dbPath表示数据库的路径。如果没有指定dbPath，`loadTable`函数会加载内存中的表。
 
-对分区表，若参数memoryMode=false，只把元数据加载到内存；若参数memoryMode=true且未指定partition参数，把表中的所有数据加载到内存的分区表中；若参数memoryMode=true且指定了partition参数，则只加载指定的分区数据到内存的分区表中。
+对分区表，若参数memoryMode=false，只把元数据加载到内存；若参数memoryMode=true，把表中的所有数据加载到内存的分区表中。
 
-#### 4.1.1 加载整个表的数据
 ```python
 trade = s.loadTable(tableName="trade",dbPath="dfs://valuedb")
 
@@ -681,25 +680,6 @@ print(trade.toDF())
 13135   NVDA 2016-12-30  30323259  106.740  106.730  106.750
 ```
 
-#### 4.1.2 加载指定分区的数据
-
-只加载AMZN分区的数据：
-```python
-trade = s.loadTable(tableName="trade",dbPath="dfs://valuedb", partitions=["AMZN"])
-print(trade.rows)
-
-# output
-4941
-
-```
-
-```python
-trade = s.loadTable(tableName="trade",dbPath="dfs://valuedb", partitions=["NFLX","NVDA"], memoryMode=True)
-print(trade.rows)
-
-# output
-8195
-```
 
 ### 4.2 使用`loadTableBySQL`函数
 
