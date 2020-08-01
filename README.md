@@ -16,9 +16,9 @@ $ pip install dolphindb
     - [2.1 使用session的upload方法上传](#21-使用session的upload方法上传)
     - [2.2 使用table函数上传](#22-使用table函数上传) 
 - [3 导入数据到DolphinDB数据库](#3-导入数据到dolphindb数据库)
-    - [3.1 导入到内存表](#31-把数据导入到内存表中)
-    - [3.2 导入到分区数据库](#32-把数据导入到分区数据库中)
-    - [3.3 导入到内存的分区表](#33-把数据导入到内存的分区表中)
+    - [3.1 导入到内存表](#31-导入到内存表)
+    - [3.2 导入到磁盘分区表](#32-导入到磁盘分区表)
+    - [3.3 导入到内存分区表](#33-导入到内存分区表)
 - [4 从DolphinDB数据库中加载数据](#4-从dolphindb数据库中加载数据)
     - [4.1 使用loadTable函数](#41-使用loadtable函数) 
     - [4.2 使用loadTableBySQL函数](#42-使用loadtablebysql函数) 
@@ -385,9 +385,9 @@ print(s.run("t1.value.avg()"))
 5.44
 ```
 
-### 2.2 使用`table`方法上传
+### 2.2 使用`table`函数上传
 
-在Python中可使用`table`方法创建DolphinDB表对象，并上传到server端。`table`方法的输入可以是字典、DataFrame或DolphinDB中的表名。
+在Python中可使用`table`函数创建DolphinDB表对象，并上传到server端。`table`函数的输入可以是字典、DataFrame或DolphinDB中的表名。
 
 * 上传dict
 
@@ -490,7 +490,7 @@ DolphinDB数据库根据存储方式可以分为3种类型：内存数据库、�
 
 下面的例子中，我们使用了一个csv文件：[example.csv](data/example.csv)。
 
-### 3.1 把数据导入到内存表中
+### 3.1 导入到内存表
 
 可使用`loadText`方法把文本文件导入到DolphinDB的内存表中。该方法会在Python中返回一个DolphinDB内存表对象。可使用`toDF`方法把Python中的DolphinDB的Table对象转换成pandas的DataFrame。
 
@@ -523,7 +523,7 @@ TICKER        date       VOL        PRC        BID       ASK
 t1=s.loadText(WORK_DIR+"/t1.tsv", '\t')
 ```
 
-### 3.2 把数据导入到分区数据库中
+### 3.2 导入到磁盘分区表
 
 如果需要导入的文件超过可用内存，可导入分区数据库。
 
@@ -614,7 +614,7 @@ print(trade.schema)
 trade = s.table(dbPath="dfs://valuedb", data="trade")
 ```
 
-### 3.3 把数据导入到分区内存表中
+### 3.3 导入到内存分区表
 
 ### 3.3.1 使用`loadTextEx`
 
@@ -928,7 +928,6 @@ s.connect(host, port, "admin", "123456")
 # 生成分布式表
 dbPath="dfs://testPython"
 tableName='t1'
-
 script = """
 dbPath='{db}'
 if(existsDatabase(dbPath))
@@ -938,18 +937,15 @@ t1 = table(10000:0,`id`cbool`cchar`cshort`cint`clong`cdate`cmonth`ctime`cminute`
 insert into t1 values (0,true,'a',122h,21,22l,2012.06.12,2012.06M,13:10:10.008,13:30m,13:30:10,2012.06.13 13:30:10,2012.06.13 13:30:10.008,13:30:10.008007006,2012.06.13 13:30:10.008007006,2.1f,2.1,'','')
 t = db.createPartitionedTable(t1, `{tb}, `id)
 t.append!(t1)""".format(db=dbPath,tb=tableName)
-
 s.run(script)
 ```
 
-DolphinDB提供`loadTable`方法来加载分布式表，通过`tableInsert`方式追加数据，具体的脚本示例如下。脚本中，我们通过自定义的函数`createDemoDataFrame()`创建一个DataFrame，
-再追加数据到DolphinDB数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时间类型自动转换的功能，因此无需进行强制类型转换。
+DolphinDB提供`loadTable`方法来加载分布式表，通过`tableInsert`方式追加数据，具体的脚本示例如下。脚本中，我们通过自定义的函数`createDemoDataFrame()`创建一个DataFrame，再追加数据到DolphinDB数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时间类型自动转换的功能，因此无需显示地进行类型转换。
 
 ```python
 tb = createDemoDataFrame()
 s.run("tableInsert{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName), tb)
 ```
-上述语句等同于 s.run("tableInsert{loadTable('dfs://testPython', `t1)}", tb), 即通过部分应用方法将用户端Pandas的DataFrame，追加到分布式数据库`dfs://testPython`的`t1`表。
 
 把数据保存到分布式表，还可以使用`append!`函数，它可以把一张表追加到另一张表。但是，一般不建议通过append!函数保存数据，因为`append!`函数会返回一个表结构，增加通信量。
 
