@@ -1,6 +1,6 @@
 # Python API for DolphinDB
 
-DolphinDB Python API 支持Python 3.4~3.7版本。通过执行如下指令进行安装：
+DolphinDB Python API 支持Python 3.6~3.7版本。通过执行如下指令进行安装：
 
 ```Console
 $ pip install dolphindb
