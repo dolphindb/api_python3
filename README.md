@@ -1,6 +1,6 @@
 # Python API for DolphinDB
 
-DolphinDB Python API 支持Python 3.6~3.7版本。通过执行如下指令进行安装：
+DolphinDB Python API 支持Python 3.4~3.7版本。通过执行如下指令进行安装：
 
 ```Console
 $ pip install dolphindb
@@ -12,9 +12,11 @@ $ pip install dolphindb
     - [1.1 建立DolphinDB连接](#11-建立dolphindb连接)
     - [1.2 运行DolphinDB脚本](#12-运行dolphindb脚本)
     - [1.3 运行DolphinDB函数](#13-运行dolphindb函数)
+    - [1.4 session函数undef和内存释放的关系](#14-session函数undef和内存释放的关系)
 - [2 上传本地对象到DolphinDB服务器](#2-上传本地对象到dolphindb服务器)
     - [2.1 使用session的upload方法上传](#21-使用session的upload方法上传)
     - [2.2 使用table函数上传](#22-使用table函数上传) 
+    - [2.3 上传的数据表的的生命周期](#23-上传的数据表的的生命周期) 
 - [3 导入数据到DolphinDB数据库](#3-导入数据到dolphindb数据库)
     - [3.1 导入到内存表](#31-导入到内存表)
     - [3.2 导入到磁盘分区表](#32-导入到磁盘分区表)
@@ -52,7 +54,7 @@ $ pip install dolphindb
 
 ### 1.1 建立DolphinDB连接
 
-Python应用通过会话（Session）在DolphinDB服务器上执行脚本和函数以及在两者之间双向传递数据。最为常用的Session类方法如下：
+Python应用通过会话（Session）在DolphinDB服务器上执行脚本和函数以及在两者之间双向传递数据。最为常用的Session类的函数如下：
 
 | 方法名        | 详情          |
 |:------------- |:-------------|
@@ -61,7 +63,12 @@ Python应用通过会话（Session）在DolphinDB服务器上执行脚本和函�
 |run("DolphinDBScript")|将脚本在DolphinDB服务器运行|
 |run("DolphinDBFunctionName",args)|调用DolphinDB服务器上的函数|
 |upload(DictionaryOfPythonObject)|将本地数据对象上传到DolphinDB服务器|
+|undef("objName","objType")|取消指定对象在DolphinDB内存中定义以及释放内存|
+|undefAll()|取消所有对象在DolphinDB内存中的定义以及释放内存|
 |close()|关闭当前会话|
+
+
+
 
 以下脚本中，通过import语句导入API以后，在Python中创建一个会话，然后使用指定的域名或IP地址和端口号把该会话连接到DolphinDB服务器。请注意，在执行以下Python脚本前，需要先启动DolphinDB服务器。
 ```python
@@ -82,6 +89,8 @@ s.connect("localhost", 8848)
 s.login(YOUR_USER_NAME,YOUR_PASS_WORD)
 ```
 若会话过期，或者初始化会话时没有指定登录信息（用户名与密码），可使用`login`函数来登录服务器。DolphinDB默认的管理员用户名为'admin'，密码为'123456'，并且默认会在连接时对用户名与密码进行加密传输。
+
+
 
 ### 1.2 运行DolphinDB脚本
 
@@ -259,7 +268,7 @@ dtype('float64')
 
     
     
-    由于DolphinDB中的TIME, MINUTE, SECOND, NANOTIME等类型没有日期信息，datetime64类型无法由Python API直接转换为这些类型。可先将datetime64类型数据上传到DolphinDB Server，然后去除日期信息获得。上传数据方法可参见[上传本地对象到DolphinDB服务器](#4-上传本地对象到dolphindb服务器)。
+    由于DolphinDB中的TIME, MINUTE, SECOND, NANOTIME等类型没有日期信息，datetime64类型无法由Python API直接转换为这些类型。可先将datetime64类型数据上传到DolphinDB Server，然后去除日期信息获得。上传数据方法可参见[上传本地对象到DolphinDB服务器](#2-上传本地对象到dolphindb服务器)。
     
     ```python
     import numpy as np
@@ -326,6 +335,17 @@ dtype('float64')
 	4   4    9.6  2 2019-02-06
 	5   3    0.1  1 2019-02-07
     ```
+    
+### 1.4 session函数undef和内存释放的关系
+
+函数`undef`或者`undefAll`用于将session中的指定对象或者全部对象释放掉。 `undef`支持的对象类型包括:"VAR"(变量), "SHARED"(共享变量)，"DEF"(函数定义)。默认类型为最常见的变量"VAR"。
+"SHARED"指内存中跨session的共享变量，例如:流表(streamTable)。假设session中有一个DolphinDB的表对象t1, 可以通过session.undef("t1","VAR")将该表释放掉。
+释放后， 并不一定能够看到内存马上释放。这与DolphinDB的内存管理机制有关。DolphinDB从操作系统申请的内存，释放后不会立即还给操作系统，因为这些释放的内存在DolphinDB中可以立即使用。
+申请内存首先从DolphinDB内部的池中申请内存，不足才会向操作系统去申请。配置文件(dolphindb.cfg)中maxMemSize中的设置的内存上限是需要保证的，譬如说设置了8G，那DolphinDB会充分的去利用这个8G内存。
+所以如果用户需要反复undef内存中的一个变量来达到释放内存以为后面程序腾出更多内存空间，则需要将maxMemSize调整到一个合理的数值，否则当前内存没有释放，
+而后面需要的内存超过了系统的最大内存，DolphinDB的进程就有可能被操作系统杀掉或者出现out of memory的错误。
+
+
 
 ## 2 上传本地对象到DolphinDB服务器
 
@@ -422,9 +442,6 @@ print(s.loadTable("testDict").toDF())
 3   3 2019-02-13      A   26.0
 ```
 
-**请注意**，在不指定表名的情况下，每次调用`table`会在DolphinDB服务端创建一个临时表，因此，若在循环中反复调用`table`函数，将会在DolphinDB服务端产生大量的临时表，极易造成内存溢出。
-
-如果只是想把表上传后立刻插入到内存表或DFS表中，而不进行其他操作，请参考[第5节](#5-追加数据到dolphindb数据表)。
 
 * 上传pandas DataFrame
 
@@ -475,14 +492,155 @@ print(s.loadTable("testDataFrame").toDF())
 2    3   True      3       3     3  ...                        NaT       NaN        NaN
 ```
 
-### 2.3 释放变量
+### 2.3 上传的数据表的的生命周期
 
-上传的对象不会自动释放。使用完后，需要通过置空的方法来释放该变量。
+`table`和`loadTable`函数是必须返回给一个Python本地变量的。即Python端的变量和server端有一个一一对应的关系。假设server端表对象为t0, 释放server端对象有三种方法:取消server端定义(undef), 将server端对象置空，
+取消本地变量对server端对象的引用。
 
-若上传的变量名为a，使用如下脚本释放变量：
 ```
-s.run("a=NULL")
+
+t0=s.table(data=createDemoDict(), tableAliasName="t1")
+
+s.undef("t0", "VAR")
+
+或者
+
+s.run("t0=NULL")
+
+或者
+
+t0=None
+
+
 ```
+
+
+当Python端通过session.table函数将数据上传到server之后, DolphinDB会为Python端的变量建立一个变量对server端table变量的引用。当python端对server端table的变量引用消失后，server端的table会自动释放。
+
+下面代码显示将一个表上传到server，然后通过toDF()加载来拿到数据。
+
+```
+t1=s.table(data=createDemoDict(), tableAliasName="t1")
+
+print(t1.toDF())
+
+#output
+
+id       date ticker  price
+0   1 2019-02-04   AAPL   22.0
+1   2 2019-02-05   AMZN    3.5
+2   2 2019-02-09   AMZN   21.0
+3   3 2019-02-13      A   26.0
+
+
+```
+
+
+
+如果重复下面这个语句，就会发生找到不到t1的异常。原因是Python端对Server端表t1的原有引用已经取消，在重新给Python端t1分配DolphinDB的表对象前, 
+DolphinDB要对session中的对应的表t1进行释放(通过函数undef取消它在session中的定义)，所以会出现无法找到t1的异常。
+
+```
+t1=s.table(data=createDemoDict(), tableAliasName="t1")
+print(t1.toDF())
+
+#output
+
+<Server Exception> in run: Can't find the object with name t1
+
+```
+
+那么如何避免这种情况呢?其实将这个table对象赋值给另一个Python本地变量就不会出现找不到t1的情况。但这里的代价是server端保存了两份同样的table对象，因为python端有两个引用：t1和t2。
+
+```
+t2=s.table(data=createDemoDict(), tableAliasName="t1")
+print(t2.toDF())
+
+#output
+
+id       date ticker  price
+0   1 2019-02-04   AAPL   22.0
+1   2 2019-02-05   AMZN    3.5
+2   2 2019-02-09   AMZN   21.0
+3   3 2019-02-13      A   26.0
+
+```
+
+
+
+如果需要反复通过同一个本地变量指向相同的或者不同的上传表，更合理的方法是不指定表名。此时会为用户随机产生一个临时表名。
+这个表名可以通过t1.tableName函数来获取。这里可能会产生一个疑惑，那么server端是不是会产生很多表对象，造成内存溢出。由于python端使用了同一个变量名，
+所以在重新上传数据的时候，系统会将上一个表对象释放掉(TMP_TBL_876e0ce5),而用一个新的table对象TMP_TBL_4c5647af来对应Python端的t1。所以Server端始终只有一个对应的表对象。
+
+
+```
+t1=s.table(data=createDemoDicts())
+print(t1.tableName())
+
+#output
+
+TMP_TBL_876e0ce5
+
+
+print(t1.toDF())
+
+#output
+
+
+id       date ticker  price
+0   1 2019-02-04   AAPL   22.0
+1   2 2019-02-05   AMZN    3.5
+2   2 2019-02-09   AMZN   21.0
+3   3 2019-02-13      A   26.0
+
+t1=s.table(data=createDemoDict())
+
+print(t1.tableName())
+
+#output
+'TMP_TBL_4c5647af'
+
+print(t1.toDF())
+
+#output
+
+id       date ticker  price
+0   1 2019-02-04   AAPL   22.0
+1   2 2019-02-05   AMZN    3.5
+2   2 2019-02-09   AMZN   21.0
+3   3 2019-02-13      A   26.0
+
+
+```
+
+同理，通过loadTable来加载一个磁盘分区表到内存的原理也是必须赋值给一个python本地变量，建立起Python本地变量和server端一一对应的关系。 首先运行一下DolphinDB脚本：
+
+```
+db = database("dfs://testdb",RANGE, [1, 5 ,11])
+t1=table(1..10 as id, 1..10 as v)
+db.createPartitionedTable(t1,`t1,`id).append!(t1)
+```
+
+然后运行以下Python 脚本:
+
+```
+pt1=s.loadTable(tableName='t1',dbPath="dfs://testdb")
+
+```
+
+上面脚本即是在server端创建了一个磁盘分区表，然后通过session函数`loadTable`来讲该表导入内存，并将该表对象赴给本地变量pt1。注意到这里t1并不是server端表对象的名字，
+而是磁盘分区表的名字，是用于讲数据库testdb中，讲分区表`t1`加载到内存中的。实际的表对象的名字，需要通过 pt1.tableName()来得到。
+
+```
+print(pt1.tableName())
+'TMP_TBL_4c5647af'
+```
+
+
+如果一个表对象只是一次性使用，尽量不要使用上传机制。直接通过函数调用来完成，表对象作为函数的一个参数。
+函数调用不会缓存数据，函数调用结束，所有数据都释放, 没有副作用，而且只有一次网络传输，降低网络延迟。
+
+
 
 ## 3 导入数据到DolphinDB数据库
 
