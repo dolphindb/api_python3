@@ -67,9 +67,6 @@ Python应用通过会话（Session）在DolphinDB服务器上执行脚本和函�
 |undefAll()|取消所有对象在DolphinDB内存中的定义以及释放内存|
 |close()|关闭当前会话|
 
-
-
-
 以下脚本中，通过import语句导入API以后，在Python中创建一个会话，然后使用指定的域名或IP地址和端口号把该会话连接到DolphinDB服务器。请注意，在执行以下Python脚本前，需要先启动DolphinDB服务器。
 ```python
 import dolphindb as ddb
@@ -89,8 +86,6 @@ s.connect("localhost", 8848)
 s.login(YOUR_USER_NAME,YOUR_PASS_WORD)
 ```
 若会话过期，或者初始化会话时没有指定登录信息（用户名与密码），可使用`login`函数来登录服务器。DolphinDB默认的管理员用户名为'admin'，密码为'123456'，并且默认会在连接时对用户名与密码进行加密传输。
-
-
 
 ### 1.2 运行DolphinDB脚本
 
@@ -134,7 +129,7 @@ s.run("getTypeStr", 1);
 'LONG'
 ```
 
-***注意***： `run`方法可接受的脚本最大长度为65,535字节。
+***注意***：`run`方法可接受的脚本最大长度为65,535字节。
 
 ### 1.3 运行DolphinDB函数
 
@@ -166,7 +161,7 @@ repr(a)
 s.run("x = [1,3,5]")
 ```
 
-而参数y要在调用`add`函数时一并赋值，需要使用“部分应用”方式把参数x固化在`add`函数内。具体请参考[部分应用文档](https://www.dolphindb.com/cn/help/PartialApplication.html)。
+而参数y要在调用`add`函数时一并赋值，需要使用“部分应用”方式把参数x固化在`add`函数内。具体请参考[部分应用文档](https://www.dolphindb.cn/cn/help/index.html?PartialApplication.html)。
 ```python
 import numpy as np
 
@@ -198,9 +193,9 @@ result.dtype
 dtype('float64')
 ```
 
-#### 1.3.2 参数支持的数据类型与形式
+#### 1.3.2 参数支持的数据类型与数据结构
 
-通过`run`调用DolphinDB的内置函数时，客户端上传的参数形式可以是标量(scalar)，列表(list)，字典(dict)，numpy的对象，pandas的DataFrame和Series等等。
+通过`run`调用DolphinDB的内置函数时，客户端上传参数的数据结构可以是标量(scalar)，列表(list)，字典(dict)，numpy的对象，pandas的DataFrame和Series等等。
 
 > 需要注意：
 > 1. NumPy array的维度不能超过2。
@@ -266,8 +261,6 @@ dtype('float64')
     ```
     
 
-    
-    
     由于DolphinDB中的TIME, MINUTE, SECOND, NANOTIME等类型没有日期信息，datetime64类型无法由Python API直接转换为这些类型。可先将datetime64类型数据上传到DolphinDB Server，然后去除日期信息获得。上传数据方法可参见[上传本地对象到DolphinDB服务器](#2-上传本地对象到dolphindb服务器)。
     
     ```python
@@ -339,22 +332,20 @@ dtype('float64')
 ### 1.4 session函数undef和内存释放的关系
 
 函数`undef`或者`undefAll`用于将session中的指定对象或者全部对象释放掉。 `undef`支持的对象类型包括:"VAR"(变量), "SHARED"(共享变量)，"DEF"(函数定义)。默认类型为最常见的变量"VAR"。
-"SHARED"指内存中跨session的共享变量，例如:流表(streamTable)。假设session中有一个DolphinDB的表对象t1, 可以通过session.undef("t1","VAR")将该表释放掉。
+"SHARED"指内存中跨session的共享变量，例如流数据表。假设session中有一个DolphinDB的表对象t1, 可以通过session.undef("t1","VAR")将该表释放掉。
 释放后， 并不一定能够看到内存马上释放。这与DolphinDB的内存管理机制有关。DolphinDB从操作系统申请的内存，释放后不会立即还给操作系统，因为这些释放的内存在DolphinDB中可以立即使用。
-申请内存首先从DolphinDB内部的池中申请内存，不足才会向操作系统去申请。配置文件(dolphindb.cfg)中maxMemSize中的设置的内存上限是需要保证的，譬如说设置了8G，那DolphinDB会充分的去利用这个8G内存。
+申请内存首先从DolphinDB内部的池中申请内存，不足才会向操作系统去申请。配置文件(dolphindb.cfg)中maxMemSize中的设置的内存上限是需要保证的，譬如说设置了8G，那么DolphinDB会充分的去利用这个8G内存。
 所以如果用户需要反复undef内存中的一个变量来达到释放内存以为后面程序腾出更多内存空间，则需要将maxMemSize调整到一个合理的数值，否则当前内存没有释放，
 而后面需要的内存超过了系统的最大内存，DolphinDB的进程就有可能被操作系统杀掉或者出现out of memory的错误。
-
 
 
 ## 2 上传本地对象到DolphinDB服务器
 
 若需要重复调用一个变量，可将本地对象上传到DolphinDB服务器，上传时需要指定变量名，以用于之后重复调用。
 
-### 2.1 使用session的`upload`方法上传
+### 2.1 使用Session的upload方法上传
 
-Python API提供`upload`函数将Python对象上传到DolphinDB服务器。`upload`函数输入一个Python的字典对象，它的key对应的是DolphinDB中的变量名，value对应的是Python对象，
-可为Numbers，Strings，Lists，DataFrame等数据对象。
+Python API提供upload方法将Python对象上传到DolphinDB服务器。upload方法输入一个Python的字典对象，它的key对应的是DolphinDB中的变量名，value对应的是Python对象，可为Numbers，Strings，Lists，DataFrame等数据对象。
 
 - 上传 Python list
 
@@ -405,9 +396,9 @@ print(s.run("t1.value.avg()"))
 5.44
 ```
 
-### 2.2 使用`table`函数上传
+### 2.2 使用table方法上传
 
-在Python中可使用`table`函数创建DolphinDB表对象，并上传到server端。`table`函数的输入可以是字典、DataFrame或DolphinDB中的表名。
+在Python中可使用table方法创建DolphinDB表对象，并上传到server端。table方法的输入可以是字典、DataFrame或DolphinDB中的表名。
 
 * 上传dict
 
@@ -423,7 +414,7 @@ def createDemoDict():
             'price': [22, 3.5, 21, 26]}
 ```
 
-调用`table`函数将该字典上传到DolphinDB server端，并将该表命名为"testDict"，再通过API提供的`loadTable`函数读取和查看表内数据。
+调用table方法将该字典上传到DolphinDB server端，并将该表命名为"testDict"，再通过API提供的`loadTable`函数读取和查看表内数据。
 
 ```python
 import numpy as np
@@ -441,7 +432,6 @@ print(s.loadTable("testDict").toDF())
 2   2 2019-02-09   AMZN   21.0
 3   3 2019-02-13      A   26.0
 ```
-
 
 * 上传pandas DataFrame
 
@@ -473,7 +463,7 @@ def createDemoDataFrame():
     return pd.DataFrame(data)
 ```
 
-调用`Table`函数将该DataFrame上传到DolphinDB server端，命名为"testDataFrame"，再通过API提供的`loadTable`函数读取和查看表内数据。
+调用table方法将该DataFrame上传到DolphinDB server端，命名为"testDataFrame"，再通过API提供的`loadTable`函数读取和查看表内数据。
 
 ```python
 import pandas as pd
@@ -498,7 +488,6 @@ print(s.loadTable("testDataFrame").toDF())
 取消本地变量对server端对象的引用。
 
 ```
-
 t0=s.table(data=createDemoDict(), tableAliasName="t1")
 
 s.undef("t0", "VAR")
@@ -510,8 +499,6 @@ s.run("t0=NULL")
 或者
 
 t0=None
-
-
 ```
 
 
@@ -550,7 +537,7 @@ print(t1.toDF())
 
 ```
 
-那么如何避免这种情况呢?其实将这个table对象赋值给另一个Python本地变量就不会出现找不到t1的情况。但这里的代价是server端保存了两份同样的table对象，因为python端有两个引用：t1和t2。
+那么如何避免这种情况呢？将这个table对象赋值给另一个Python本地变量就不会出现找不到t1的情况。但这里的代价是server端保存了两份同样的table对象，因为Python端有两个引用：t1和t2。
 
 ```
 t2=s.table(data=createDemoDict(), tableAliasName="t1")
@@ -568,9 +555,8 @@ id       date ticker  price
 
 
 
-如果需要反复通过同一个本地变量指向相同的或者不同的上传表，更合理的方法是不指定表名。此时会为用户随机产生一个临时表名。
-这个表名可以通过t1.tableName函数来获取。这里可能会产生一个疑惑，那么server端是不是会产生很多表对象，造成内存溢出。由于python端使用了同一个变量名，
-所以在重新上传数据的时候，系统会将上一个表对象释放掉(TMP_TBL_876e0ce5),而用一个新的table对象TMP_TBL_4c5647af来对应Python端的t1。所以Server端始终只有一个对应的表对象。
+如果需要反复通过同一个本地变量指向相同的或者不同的上传表，更合理的方法是不指定表名。此时会为用户随机产生一个临时表名。这个表名可以通过t1.tableName()来获取。这里可能会产生一个疑惑，那么server端是不是会产生很多表对象，造成内存溢出。由于python端使用了同一个变量名，
+所以在重新上传数据的时候，系统会将上一个表对象释放掉(TMP_TBL_876e0ce5)，而用一个新的table对象TMP_TBL_4c5647af来对应Python端的t1，所以Server端始终只有一个对应的表对象。
 
 
 ```
@@ -613,7 +599,7 @@ id       date ticker  price
 
 ```
 
-同理，通过loadTable来加载一个磁盘分区表到内存的原理也是必须赋值给一个python本地变量，建立起Python本地变量和server端一一对应的关系。 首先运行一下DolphinDB脚本：
+同理，通过`loadTable`来加载一个磁盘分区表到内存的原理也是必须赋值给一个Python本地变量，建立起Python本地变量和server端一一对应的关系。 首先运行一下DolphinDB脚本：
 
 ```
 db = database("dfs://testdb",RANGE, [1, 5 ,11])
@@ -637,8 +623,7 @@ print(pt1.tableName())
 ```
 
 
-如果一个表对象只是一次性使用，尽量不要使用上传机制。直接通过函数调用来完成，表对象作为函数的一个参数。
-函数调用不会缓存数据，函数调用结束，所有数据都释放, 没有副作用，而且只有一次网络传输，降低网络延迟。
+如果一个表对象只是一次性使用，尽量不要使用上传机制。直接通过函数调用来完成，表对象作为函数的一个参数。函数调用不会缓存数据，函数调用结束，所有数据都释放，没有副作用，而且只有一次网络传输，降低网络延迟。
 
 
 
@@ -806,7 +791,7 @@ print(trade.rows)
 
 参数tableName表示分区表的名称，dbPath表示数据库的路径。如果没有指定dbPath，`loadTable`函数会加载内存中的表。
 
-对分区表，若参数memoryMode=false，只把元数据加载到内存；若参数memoryMode=true，把表中的所有数据加载到内存的分区表中。
+对分区表，若参数memoryMode=false，只把元数据加载到内存；若参数memoryMode=true，把表中的所有数据加载到内存分区表中。
 
 ```python
 trade = s.loadTable(tableName="trade",dbPath="dfs://valuedb")
@@ -841,7 +826,7 @@ print(trade.toDF())
 
 ### 4.2 使用`loadTableBySQL`函数
 
-`loadTableBySQL`函数把磁盘上的分区表中满足SQL语句过滤条件的数据加载到内存的分区表中。
+`loadTableBySQL`函数把磁盘上的分区表中满足SQL语句过滤条件的数据加载到内存分区表中。
 
 ```python
 import os
@@ -1338,7 +1323,7 @@ print(t1.rows)
 13146
 ```
 
-关于追加表的具体介绍请参考[追加数据到DolphinDB数据表](#5-追加数据到DolphinDB数据表)。
+关于追加表的具体介绍请参考[追加数据到DolphinDB数据表](#5-追加数据到dolphindb数据表)。
 
 ### 6.3.3 更新表
 
@@ -1889,7 +1874,7 @@ print(result["ANOVA"])
 
 ## 8 Python Streaming API
 
-Python API支持流数据订阅的功能，下面简单介绍一下流数据订阅的相关方法与使用示例。
+Python API支持流数据订阅的功能，以下介绍流数据订阅的相关方法与使用示例。
 
 ### 8.1 指定订阅端口号
 
@@ -1910,7 +1895,7 @@ s = ddb.session()
 s.enableStreaming(8000)
 ```
 
-### 8.2 订阅和反订阅
+### 8.2 订阅与反订阅
 
 #### 8.2.1 使用订阅函数
 使用`subscribe`函数来订阅DolphinDB中的流数据表，语法如下：
@@ -1932,7 +1917,7 @@ s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=Fals
 
 请注意，发布节点需要配置maxPubConnections参数，具体请参照[DolphinDB流数据教程](https://github.com/dolphindb/Tutorials_CN/blob/master/streaming_tutorial.md)。
 
-在DolphinDB中创建共享的流数据表，指定进行过滤的列，并插入一些随机数据：
+在DolphinDB中创建共享的流数据表，指定进行过滤的列，并插入随机数据：
 ```
 share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades
 setStreamTableFilterColumn(trades, `sym)
@@ -1996,7 +1981,7 @@ DolphinDB database 中计算实时K线的流程如下图所示：
 
 实时数据供应商一般会提供基于Python、Java或其他常用语言的API的数据订阅服务。本例中使用Python来模拟接收市场数据，通过DolphinDB Python API写入流数据表中。DolphinDB的流数据时序聚合引擎(TimeSeriesAggregator)可以对实时数据按照指定的频率与移动窗口计算K线。
 
-本例使用的模拟实时数据源为[文本文件trades.csv](data/trades.csv)。该文件包含以下4列（一同给出一行样本数据）：
+本例使用的模拟实时数据源为[文本文件trades.csv](data/k_line/trades.csv)。该文件包含以下4列（一同给出一行样本数据）：
 
 Symbol| Datetime | Price| Volume
 ---|---|---|---
@@ -2016,7 +2001,6 @@ datetime| symbol | open | close | high | low | volume |
 #### 8.3.1 使用 Python 接收实时数据，并写入DolphinDB流数据表
 
 * DolphinDB 中建立流数据表
-
 ```
 share streamTable(100:0, `Symbol`Datetime`Price`Volume,[SYMBOL,DATETIME,DOUBLE,INT]) as Trade
 ```
@@ -2044,7 +2028,6 @@ s.run("data = select Symbol, datetime(Datetime) as Datetime, Price, Volume from 
 csv_df=csv_df['Symbol', 'Datetime', 'Price', 'Volume']
 s.run("tableInsert{Trade}", csv_df)
 ```
-
 
 #### 8.3.2 实时计算K线
 
@@ -2109,7 +2092,7 @@ Event().wait()
 
 ### 9.1 动量交易策略
 
-下面的例子是使用动量交易策略进行回测。最常用的动量因子是过去一年扣除最近一个月的收益率。本例中，每天调整1/5的投资组合，并持有新的投资组合5天。为了简化起见，不考虑交易成本。
+下面的例子使用动量交易策略进行回测。最常用的动量因子是过去一年扣除最近一个月的收益率。本例中，每天调整1/5的投资组合，并持有新的投资组合5天。为了简化起见，不考虑交易成本。
 
 **Create server session**
 
@@ -2193,7 +2176,7 @@ portPnl = stockPnL.select("pnl").groupby("date").sum().sort(bys=["date"]).execut
 print(portPnl.toDF())
 ```
 
-### 9.2 时间序列操作
+### 9.2 时间序列计算
 
 下面的例子计算"101 Formulaic Alphas" by Kakushadze (2015)中的98号因子。
 
