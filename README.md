@@ -1297,7 +1297,7 @@ print(trade.select("distinct TICKER").toDF())
 
 #### 6.3.1 加载数据库中的表
 
-请参考[第6节](#6-从dolphindb数据库中加载数据)。
+请参考[从dolphindb数据库中加载数据](#4-从dolphindb数据库中加载数据)。
 
 #### 6.3.2 数据表添加数据
 
@@ -1338,7 +1338,7 @@ print(t1.rows)
 13146
 ```
 
-关于追加表的具体介绍请参考[第7节](#7-追加数据到dolphindb数据表)。
+关于追加表的具体介绍请参考[追加数据到DolphinDB数据表](#5-追加数据到DolphinDB数据表)。
 
 ### 6.3.3 更新表
 
