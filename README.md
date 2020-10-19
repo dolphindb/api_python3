@@ -653,7 +653,7 @@ re=s.loadTable(tableName='pt', dbPath="dfs://db_value_date").toDF()
 
 ```
 months=np.array(pd.date_range(start='2012-01', end='2012-10', freq="M"), dtype="datetime64[M]")
-s.database('db', partitionType=keys.VALUE, partitions=months,dbPath="dfs://db_value_month")
+db = s.database('db', partitionType=keys.VALUE, partitions=months,dbPath="dfs://db_value_month")
 df = pd.DataFrame({'date': np.array(['2012-01-01', '2012-02-01', '2012-05-01', '2012-06-01'], dtype="datetime64"), 'val':[1,2,3,4]})
 t = s.table(data=df)
 db.createPartitionedTable(table=t, tableName='pt', partitionColumns='date').append(t)
