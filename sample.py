@@ -31,7 +31,7 @@ loadScript = 'tb = loadTable("{a}","{b}")'.format(a=dbPath,b=tableName)
 s.run(loadScript)
 script = 'tableInsert{tb}'
 print(script)
-dataTable = pd.DataFrame({'date':[np.datetime64('2019-08-01', dtype='datetime64[D]'),np.datetime64('2019-08-02', dtype='datetime64[D]')],'sym':['MSFT','GS'],'price':[90,89]})
+dataTable = pd.DataFrame({'date':np.array(['2019-08-01', '2019-08-02'], dtype="datetime64[D]"),'sym':['MSFT','GS'],'price':[90,89]})
 s.run(script, dataTable)
 
 script='select * from loadTable("{a}","{b}")'.format(a=dbPath,b=tableName)
