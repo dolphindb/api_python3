@@ -608,12 +608,15 @@ import dolphindb.settings as keys
 按date分区
 
 ```
+dbPath="dfs://db_value_date"
+if s.existsDatabase(dbPath):
+    s.dropDatabase(dbPath) 
 dates=np.array(pd.date_range(start='20120101', end='20120110'), dtype="datetime64[D]")
-db = s.database(dbName='mydb', partitionType=keys.VALUE, partitions=dates,dbPath="dfs://db_value_date")
+db = s.database(dbName='mydb', partitionType=keys.VALUE, partitions=dates,dbPath=dbPath)
 df = pd.DataFrame({'datetime':np.array(['2012-01-01T00:00:00', '2012-01-02T00:00:00'], dtype='datetime64'), 'sym':['AA', 'BB'], 'val':[1,2]})
 t = s.table(data=df)
 db.createPartitionedTable(table=t, tableName='pt', partitionColumns='datetime').append(t)
-re=s.loadTable(tableName='pt', dbPath="dfs://db_value_date").toDF()
+re=s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
 按month分区
@@ -627,7 +630,7 @@ db = s.database(dbName='mydb', partitionType=keys.VALUE, partitions=months,dbPat
 df = pd.DataFrame({'date': np.array(['2012-01-01', '2012-02-01', '2012-05-01', '2012-06-01'], dtype="datetime64"), 'val':[1,2,3,4]})
 t = s.table(data=df)
 db.createPartitionedTable(table=t, tableName='pt', partitionColumns='date').append(t)
-re=s.loadTable(tableName='pt', dbPath="dfs://db_value_month").toDF()
+re=s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
 #### 3.1.2 创建基于RANGE的DolphinDB数据库以及分区表
@@ -642,7 +645,7 @@ db = s.database(dbName='mydb', partitionType=keys.RANGE, partitions=[1, 11, 21],
 df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.repeat(1, 20)})
 t = s.table(data=df, tableAliasName='t')
 db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id').append(t)
-re = s.loadTable(tableName='pt', dbPath="dfs://db_range_int").toDF()
+re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
 
@@ -658,7 +661,7 @@ db = s.database(dbName='mydb', partitionType=keys.LIST, partitions=[['IBM', 'ORC
 df = pd.DataFrame({'sym':['IBM', 'ORCL', 'MSFT', 'GOOG', 'FB'], 'val':[1,2,3,4,5]})
 t = s.table(data=df)
 db.createPartitionedTable(table=t, tableName='pt', partitionColumns='sym').append(t)
-re = s.loadTable(tableName='pt', dbPath="dfs://db_list_sym").toDF()
+re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```  
 
 #### 3.1.4 创建基于HASH的DolphinDB数据库以及分区表
@@ -674,7 +677,7 @@ df = pd.DataFrame({'id':[1,2,3,4,5], 'val':[10, 20, 30, 40, 50]})
 t = s.table(data=df)
 pt = db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id')
 pt.append(t)
-re = s.loadTable(tableName='pt', dbPath="dfs://db_hash_int").toDF()
+re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
 #### 3.1.5 创建基于COMPO的DolphinDB数据库以及分区表
@@ -692,7 +695,7 @@ db = s.database(dbName='mydb', partitionType=keys.COMPO, partitions=[db1, db2], 
 df = pd.DataFrame({'date':np.array(['2012-01-01', '2012-01-01', '2012-01-06', '2012-01-06'], dtype='datetime64'), 'val': [1, 6, 1, 6]})
 t = s.table(data=df)
 db.createPartitionedTable(table=t, tableName='pt', partitionColumns=['date', 'val']).append(t)
-re = s.loadTable(tableName='pt', dbPath="dfs://db_compo_test").toDF()
+re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
 ### 3.2 使用run方法来创建
@@ -714,7 +717,7 @@ db.createPartitionedTable(t,`pt,`sym).append!(t)
 
 """
 t1=s.run(dstr)
-t1=s.loadTable(tableName="pt",dbPath="dfs://valuedb")
+t1=s.loadTable(tableName="pt",dbPath=dbPath)
 t1.toDF()
 
 # output
