@@ -91,6 +91,25 @@ s.login("admin","123456")
 ```
 若会话过期，或者初始化会话时没有指定登录信息（用户名与密码），可使用`login`函数来登录服务器。DolphinDB默认的管理员用户名为'admin'，密码为'123456'，并且默认会在连接时对用户名与密码进行加密传输。
 
+
+#### SSL(加密）模式
+
+Session初始化的时候,从server 1.10.17,1.20.6之后开始支持加密通讯 参数enableSSL，默认值为False. 如果需要启动SSL通讯，可以通过以下脚本，同时server端需要添加enableHTTPS=true配置项。
+
+```
+s=ddb.Session(enableSSL=True)
+```
+
+#### ASYN(异步)模式
+
+Session初始化的时候,从server 1.10.17,1.20.6之后开始支持加密通讯 参数enableASYN，默认值为False.如果需要启动异步通讯，可以通过以下脚本。异步通讯的情况下，与server端的通讯只能通过
+`session.run`方法，并且无返回值，因为异步通讯情况下之前的操作并不一定能确保执行完毕。这种模式非常适用于异步写入数据，节省了API端检测返回值的时间。 
+
+```
+s=ddb.Session(enableASYN=True)
+```
+
+
 ### 1.2 运行DolphinDB脚本
 
 凡是可在DolphinDB上运行的脚本都可以通过`run(script)`方法来运行。如果脚本在DolphinDB中返回对象，会转换成Python中对象。脚本运行失败的话，会有相应的错误提示。
