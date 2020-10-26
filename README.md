@@ -97,7 +97,7 @@ s.login("admin","123456")
 Session初始化的时候,从server 1.10.17,1.20.6之后开始支持加密通讯 参数enableSSL，默认值为False. 如果需要启动SSL通讯，可以通过以下脚本，同时server端需要添加enableHTTPS=true配置项。
 
 ```
-s=ddb.Session(enableSSL=True)
+s=ddb.session(enableSSL=True)
 ```
 
 #### ASYN(异步)模式
@@ -106,7 +106,7 @@ Session初始化的时候,从server 1.10.17,1.20.6之后开始支持加密通讯
 `session.run`方法，并且无返回值，因为异步通讯情况下之前的操作并不一定能确保执行完毕。这种模式非常适用于异步写入数据，节省了API端检测返回值的时间。 
 
 ```
-s=ddb.Session(enableASYN=True)
+s=ddb.session(enableASYN=True)
 ```
 
 
