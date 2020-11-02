@@ -117,7 +117,7 @@ s=ddb.session(enableASYN=True)
 a=s.run("`IBM`GOOG`YHOO")
 repr(a)
 # output
-"array(['IBM', 'GOOG', 'YHOO'], dtype='<U4')"
+"array(['IBM', 'GOOG', 'YHOO'], dtype=object)"
 ```
 
 使用`run`方法可生成自定义函数：
@@ -223,7 +223,7 @@ dtype('float64')
   s.run("add",[1,2,3,4],[1,2,1,1])
   # output
   array([2, 4, 4, 5])
-  ```
+```
 
 - 将NumPy对象作为参数
 
@@ -238,7 +238,7 @@ dtype('float64')
     ```
 
   - np.datetime64作为参数
-   
+  
     Python API将datetime64格式的数据转换成DolphinDB中对应的时间数据类型。对应关系如下表。
   
     |DolphinDB Type        | datetime64  |
@@ -286,7 +286,7 @@ dtype('float64')
     
     s.run('a')
     # output
-    numpy.datetime64('1970-01-01T20:01:01.122346100')
+    np.datetime64('1970-01-01T20:01:01.122346100')
     ```
     请注意，在上例最后一步中，将DolphinDB中的NANOTIME类型返回Python时，Python会自动添加1970-01-01作为日期部分。
     
@@ -323,7 +323,7 @@ dtype('float64')
 	  'x': np.int32([5, 4, 3, 2, 1]),
 	  'date': np.array(['2019-02-03','2019-02-04','2019-02-05','2019-02-06','2019-02-07'],
 			   dtype='datetime64[D]')},
-	 index=[1, 2, 3, 4, 5])
+	 index=[0, 1, 2, 3, 4])
 
     s.upload({'a':a})
     s.run("typestr",a)
@@ -333,11 +333,11 @@ dtype('float64')
     s.run('a')
     # output
 	   id  value  x       date
-	1   1    7.8  5 2019-02-03
-	2   2    4.6  4 2019-02-04
-	3   3    5.1  3 2019-02-05
-	4   4    9.6  2 2019-02-06
-	5   3    0.1  1 2019-02-07
+	0   1    7.8  5 2019-02-03
+	1   2    4.6  4 2019-02-04
+	2   3    5.1  3 2019-02-05
+	3   4    9.6  2 2019-02-06
+	4   3    0.1  1 2019-02-07
     ```
     
 ### 1.4 Session函数`undef`与内存释放的关系
@@ -553,7 +553,7 @@ print(t2.toDF())
 
 如果需要反复通过同一个本地变量指向相同的或者不同的上传表，更合理的方法是不指定表名。此时会为用户随机产生一个临时表名。这个表名可以通过t1.tableName()来获取。这里可能会产生一个疑惑，那么server端是不是会产生很多表对象，造成内存溢出。由于python端使用了同一个变量名，所以在重新上传数据的时候，系统会将上一个表对象释放掉(TMP_TBL_876e0ce5)，而用一个新的table对象TMP_TBL_4c5647af来对应Python端的t1，所以Server端始终只有一个对应的表对象。
 ```
-t1=s.table(data=createDemoDicts())
+t1=s.table(data=createDemoDict())
 print(t1.tableName())
 
 #output
@@ -681,7 +681,7 @@ df = pd.DataFrame({'sym':['IBM', 'ORCL', 'MSFT', 'GOOG', 'FB'], 'val':[1,2,3,4,5
 t = s.table(data=df)
 db.createPartitionedTable(table=t, tableName='pt', partitionColumns='sym').append(t)
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
-```  
+```
 
 #### 3.1.4 创建基于HASH的DolphinDB数据库以及分区表
 
@@ -725,6 +725,7 @@ re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 
 
 ```
+dbPath="dfs://valuedb"
 dstr = """
 dbPath="dfs://valuedb"
 if (existsDatabase(dbPath)){
@@ -769,7 +770,7 @@ t=table(take(['AMZN','NFLX', 'NVDA'], 10) as sym, 1..10 as id);
 db.createPartitionedTable(t,`pt,`sym).append!(t)
 ```
 
-     
+
 ## 4 导入数据到DolphinDB数据库
 
 DolphinDB数据库根据存储方式可以分为3种类型：内存数据库、本地文件系统的数据库和分布式文件系统（DFS）中的数据库。DFS数据库能够自动管理数据存储和备份，并且性能最优。因此，推荐用户使用分布式文件系统，部署方式请参考[多服务器集群部署](https://github.com/dolphindb/Tutorials_CN/blob/master/multi_machine_cluster_deploy.md)。
@@ -1522,18 +1523,20 @@ t1=trade.where("ticker=`AMZN").where("VOL=999999")
 print(t1.toDF())
 
 # output
-     TICKER        date     VOL        PRC        BID        ASK
-0      AMZN  1997.05.15  999999   23.50000   23.50000   23.62500
-1      AMZN  1997.05.16  999999   20.75000   20.50000   21.00000
-2      AMZN  1997.05.19  999999   20.50000   20.50000   20.62500
-3      AMZN  1997.05.20  999999   19.62500   19.62500   19.75000
-4      AMZN  1997.05.21  999999   17.12500   17.12500   17.25000
-...
-4948   AMZN  1997.05.27  999999   19.00000   19.00000   19.12500
-4949   AMZN  1997.05.28  999999   18.37500   18.37500   18.62500
-4950   AMZN  1997.05.29  999999   18.06250   18.00000   18.12500
+           TICKER       date     VOL             PRC           BID              ASK
+0      AMZN 1997-05-15  999999   23.50000   23.50000   23.62500
+1      AMZN 1997-05-16  999999   20.75000   20.50000   21.00000
+2      AMZN 1997-05-19  999999   20.50000   20.50000   20.62500
+3      AMZN 1997-05-20  999999   19.62500   19.62500   19.75000
+4      AMZN 1997-05-21  999999   17.12500   17.12500   17.25000
+...     
+4936   AMZN 2016-12-23  999999  760.59003  760.33002  760.59003
+4937   AMZN 2016-12-27  999999  771.40002  771.40002  771.76001
+4938   AMZN 2016-12-28  999999  772.13000  771.92999  772.15997
+4939   AMZN 2016-12-29  999999  765.15002  764.66998  765.15997
+4940   AMZN 2016-12-30  999999  749.87000  750.02002  750.40002
 
-[4951 rows x 6 columns]
+[4941 rows x 6 columns]
 ```
 
 #### 7.3.4 删除表中的记录
@@ -1596,12 +1599,12 @@ trade=s.loadText(WORK_DIR+"/example.csv")
 print(trade.select(['ticker','date','bid','ask','prc','vol']).toDF())
 
 # output
-  TICKER        date      VOL     PRC     BID     ASK
-0   AMZN  1997.05.15  6029815  23.500  23.500  23.625
-1   AMZN  1997.05.16  1232226  20.750  20.500  21.000
-2   AMZN  1997.05.19   512070  20.500  20.500  20.625
-3   AMZN  1997.05.20   456357  19.625  19.625  19.750
-4   AMZN  1997.05.21  1577414  17.125  17.125  17.250
+             ticker       date                 bid             ask        prc                vol
+0       AMZN 1997-05-15   23.50000   23.625   23.50000  6029815
+1       AMZN 1997-05-16   20.50000   21.000   20.75000  1232226
+2       AMZN 1997-05-19   20.50000   20.625   20.50000   512070
+3       AMZN 1997-05-20   19.62500   19.750   19.62500   456357
+4       AMZN 1997-05-21   17.12500   17.250   17.12500  1577414
 ...
 
 ```
@@ -1684,16 +1687,16 @@ trade=s.loadText(WORK_DIR+"/example.csv")
 print(trade.select("ticker, date, vol").where("bid!=NULL, ask!=NULL, vol>50000000").toDF())
 
 # output
-   ticker        date        vol
-0    AMZN  1999.09.29   80380734
-1    AMZN  2000.06.23   52221978
-2    AMZN  2001.11.26   51543686
-3    AMZN  2002.01.22   57235489
-4    AMZN  2005.02.03   60580703
+            ticker       date        vol
+0    AMZN 1999-09-29   80380734
+1    AMZN 2000-06-23   52221978
+2    AMZN 2001-11-26   51543686
+3    AMZN 2002-01-22   57235489
+4    AMZN 2005-02-03   60580703
 ...
-38   NVDA  2016.11.11   54384267
-39   NVDA  2016.12.28   57384116
-40   NVDA  2016.12.29   54384676
+38   NFLX 2016-01-20   53009419
+39   NFLX 2016-04-19   55728765
+40   NFLX 2016-07-19   55685209
 ```
 
 ### 8.4 `groupby`
@@ -1775,16 +1778,18 @@ df= s.loadTable(tableName="trade",dbPath="dfs://valuedb").select("TICKER, month(
 print(df)
 
 # output
-      TICKER     month  cumsum_VOL
-0       AMZN  1997.05M     6029815
-1       AMZN  1997.05M     7262041
-2       AMZN  1997.05M     7774111
-3       AMZN  1997.05M     8230468
-4       AMZN  1997.05M     9807882
-...
-13133   NVDA  2016.12M   367356016
-13134   NVDA  2016.12M   421740692
-13135   NVDA  2016.12M   452063951
+         TICKER     month     cumsum_VOL
+0       AMZN 1997-05-01     6029815
+1       AMZN 1997-05-01     7262041
+2       AMZN 1997-05-01     7774111
+3       AMZN 1997-05-01     8230468
+4       AMZN 1997-05-01     9807882
+...      
+13131   NVDA 2016-12-01   280114768
+13132   NVDA 2016-12-01   309971900
+13133   NVDA 2016-12-01   367356016
+13134   NVDA 2016-12-01   421740692
+13135   NVDA 2016-12-01   452063951
 ```
 
 ```python
@@ -1793,16 +1798,17 @@ print(df)
 
 # output
       TICKER     month    sum_VOL
-0       AMZN  1997.05M   13736587
-1       AMZN  1997.05M   13736587
-2       AMZN  1997.05M   13736587
-3       AMZN  1997.05M   13736587
-4       AMZN  1997.05M   13736587
-5       AMZN  1997.05M   13736587
-...
-13133   NVDA  2016.12M  452063951
-13134   NVDA  2016.12M  452063951
-13135   NVDA  2016.12M  452063951
+0       AMZN 1997-05-01   13736587
+1       AMZN 1997-05-01   13736587
+2       AMZN 1997-05-01   13736587
+3       AMZN 1997-05-01   13736587
+4       AMZN 1997-05-01   13736587
+...      
+13131   NVDA 2016-12-01  452063951
+13132   NVDA 2016-12-01  452063951
+13133   NVDA 2016-12-01  452063951
+13134   NVDA 2016-12-01  452063951
+13135   NVDA 2016-12-01  452063951
 ```
 
 ```python
@@ -1810,18 +1816,18 @@ df= s.loadTable(dbPath="dfs://valuedb", tableName="trade").contextby('ticker').h
 print(df)
 
 # output
-     TICKER        date       VOL       PRC       BID       ASK
-0      NVDA  1999.01.22   5702636   19.6875   19.6250   19.6875
-1      NVDA  1999.01.25   1074571   21.7500   21.7500   21.8750
-2      NVDA  1999.01.26    719199   20.0625   20.0625   20.1250
-3      NVDA  1999.01.27    510637   20.0000   19.8750   20.0000
-4      NVDA  1999.01.28    476094   19.9375   19.8750   20.0000
-5      NVDA  1999.01.29    509718   19.0000   19.0000   19.3125
-...
-4512   NVDA  2016.12.27  29857132  117.3200  117.3100  117.3200
-4513   NVDA  2016.12.28  57384116  109.2500  109.2500  109.2900
-4514   NVDA  2016.12.29  54384676  111.4300  111.2600  111.4200
-4515   NVDA  2016.12.30  30323259  106.7400  106.7300  106.7500
+          TICKER        date         VOL          PRC          BID             ASK
+0      NVDA 1999-01-22   5702636   19.6875   19.6250   19.6875
+1      NVDA 1999-01-25   1074571   21.7500   21.7500   21.8750
+2      NVDA 1999-01-26    719199   20.0625   20.0625   20.1250
+3      NVDA 1999-01-27    510637   20.0000   19.8750   20.0000
+4      NVDA 1999-01-28    476094   19.9375   19.8750   20.0000
+...     
+4511   NVDA 2016-12-23  16193331  109.7800  109.7700  109.7900
+4512   NVDA 2016-12-27  29857132  117.3200  117.3100  117.3200
+4513   NVDA 2016-12-28  57384116  109.2500  109.2500  109.2900
+4514   NVDA 2016-12-29  54384676  111.4300  111.2600  111.4200
+4515   NVDA 2016-12-30  30323259  106.7400  106.7300  106.7500
 ```
 
 ### 8.6 表连接
@@ -2132,8 +2138,8 @@ def handler(lst):
 s.subscribe("192.168.1.103",8921,handler,"trades","action",0,False,np.array(['000905']))
 
 # output
-[numpy.datetime64('2020-09-24T12:05:53.029'), '000905', 48.3, 1]
-[numpy.datetime64('2020-09-24T12:05:53.029'), '000905', 75.4, 6]
+[numpy.datetime64('2020-10-29T10:23:31.411'), '000905', 94.3, 1]
+[numpy.datetime64('2020-10-29T10:23:31.411'), '000905', 35.0, 6]
 ```
 
 #### 9.2.2 获取订阅主题
@@ -2387,7 +2393,7 @@ def alpha98(t):
 US = s.loadTable(tableName="US", dbPath="dfs://US").select("PERMNO, date, PRC as vwap, PRC+rand(1.0, PRC.size()) as open, mavg(VOL, 5) as adv5, mavg(VOL,15) as adv15").where("2007.01.01<=date<=2016.12.31").contextby("PERMNO").executeAs("US")
 result=alpha98(US.tableName()).where('date>2007.03.12').executeAs("result")
 print(result.top(10).toDF())
-``` 
+```
 
 
 
