@@ -1915,8 +1915,8 @@ WORK_DIR = "C:/DolphinDB/Data"
 if s.existsDatabase(WORK_DIR+"/tickDB"):
     s.dropDatabase(WORK_DIR+"/tickDB")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AAPL","FB"], dbPath=WORK_DIR+"/tickDB")
-trades = s.loadTextEx("db",  tableName='trades',partitionColumns=["Symbol"], remoteFilePath=WORK_DIR + "/trades.csv")
-quotes = s.loadTextEx("db",  tableName='quotes',partitionColumns=["Symbol"], remoteFilePath=WORK_DIR + "/quotes.csv")
+trades = s.loadTextEx("mydb",  tableName='trades',partitionColumns=["Symbol"], remoteFilePath=WORK_DIR + "/trades.csv")
+quotes = s.loadTextEx("mydb",  tableName='quotes',partitionColumns=["Symbol"], remoteFilePath=WORK_DIR + "/quotes.csv")
 
 print(trades.top(5).toDF())
 
