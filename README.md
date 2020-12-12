@@ -16,7 +16,7 @@ $ pip install dolphindb
 - [2 上传本地对象到DolphinDB服务器](#2-上传本地对象到dolphindb服务器)
     - [2.1 使用session的upload方法上传](#21-使用session的upload方法上传)
     - [2.2 使用table函数上传](#22-使用table函数上传) 
-    - [2.3 上传的数据表的的生命周期](#23-上传的数据表的的生命周期) 
+    - [2.3 上传的数据表的生命周期](#23-上传的数据表的生命周期) 
 - [3 创建DolphinDB数据库以及分区表](#3-创建dolphindb数据库以及分区表)
     - [3.1 使用DolphinDB Python API的原生方法](#31-使用dolphindb-python-api的原生方法)
     - [3.2 使用run方法来创建](#32-使用run方法来创建) 
@@ -58,7 +58,7 @@ $ pip install dolphindb
 
 ### 1.1 建立DolphinDB连接
 
-Python应用通过会话（Session）在DolphinDB服务器上执行脚本和函数以及在两者之间双向传递数据。最为常用的Session类的函数如下：
+Python应用通过会话（Session）在DolphinDB服务器上执行脚本和函数以及在两者之间双向传递数据。常用的Session类的函数如下：
 
 | 方法名        | 详情          |
 |:------------- |:-------------|
@@ -80,7 +80,7 @@ s.connect("localhost", 8848)
 True
 ```
 
-如果需要使用用户名和密码连接, 可使用以下脚本。其中admin为用户名， "123456"为密码。
+如果需要使用用户名和密码连接，可使用以下脚本。其中"admin"为DolphinDB默认的管理员用户名，"123456"为密码。
 ```python
 s.connect("localhost", 8848, "admin", "123456")
 ```
@@ -89,33 +89,35 @@ s.connect("localhost", 8848, "admin", "123456")
 s.connect("localhost", 8848)
 s.login("admin","123456")
 ```
-若会话过期，或者初始化会话时没有指定登录信息（用户名与密码），可使用`login`函数来登录服务器。DolphinDB默认的管理员用户名为'admin'，密码为'123456'，并且默认会在连接时对用户名与密码进行加密传输。
+若会话过期，或者初始化会话时没有指定登录信息（用户名与密码），可使用`login`函数来登录服务器。默认在连接时对用户名与密码进行加密传输。
 
 
-#### SSL(加密)模式
+#### SSL（加密）模式
 
-Session初始化的时候,从server 1.10.17,1.20.6之后开始支持加密通讯 参数enableSSL，默认值为False. 如果需要启动SSL通讯，可以通过以下脚本，同时server端需要添加enableHTTPS=true配置项。
+从server 1.10.17与1.20.6 版本之后开始支持加密通讯参数enableSSL，默认值为False。
 
+可使用以下脚本启动SSL通讯。server端同时需要添加enableHTTPS=true配置项。
 ```
 s=ddb.session(enableSSL=True)
 ```
 
-#### ASYN(异步)模式
+#### ASYN（异步）模式
 
-Session初始化的时候,从server 1.10.17,1.20.6之后开始支持加密通讯 参数enableASYN，默认值为False.如果需要启动异步通讯，可以通过以下脚本。异步通讯的情况下，与server端的通讯只能通过
-`session.run`方法，并且无返回值，因为异步通讯情况下之前的操作并不一定能确保执行完毕。这种模式非常适用于异步写入数据，节省了API端检测返回值的时间。 
+从server 1.10.17, 1.20.6 版本之后开始支持异步通讯参数enableASYN，默认值为False。
+
+可使用以下脚本启动异步通讯。异步通讯的情况下，与server端的通讯只能通过`session.run`方法，并且无返回值，因为异步通讯情况下之前的操作并不一定能确保执行完毕。这种模式非常适用于异步写入数据，节省了API端检测返回值的时间。 
 
 ```
 s=ddb.session(enableASYN=True)
 ```
 
-
 ### 1.2 运行DolphinDB脚本
 
-凡是可在DolphinDB上运行的脚本都可以通过`run(script)`方法来运行。如果脚本在DolphinDB中返回对象，会转换成Python中对象。脚本运行失败的话，会有相应的错误提示。
+DolphinDB脚本都可以通过`run(script)`方法来运行。如果脚本在DolphinDB中返回对象，会转换成Python中对象。脚本运行失败的话，会有相应的错误提示。
 ```python
 a=s.run("`IBM`GOOG`YHOO")
 repr(a)
+
 # output
 "array(['IBM', 'GOOG', 'YHOO'], dtype=object)"
 ```
@@ -134,6 +136,7 @@ def getTypeStr(input){
 """
 s.run(script)
 s.run("getTypeStr", 1)
+
 # output
 'LONG'
 ```
@@ -159,8 +162,9 @@ s.run("x = [1,3,5];y = [2,4,6]")
 ```python
 a=s.run("add(x,y)")
 repr(a)
+
 # output
-'array([3, 7, 11])'
+array([3, 7, 11], dtype=int32)
 ```
 
 - 仅有一个参数在DolphinDB server端被赋值
@@ -168,9 +172,6 @@ repr(a)
 若仅变量x已通过Python程序在服务器端被赋值：
 ```python
 s.run("x = [1,3,5]")
-
-# output
-array([1, 3, 5])
 ```
 
 而参数y要在调用`add`函数时一并赋值，需要使用“部分应用”方式把参数x固化在`add`函数内。具体请参考[部分应用文档](https://www.dolphindb.cn/cn/help/index.html?PartialApplication.html)。
@@ -207,12 +208,12 @@ dtype('float64')
 
 #### 1.3.2 参数支持的数据类型与数据结构
 
-通过`run`调用DolphinDB的内置函数时，客户端上传参数的数据结构可以是标量(scalar)，列表(list)，字典(dict)，numpy的对象，pandas的DataFrame和Series等等。
+通过`run`调用DolphinDB的内置函数时，客户端上传参数的数据结构可以是标量(scalar)，列表(list)，字典(dict)，NumPy的对象，pandas的DataFrame和Series等等。
 
 > 需要注意：
 > 1. NumPy array的维度不能超过2。
 > 2. pandas的DataFrame和Series若有index，在上传到DolphinDB以后会丢失。如果需要保留index列，则需要使用pandas的DataFrame函数reset_index。
-> 3. 如果DolphinDB函数的参数是时间或日期类型，Python客户端上传的时候参数应该先转换为numpy.datetime64类型。
+> 3. 如果DolphinDB函数的参数是时间或日期类型，Python客户端上传时，参数应该先转换为numpy.datetime64类型。
 
 下面具体介绍不同的Python对象作为参数参与运算的例子。
 
@@ -227,7 +228,7 @@ dtype('float64')
 
 - 将NumPy对象作为参数
 
-  除了NumPy的array对象之外，NumPy的数值型标量也可以作为参数参与运算，例如，将np.int、np.datetime64等对象上传到DolphinDB作为函数参数。
+  除了NumPy的array对象之外，NumPy的数值型标量也可以作为参数参与运算，例如，将np.int或np.datetime64等对象上传到DolphinDB作为函数参数。
 
   - np.int作为参数
     ```python
@@ -272,7 +273,7 @@ dtype('float64')
     'NANOTIMESTAMP'
     ```
     
-    由于DolphinDB中的TIME, MINUTE, SECOND, NANOTIME等类型没有日期信息，datetime64类型无法由Python API直接转换为这些类型。若需要根据Python中数据在DolphinDB中产生这些数据类型，可先将datetime64类型数据上传到DolphinDB Server，然后去除日期信息。上传数据方法可参见[上传本地对象到DolphinDB服务器](#2-上传本地对象到dolphindb服务器)。
+    由于DolphinDB中的TIME, MINUTE, SECOND, NANOTIME等类型没有日期信息，datetime64类型无法由Python API直接转换为这些类型。若需要根据Python中数据在DolphinDB中产生这些类型数据，可先将datetime64类型数据上传到DolphinDB Server，然后去除日期信息。上传数据方法可参见[上传本地对象到DolphinDB服务器](#2-上传本地对象到dolphindb服务器)。
     
     ```python
     import numpy as np
@@ -342,10 +343,10 @@ dtype('float64')
     
 ### 1.4 Session函数`undef`与内存释放的关系
 
-函数`undef`或者`undefAll`用于将session中的指定对象或者全部对象释放掉。`undef`支持的对象类型包括:"VAR"(变量)、"SHARED"(共享变量)与"DEF"(函数定义)。默认类型为最常见的变量"VAR"。
+函数`undef`或者`undefAll`用于将session中的指定对象或者全部对象释放掉。`undef`支持的对象类型包括："VAR"(变量)、"SHARED"(共享变量)与"DEF"(函数定义)。默认类型为最常见的变量"VAR"。
 "SHARED"指内存中跨session的共享变量，例如流数据表。
 
-假设session中有一个DolphinDB的表对象t1, 可以通过session.undef("t1","VAR")将该表释放掉。释放后，并不一定能够看到内存马上释放。这与DolphinDB的内存管理机制有关。DolphinDB从操作系统申请的内存，释放后不会立即还给操作系统，因为这些释放的内存在DolphinDB中可以立即使用。申请内存首先从DolphinDB内部的池中申请内存，不足才会向操作系统去申请。配置文件(dolphindb.cfg)中参数maxMemSize设置的内存上限是需要保证的。譬如说设置为8G，那么DolphinDB会充分的去利用这个8G内存。所以如果用户需要反复undef内存中的一个变量来达到释放内存以为后面程序腾出更多内存空间，则需要将maxMemSize调整到一个合理的数值，否则当前内存没有释放，而后面需要的内存超过了系统的最大内存，DolphinDB的进程就有可能被操作系统杀掉或者出现out of memory的错误。
+假设session中有一个DolphinDB的表对象t1, 可以通过session.undef("t1","VAR")将该表释放掉。释放后，并不一定能够看到内存马上释放。这与DolphinDB的内存管理机制有关。DolphinDB从操作系统申请的内存，释放后不会立即还给操作系统，因为这些释放的内存在DolphinDB中可以立即使用。申请内存首先从DolphinDB内部的池中申请内存，不足才会向操作系统去申请。配置文件(dolphindb.cfg)中参数maxMemSize设置的内存上限会尽量保证。譬如说设置为8GB，那么DolphinDB会尽可能利用8GB内存。所以如果用户需要反复undef内存中的一个变量以释放内存，为后面程序腾出更多内存空间，则需要将maxMemSize调整到一个合理的数值，否则当前内存没有释放，而后面需要的内存超过了系统的最大内存，DolphinDB的进程就有可能被操作系统杀掉或者出现out of memory的错误。
 
 
 ## 2 上传本地对象到DolphinDB服务器
@@ -372,7 +373,7 @@ print(a_type)
 ANY VECTOR
 ```
 
-注意，Python中像a=[1,2,3.0]这样含有不同数据类型的list，上传到DolphinDB后，会被识别为any vector。这种情况下，建议使用numpy.array代替list，即通过a=numpy.array([1,2,3.0],dtype=numpy.double)指定统一的数据类型，这样上传a以后，a会被识别为double类型的向量。
+注意，Python中像a=[1,2,3.0]这样含有不同数据类型的list，上传到DolphinDB后，会被识别为元组（any vector）。这种情况下，建议使用numpy.array代替list，即通过a=numpy.array([1,2,3.0],dtype=numpy.double)指定统一的数据类型，这样上传a以后，a会被识别为double类型的向量。
 
 - 上传 NumPy array
 
@@ -424,7 +425,6 @@ def createDemoDict():
 ```
 
 调用`table`方法将该字典上传到DolphinDB server端，并将该表命名为"testDict"，再通过API提供的`loadTable`函数读取和查看表内数据。
-
 ```python
 import numpy as np
 
@@ -475,47 +475,41 @@ def createDemoDataFrame():
 调用`table`方法将该DataFrame上传到DolphinDB server端，命名为"testDataFrame"，再通过API提供的`loadTable`函数读取和查看表内数据。
 
 ```python
-import pandas as pd
-
-# save the table to DolphinDB server as table "testDataFrame"
 dt = s.table(data=createDemoDataFrame(), tableAliasName="testDataFrame")
-
-# load table "testDataFrame" on DolphinDB server 
 print(s.loadTable("testDataFrame").toDF())
 
 # output
->>> print(s.loadTable("testDataFrame").toDF())
    cid  cbool  cchar  cshort  cint  ...             cnanotimestamp    cfloat    cdouble csymbol cstring
 0    1   True      1       1     1  ... 2019-01-01 15:00:00.807060  2.100000   0.000000       A     abc
 1    2  False      2       2     2  ... 2019-01-01 15:30:00.807060  2.658956  47.456213       B     def
 2    3   True      3       3     3  ...                        NaT       NaN        NaN
 ```
 
-### 2.3 上传的数据表的的生命周期
+### 2.3 上传的数据表的生命周期
 
-`table`和`loadTable`函数必须返回一个Python本地变量，即Python端的变量和server端的变量是一一对应的。假设server端表对象为t0, 
-```
+`table`和`loadTable`函数返回一个Python本地变量。假设server端表对象为t1，对应的Python本地变量为t0： 
+```python
 t0=s.table(data=createDemoDict(), tableAliasName="t1")
 ```
 释放server端对象有三种方法：
 
-- 取消server端定义(undef)
-```
-s.undef("t0", "VAR")
+- 使用undef方法取消server端定义
+```python
+s.undef("t1", "VAR")
 ```
 - 将server端对象置空
-```
-s.run("t0=NULL")
+```python
+s.run("t1=NULL")
 ```
 - 取消本地变量对server端对象的引用
-```
+```python
 t0=None
 ```
 
-当Python端通过session.table函数将数据上传到server之后，DolphinDB会为Python端的变量建立一个变量对server端table变量的引用。当Python端对server端table变量引用消失后，server端的table会自动释放。
+Python端通过session.table函数将数据上传到server之后，DolphinDB会建立一个Python端变量对server端table变量的引用。当Python端对server端table变量引用消失后，server端的table会自动释放。
 
-以下代码将一个表上传到server，然后通过toDF()加载数据。
-```
+以下代码将一个表上传到server，然后通过toDF()下载数据。
+```python
 t1=s.table(data=createDemoDict(), tableAliasName="t1")
 print(t1.toDF())
 
@@ -527,10 +521,9 @@ print(t1.toDF())
 3   3 2019-02-13      A   26.0
 ```
 
-如果重复下面这个语句，会发生找到不到t1的异常。原因是Python端对Server端表t1的原有引用已经取消，在重新给Python端t1分配DolphinDB的表对象前，
+如果重复下面这个语句，会发生找到不到t1的异常。原因是Python端对server端表t1的原有引用已经取消，在重新给Python端t1分配DolphinDB的表对象前，
 DolphinDB要对session中的对应的表t1进行释放（通过函数`undef`取消它在session中的定义），所以会出现无法找到t1的异常。
-
-```
+```python
 t1=s.table(data=createDemoDict(), tableAliasName="t1")
 print(t1.toDF())
 
@@ -538,8 +531,8 @@ print(t1.toDF())
 <Server Exception> in run: Can't find the object with name t1
 ```
 
-如何避免这种情况呢？可将这个table对象赋值给另一个Python本地变量，但代价是server端保存了两份同样的table对象，因为Python端有两个引用：t1和t2。
-```
+若要避免这种情况，可将这个table对象赋值给另一个Python本地变量，但代价是server端保存了两份同样的table对象，因为Python端有两个引用：t1和t2。
+```python
 t2=s.table(data=createDemoDict(), tableAliasName="t1")
 print(t2.toDF())
 
@@ -551,8 +544,8 @@ print(t2.toDF())
 3   3 2019-02-13      A   26.0
 ```
 
-如果需要反复通过同一个本地变量指向相同的或者不同的上传表，更合理的方法是不指定表名。此时会为用户随机产生一个临时表名。这个表名可以通过t1.tableName()来获取。这里可能会产生一个疑惑，那么server端是不是会产生很多表对象，造成内存溢出。由于python端使用了同一个变量名，所以在重新上传数据的时候，系统会将上一个表对象释放掉(TMP_TBL_876e0ce5)，而用一个新的table对象TMP_TBL_4c5647af来对应Python端的t1，所以Server端始终只有一个对应的表对象。
-```
+如果需要反复通过同一个本地变量指向相同的或者不同的上传表，更合理的方法是不指定表名。此时会为用户随机产生一个临时表名。这个表名可以通过t1.tableName()来获取。那么server端是不是会产生很多表对象，造成内存溢出呢？由于Python端使用了同一个变量名，所以在重新上传数据的时候，系统会将上一个表对象释放掉(TMP_TBL_876e0ce5)，而用一个新的table对象TMP_TBL_4c5647af来对应Python端的t1，所以server端始终只有一个对应的表对象。
+```python
 t1=s.table(data=createDemoDict())
 print(t1.tableName())
 
@@ -584,8 +577,9 @@ print(t1.toDF())
 3   3 2019-02-13      A   26.0
 ```
 
-同理，通过`loadTable`来加载一个磁盘分区表到内存的原理也是必须赋值给一个Python本地变量，建立起Python本地变量和server端一一对应的关系。 首先运行以下DolphinDB脚本：
+同理，通过`loadTable`来加载一个DFS分区表到内存，也会赋值给一个Python本地变量，建立起Python本地变量和server端一一对应的关系。
 
+运行以下DolphinDB脚本：
 ```
 db = database("dfs://testdb",RANGE, [1, 5 ,11])
 t1=table(1..10 as id, 1..10 as v)
@@ -593,40 +587,37 @@ db.createPartitionedTable(t1,`t1,`id).append!(t1)
 ```
 
 然后运行以下Python脚本:
-```
+```python
 pt1=s.loadTable(tableName='t1',dbPath="dfs://testdb")
 ```
 
-上面脚本即是在server端创建了一个磁盘分区表，然后通过session函数`loadTable`来讲该表导入内存，并将该表对象赴给本地变量pt1。注意到这里t1并不是server端表对象的名字，
-而是磁盘分区表的名字，是用于讲数据库testdb中，讲分区表`t1`加载到内存中的。实际的表对象的名字，需要通过 pt1.tableName()来得到。
-```
+以上脚本在server端创建了一个DFS分区表，然后通过session函数`loadTable`来将该表导入内存，并将该表对象赋给本地变量pt1。注意到这里t1并不是server端表对象名，
+而是DFS分区表名，用于将数据库testdb中分区表 t1 加载到内存。server端表对象名需要通过 pt1.tableName()来得到。
+```python
 print(pt1.tableName())
 'TMP_TBL_4c5647af'
 ```
 
-如果一个表对象只是一次性使用，尽量不要使用上传机制。直接通过函数调用来完成，表对象作为函数的一个参数。函数调用不会缓存数据，函数调用结束，所有数据都释放，没有副作用，而且只有一次网络传输，降低网络延迟。
-
+如果一个表对象只是一次性使用，尽量不要使用上传机制。直接通过函数调用来完成，表对象作为函数的一个参数。函数调用不会缓存数据。函数调用结束后，所有数据都释放，而且只有一次网络传输，降低网络延迟。
 
 ## 3 创建DolphinDB数据库以及分区表
 
-创建DolphinDB数据库可以有如下三种方式:
+在Python API中创建DolphinDB数据库可以使用DolphinDB Python API的原生方法或`run`方法。
 
 ### 3.1 使用DolphinDB Python API的原生方法
 
 准备环境
 
-```
+```python
 import numpy as np
 import pandas as pd
 import dolphindb.settings as keys
 ```
 
-#### 3.1.1 创建基于VALUE的DolphinDB数据库以及分区表
+#### 3.1.1 创建基于VALUE分区的数据库及数据表
 
-
-按date分区
-
-```
+按date分区：
+```python
 dbPath="dfs://db_value_date"
 if s.existsDatabase(dbPath):
     s.dropDatabase(dbPath) 
@@ -638,9 +629,8 @@ db.createPartitionedTable(table=t, tableName='pt', partitionColumns='datetime').
 re=s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-按month分区
-
-```
+按month分区：
+```python
 dbPath="dfs://db_value_month"
 if s.existsDatabase(dbPath):
     s.dropDatabase(dbPath) 
@@ -652,11 +642,10 @@ db.createPartitionedTable(table=t, tableName='pt', partitionColumns='date').appe
 re=s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-#### 3.1.2 创建基于RANGE的DolphinDB数据库以及分区表
+#### 3.1.2 创建基于RANGE分区的数据库及数据表
 
-按int类型ID分区
-
-```
+按int类型ID分区：
+```python
 dbPath="dfs://db_range_int"
 if s.existsDatabase(dbPath):
     s.dropDatabase(dbPath) 
@@ -668,11 +657,10 @@ re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
 
-#### 3.1.3 创建基于LIST的DolphinDB数据库以及分区表
+#### 3.1.3 创建基于LIST分区的数据库及数据表
 
-按Symbol类型的股票代码来分区
-
-```
+按Symbol类型的股票代码分区：
+```python
 dbPath="dfs://db_list_sym"
 if s.existsDatabase(dbPath):
     s.dropDatabase(dbPath) 
@@ -683,11 +671,10 @@ db.createPartitionedTable(table=t, tableName='pt', partitionColumns='sym').appen
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-#### 3.1.4 创建基于HASH的DolphinDB数据库以及分区表
+#### 3.1.4 创建基于HASH分区的数据库及数据表
 
-按int类型ID来分区
-
-```
+按int类型ID分区：
+```python
 dbPath="dfs://db_hash_int"
 if s.existsDatabase(dbPath):
     s.dropDatabase(dbPath) 
@@ -699,12 +686,12 @@ pt.append(t)
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-#### 3.1.5 创建基于COMPO的DolphinDB数据库以及分区表
+#### 3.1.5 创建基于COMPO分区的数据库及数据表
 
-以下脚本创建基于COMPO的数据库以及分区表：第一层是基于VALUE的date类型分区，第二层是基于RANGE的int类型分区。
+以下脚本创建基于COMPO分区的数据库及数据表：第一层是基于VALUE的date类型分区，第二层是基于RANGE的int类型分区。
 
-注意： 创建COMPO的子分区数据库的dbPath参数必须设置为空字符串。
-```
+注意：创建COMPO的子分区数据库的dbPath参数必须设置为空字符串。
+```python
 db1 = s.database('db1', partitionType=keys.VALUE,partitions=np.array(["2012-01-01", "2012-01-06"], dtype="datetime64[D]"), dbPath='')
 db2 = s.database('db2', partitionType=keys.RANGE,partitions=[1, 6, 11], dbPath='')
 dbPath="dfs://db_compo_test"
@@ -717,14 +704,10 @@ db.createPartitionedTable(table=t, tableName='pt', partitionColumns=['date', 'va
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-### 3.2 使用run方法来创建
+### 3.2 使用`run`方法创建
 
-这种方法就是将用DolphinDB脚本语言编写的创建数据库及分区表的脚本，通过字符串的方式传给run方法来实现，例如：
-
-
-
-
-```
+将以DolphinDB脚本语言编写的创建数据库及数据表的脚本，通过字符串的方式传给`run`方法。例如：
+```python
 dbPath="dfs://valuedb"
 dstr = """
 dbPath="dfs://valuedb"
@@ -733,7 +716,7 @@ if (existsDatabase(dbPath)){
 }
 mydb=database(dbPath, VALUE, ['AMZN','NFLX', 'NVDA'])
 t=table(take(['AMZN','NFLX', 'NVDA'], 10) as sym, 1..10 as id)
-db.createPartitionedTable(t,`pt,`sym).append!(t)
+mydb.createPartitionedTable(t,`pt,`sym).append!(t)
 
 """
 t1=s.run(dstr)
@@ -741,7 +724,8 @@ t1=s.loadTable(tableName="pt",dbPath=dbPath)
 t1.toDF()
 
 # output
-     sym   id
+
+     sym	id
 0	AMZN	1
 1	AMZN	4
 2	AMZN	7
@@ -754,40 +738,23 @@ t1.toDF()
 9	NVDA	9
 ```
 
-### 3.3 使用其它DolphinDB客户端软件来创建
-
-用户可以通过 DolphinDB GUI, VS Code Extension, DolphinDB Notebook, DolphinDB Jupyter Notebook Extension, DolphinDB终端，以及DolphinDB命令行本地或者远程脚本执行来创建DolphinDB数据库以及分区。
-
-例如可以将下述创建数据库脚本放到以上工具中执行。
-
-```
-dbPath="dfs://valuedb"
-if (existsDatabase(dbPath)){
-    dropDatabase(dbPath)
-}
-db=database(dbPath, VALUE, ['AMZN','NFLX', 'NVDA'];
-t=table(take(['AMZN','NFLX', 'NVDA'], 10) as sym, 1..10 as id);
-db.createPartitionedTable(t,`pt,`sym).append!(t)
-```
-
-
 ## 4 导入数据到DolphinDB数据库
 
-DolphinDB数据库根据存储方式可以分为3种类型：内存数据库、本地文件系统的数据库和分布式文件系统（DFS）中的数据库。DFS数据库能够自动管理数据存储和备份，并且性能最优。因此，推荐用户使用分布式文件系统，部署方式请参考[多服务器集群部署](https://github.com/dolphindb/Tutorials_CN/blob/master/multi_machine_cluster_deploy.md)。
+DolphinDB数据库根据存储方式主要有2种类型：内存数据库以及分布式文件系统（DFS）中的数据库。DFS数据库的部署方式请参考[多服务器集群部署](https://github.com/dolphindb/Tutorials_CN/blob/master/multi_machine_cluster_deploy.md)。
 
-下面的例子中，我们使用了一个csv文件：[example.csv](data/example.csv)。
+下面的例子中，我们使用了一个csv文件：[data_example.csv](data/example.csv)。
 
-### 4.1 导入到内存表
+### 4.1 导入内存表
 
 可使用`loadText`方法把文本文件导入到DolphinDB的内存表中。该方法会在Python中返回一个DolphinDB内存表对象。可使用`toDF`方法把Python中的DolphinDB的Table对象转换成pandas的DataFrame。
 
 ```python
 WORK_DIR = "C:/DolphinDB/Data"
 
-# return a DolphinDB table object in Python
-trade=s.loadText(WORK_DIR+"/example.csv")
+# 返回一个Python中的DolphinDB表对象
+trade=s.loadText(WORK_DIR+"/data_example.csv")
 
-# convert the imported DolphinDB table object into a pandas DataFrame
+# 将返回的DolphinDB表对象转化为pandas DataFrame。表的数据传输发生在此步骤。
 df = trade.toDF()
 print(df)
 
@@ -810,30 +777,29 @@ print(df)
 t1=s.loadText(WORK_DIR+"/t1.tsv", '\t')
 ```
 
-### 4.2 导入到磁盘分区表
+### 4.2 导入DFS分区表
 
-如果需要导入的文件超过可用内存，可导入分区数据库。
+如果需要持久保存导入数据，或者需要导入的文件超过可用内存，可将数据导入DFS分区数据库。
 
 ### 4.2.1 创建分区数据库
 
-创建了分区数据库后，一般不能修改分区方案。唯一的例外是值分区（或者复合分区中的值分区）创建后，可以添加分区。
-
-本节例子中会用到数据库valuedb。首先检查该数据库是否存在，如果存在，将其删除：
+本节例子中会使用数据库valuedb。首先检查该数据库是否存在，如果存在，将其删除：
 ```python
 if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 ```
 
-使用`database`方法创建值分区（VALUE）的数据库。由于example.csv文件中只有3个股票代码，使用股票代码作为分区字段。参数partitions表示分区方案。下例中，我们先导入DolphinDB的关键字，再创建数据库。
+使用`database`方法创建值分区（VALUE）的数据库，使用股票代码作为分区字段。参数partitions表示分区方案。下例中，我们先导入DolphinDB的关键字，再创建数据库。
 ```python
 import dolphindb.settings as keys
 
-# 'db' indicates the database handle name on the DolphinDB server.
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=['AMZN','NFLX', 'NVDA'], dbPath='dfs://valuedb')
-#equals to s.run("db=database('dfs://valuedb', VALUE, ['AMZN','NFLX', 'NVDA'])")
+# 等效于 s.run("db=database('dfs://valuedb', VALUE, ['AMZN','NFLX', 'NVDA'])") 
 ```
 
-除了值分区（VALUE），DolphinDB还支持顺序分区（SEQ）、哈希分区（HASH）、范围分区（RANGE）、列表分区（LIST）与组合分区（COMPO），具体请参见[database函数](https://www.dolphindb.cn/cn/help/database1.html)。
+除了值分区（VALUE），DolphinDB还支持哈希分区（HASH）、范围分区（RANGE）、列表分区（LIST）与组合分区（COMPO），具体请参见[`database`函数](https://www.dolphindb.cn/cn/help/database1.html)。
+
+创建了分区数据库后，不可更改分区类型，一般亦不可更改分区方案，但是值分区或范围分区（或者复合分区中的值分区或范围分区）创建后，DolphinDB中可以分别使用`addValuePartitions`与 `addRangePartitions`函数添加分区。若设置参数newValuePartitionPolicy设为add，可随新增数据自动增加值分区。
 
 ### 4.2.2 创建分区表，并导入数据到表中
 
@@ -843,10 +809,10 @@ s.database(dbName='mydb', partitionType=keys.VALUE, partitions=['AMZN','NFLX', '
 - dbPath表示数据库路径
 - tableName表示分区表的名称
 - partitionColumns表示分区列
-- remoteFilePath表示文本文件的绝对路径; 如果终端和DolphinDB服务器不在一台机器上，remoteFilePath指远程文件在DolphinDB服务器上的绝对路径。
+- remoteFilePath表示文本文件的绝对路径。如果终端和DolphinDB服务器不在一台机器上，remoteFilePath指远程文件在DolphinDB服务器上的绝对路径。
 - delimiter表示文本文件的分隔符（默认分隔符是逗号）
 
-下面的例子使用函数`loadTextEx`创建了分区表trade，并把example.csv中的数据加载到表中。
+下面的例子使用函数`loadTextEx`创建了分区表trade，并把data_example.csv中的数据加载到表中。
 
 ```python
 import dolphindb.settings as keys
@@ -855,7 +821,7 @@ if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX", "NVDA"], dbPath="dfs://valuedb")
 
-trade = s.loadTextEx(dbPath="mydb",  tableName='trade',partitionColumns=["TICKER"], remoteFilePath=WORK_DIR + "/example.csv")
+trade = s.loadTextEx(dbPath="mydb",  tableName='trade',partitionColumns=["TICKER"], remoteFilePath=WORK_DIR + "/data_example.csv")
 print(trade.toDF())
 
 # output
@@ -901,7 +867,7 @@ print(trade.schema)
 trade = s.table(dbPath="dfs://valuedb", data="trade")
 ```
 
-### 4.3 导入到内存分区表
+### 4.3 导入内存分区表
 
 ### 4.3.1 使用`loadTextEx`
 
@@ -914,7 +880,7 @@ import dolphindb.settings as keys
 
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], dbPath="")
 
-trade=s.loadTextEx(dbPath="mydb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
+trade=s.loadTextEx(dbPath="mydb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
 trade.toDF()
 ```
 
@@ -923,7 +889,7 @@ trade.toDF()
 `ploadText`函数可以并行加载文本文件到内存分区表中。它的加载速度要比`loadText`函数快。
 
 ```python
-trade=s.ploadText(WORK_DIR+"/example.csv")
+trade=s.ploadText(WORK_DIR+"/data_example.csv")
 print(trade.rows)
 
 # output
@@ -979,7 +945,7 @@ import dolphindb.settings as keys
 if s.existsDatabase("dfs://valuedb"  or os.path.exists("dfs://valuedb")):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX", "NVDA"], dbPath="dfs://valuedb")
-t = s.loadTextEx(dbPath="mydb",  tableName='trade',partitionColumns=["TICKER"], remoteFilePath=WORK_DIR + "/example.csv")
+t = s.loadTextEx(dbPath="mydb",  tableName='trade',partitionColumns=["TICKER"], remoteFilePath=WORK_DIR + "/data_example.csv")
 
 trade = s.loadTableBySQL(tableName="trade", dbPath="dfs://valuedb", sql="select * from trade where date>2010.01.01")
 print(trade.rows)
@@ -1006,8 +972,8 @@ DolphinDB Python API使用Python原生的各种形式的数据对象来存放Dol
 
 #### 5.3.2 数据类型的转换
 
-下表展示了从DolphinDB数据库中通过`toDF()`函数下载数据到Python时，数据类型的转换。需要指出的是：
-- DolphinDB CHAR类型会被转换成Python int64类型。对此结果，用户可以使用Python的`chr`函数使之转换为字符。
+下表展示了从DolphinDB数据库中通过`toDF()`函数下载数据到Python时数据类型的转换。需要指出的是：
+- DolphinDB CHAR类型会被转换成Python int64类型。对此结果，用户可以使用Python的`chr`函数将其转换为字符。
 - 由于Python pandas中所有有关时间的数据类型均为datetime64，DolphinDB中的所有时间类型数据[均会被转换为datetime64类型](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)。MONTH类型，如2012.06M，会被转换为2012-06-01（即当月的第一天）。
 - TIME, MINUTE, SECOND与NANOTIME类型不包含日期信息，转换时会自动添加1970-01-01，例如13:30m会被转换为1970-01-01 13:30:00。
 
@@ -1037,17 +1003,15 @@ DolphinDB Python API使用Python原生的各种形式的数据对象来存放Dol
 
 #### 5.3.3 缺失值处理
 
-从DolphinDB下载数据到Python，并使用`toDF()`方法把DolphinDB数据转换为Python的DataFrame，DolphinDB中的逻辑型、数值型和时序类型的NULL值默认情况下是NaN、NaT，字符串的NULL值为空字符串。
+从DolphinDB下载数据到Python，并使用`toDF()`方法把DolphinDB数据转换为Python的DataFrame时，DolphinDB中的逻辑型、数值型和时序类型的NULL值默认情况下转换为NaN或NaT，字符串的NULL值转换为空字符串。
 
 ## 6 追加数据到DolphinDB数据表
 
-实际工作中，用户经常从其他数据库系统或第三方Web API中取得数据后存入DolphinDB数据表中。本节将介绍如何通过Python API将取到的数据上传并保存到DolphinDB的数据表中。
+用户可能需要从其他数据库系统或第三方Web API中取得数据后存入DolphinDB数据表中。本节将介绍如何通过Python API将取到的数据上传并保存到DolphinDB的数据表中。
 
-DolphinDB数据表按存储方式分为三种:
-
+DolphinDB数据表按存储方式大致可分为以下两种:
 - 内存表：数据仅保存在内存中，存取速度最快。
-- 本地磁盘表：数据保存在本地磁盘上，可以从磁盘加载到内存。不建议在生产环境中使用。
-- 分布式表：数据分布在不同的节点，通过DolphinDB的分布式计算引擎，仍然可以像本地表一样做统一查询。建议在生产环境中使用。
+- 分布式表：数据分布在不同的节点的磁盘，通过DolphinDB的分布式文件系统统一管理。
 
 ### 6.1 追加数据到内存表
 
@@ -1065,15 +1029,13 @@ import dolphindb as ddb
 s = ddb.session()
 s.connect("localhost", 8848, "admin", "123456")
 
-# 生成内存表
+# 生成一个空的内存表
 script = """t = table(1000:0,`id`date`ticker`price, [INT,DATE,SYMBOL,DOUBLE])
 share t as tglobal"""
 s.run(script)
 ```
 
-上面的例子通过`table`函数在DolphinDB server端来创建内存表，指定了初始内存分配和初始长度、列名和数据类型。由于内存表是会话隔离的，所以普通内存表只有当前会话可见。
-若需要多个客户端可以同时访问内存表，可使用`share`在会话间共享内存表。
-
+上面的例子通过`table`函数在DolphinDB server端来创建内存表，指定了初始内存分配和初始长度、列名和数据类型。由于内存表是会话隔离的，所以普通内存表只有当前会话可见。若需要多个客户端可以同时访问内存表，可使用`share`在会话间共享内存表。
 
 #### 6.1.1 使用`tableInsert`函数批量追加
 
@@ -1086,12 +1048,10 @@ tickers=['AAPL','GOOG','AAPL']
 prices = [302.5, 295.6, 297.5]
 args = [ids, dates, tickers, prices]
 s.run("tableInsert{tglobal}", args)
-
 #output
 3
 
 s.run("tglobal")
-
 #output
    id       date ticker  price
 0   1 2019-03-03   AAPL  302.5
@@ -1122,19 +1082,17 @@ s.run("tableInsert{tglobal}",tb)
 4
 
 s.run("tglobal")
-
-
-id	ticker	price
+#output
+   id	ticker	price
 0	1	AAPL	22.0
 1	2	AMZN	3.5
 2	2	AMZN	21.0
 3	3	A	26.0
-
 ```
 
 - 若表中有时间列
 
-由于Python pandas中所有[有关时间的数据类型均为datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)，上传一个DataFrame到DolphinDB以后所有时间类型的列均为nanotimestamp类型，因此在追加一个带有时间列的DataFrame时，我们需要在DolphinDB服务端对时间列进行数据类型转换：先将该DataFrame上传到服务端，通过select语句将表内的每一列都选出来，并进行时间类型转换（该例子将nanotimestamp类型转换为date类型），再追加到内存表中，具体如下：
+由于Python pandas中所有[有关时间的数据类型均为datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)，上传一个DataFrame到DolphinDB以后所有时间类型的列均为nanotimestamp类型，因此在追加一个带有时间列的DataFrame时，我们需要在DolphinDB服务端对时间列进行数据类型转换：先将该DataFrame上传到服务端，通过select语句对表内的每一个时间列进行时间类型转换（下例将nanotimestamp类型转换为date类型），再追加到内存表中，具体如下：
 ```python
 script = """t = table(1000:0,`id`date`ticker`price, [INT,DATE,SYMBOL,DOUBLE])
 share t as tglobal"""
@@ -1146,8 +1104,8 @@ s.upload({'tb':tb})
 s.run("tableInsert(tglobal,(select id, date(date) as date, ticker, price from tb))")
 s.run("tglobal")
 
-
-id	date	ticker	price
+#output
+   id	      date ticker	price
 0	1	2019-02-04	AAPL	22.0
 1	2	2019-02-05	AMZN	3.5
 2	2	2019-02-09	AMZN	21.0
@@ -1220,14 +1178,13 @@ s.run(script)
 
 **请注意**，从性能方面考虑，不建议使用`INSERT INTO`来插入数据，因为服务器端要对INSERT语句进行解析会造成额外开销。
 
-
 ### 6.2 追加数据到分布式表
 
 分布式表是DolphinDB推荐在生产环境下使用的数据存储方式，它支持快照级别的事务隔离，保证数据一致性。分布式表支持多副本机制，既提供了数据容错能力，又能作为数据访问的负载均衡。下面的例子通过Python API把数据保存至分布式表。
 
-请注意只有启用enableDFS=1的集群环境才能使用分布式表。
+请注意只有设置配置参数enableDFS=1的集群环境才能使用分布式表。
 
-在DolphinDB中使用以下脚本创建分布式表，脚本中，`database`函数用于创建数据库，`createPartitionedTable`函数用于创建分区表。
+在DolphinDB中使用以下脚本创建分布式表。其中，`database`函数用于创建数据库，`createPartitionedTable`函数用于创建分区表。
 
 ```python
 import dolphindb as ddb
@@ -1250,15 +1207,13 @@ t.append!(t1)""".format(db=dbPath,tb=tableName)
 s.run(script)
 ```
 
-DolphinDB提供`loadTable`方法来加载分布式表，通过`tableInsert`方式追加数据，具体的脚本示例如下。脚本中，我们通过自定义的函数`createDemoDataFrame()`创建一个DataFrame，再追加数据到DolphinDB数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时间类型自动转换的功能，因此无需显示地进行类型转换。
-
+DolphinDB提供`loadTable`方法来加载分布式表，通过`tableInsert`方式追加数据，具体的脚本示例如下。通过自定义的函数`createDemoDataFrame()`创建一个DataFrame，再追加数据到DolphinDB数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时间类型自动转换的功能，因此无需显式进行类型转换。
 ```python
 tb = createDemoDataFrame()
 s.run("tableInsert{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName), tb)
 ```
 
 把数据保存到分布式表，还可以使用`append!`函数，它可以把一张表追加到另一张表。但是，一般不建议通过append!函数保存数据，因为`append!`函数会返回一个表结构，增加通信量。
-
 ```python
 tb = createDemoDataFrame()
 s.run("append!{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName),tb)
@@ -1279,7 +1234,7 @@ s.run("append!{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName),tb)
 |dropPartition(dbPath, partitionPaths, tableName)|删除数据库的某个分区|
 |existsDatabase|判断是否存在数据库|
 
-* 表和分区相关
+* 数据表/分区相关
 
 | 方法名        | 详情          |
 |:------------- |:-------------|
@@ -1288,7 +1243,7 @@ s.run("append!{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName),tb)
 |loadTable|加载本地磁盘表或者分布式表到内存|
 |table|创建表|
 
-我们在Python中得到一个表对象以后，可以对这个对象调用如下的方法，这些方法是Table类方法。
+在Python中得到一个表对象以后，可以对这个对象调用如下的方法，这些方法是Table类方法。
 
 | 方法名        | 详情          |
 |:------------- |:-------------|
@@ -1385,7 +1340,6 @@ s.run("tableInsert{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName),t
 s.run("select * from loadTable('{db}', `{tb})".format(db=dbPath,tb=tableName))
 
 # output
-
     id	date	ticker	price
 0	3	2019-02-13	A	26.0
 1	1	2019-02-04	AAPL	22.0
@@ -1411,13 +1365,12 @@ select * from tb
 """
 s.run(db_script)
 
-
+# output
     id	date	ticker	price
 0	3	2019-02-13	A	26.0
 1	1	2019-02-04	AAPL	22.0
 2	2	2019-02-05	AMZN	3.5
 3	2	2019-02-09	AMZN	21.0
-
 ```
 
 ### 7.2 数据库操作
@@ -1448,7 +1401,7 @@ import dolphindb.settings as keys
 if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], dbPath="dfs://valuedb")
-trade=s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
+trade=s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
 print(trade.rows)
 # output
 13136
@@ -1473,7 +1426,7 @@ print(trade.select("distinct TICKER").toDF())
 
 #### 7.3.2 数据表添加数据
 
-我们可以通过`append`方法追加数据。
+可以通过`append`方法追加数据。
 
 下面的例子把数据追加到磁盘上的分区表。如果需要使用追加数据后的表，需要重新把它加载到内存中。
 
@@ -1500,7 +1453,7 @@ print (trade.rows)
 下面的例子把数据追加到内存表中。
 
 ```python
-trade=s.loadText(WORK_DIR+"/example.csv")
+trade=s.loadText(WORK_DIR+"/data_example.csv")
 t = trade.top(10).executeAs("top10")
 t1=trade.append(t)
 
@@ -1517,7 +1470,7 @@ print(t1.rows)
 `update`只能用于更新内存表，并且必须和`execute`一起使用。
 
 ```python
-trade=s.loadText(WORK_DIR+"/example.csv")
+trade=s.loadText(WORK_DIR+"/data_example.csv")
 trade = trade.update(["VOL"],["999999"]).where("TICKER=`AMZN").where(["date=2015.12.16"]).execute()
 t1=trade.where("ticker=`AMZN").where("VOL=999999")
 print(t1.toDF())
@@ -1544,7 +1497,7 @@ print(t1.toDF())
 `delete`必须与`execute`一起使用来删除表中的记录。
 
 ```python
-trade=s.loadText(WORK_DIR+"/example.csv")
+trade=s.loadText(WORK_DIR+"/data_example.csv")
 trade.delete().where('date<2013.01.01').execute()
 print(trade.rows)
 
@@ -1555,7 +1508,7 @@ print(trade.rows)
 #### 7.3.5 删除表中的列
 
 ```python
-trade=s.loadText(WORK_DIR+"/example.csv")
+trade=s.loadText(WORK_DIR+"/data_example.csv")
 t1=trade.drop(['ask', 'bid'])
 print(t1.top(5).toDF())
 
@@ -1574,7 +1527,7 @@ print(t1.top(5).toDF())
 if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], dbPath="dfs://valuedb")
-s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
+s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
 s.dropTable(dbPath="dfs://valuedb", tableName="trade")
 ```
 
@@ -1582,7 +1535,7 @@ s.dropTable(dbPath="dfs://valuedb", tableName="trade")
 ```
 s.loadTable(dbPath="dfs://valuedb", tableName="trade")
 
-Exeption:
+Exception:
 getFileBlocksMeta on path '/valuedb/trade.tbl' failed, reason: path does not exist
 ```
 
@@ -1595,11 +1548,11 @@ DolphinDB提供了灵活的方法来生成SQL语句。
 #### 8.1.1 使用一系列的列名作为输入内容
 
 ```python
-trade=s.loadText(WORK_DIR+"/example.csv")
+trade=s.loadText(WORK_DIR+"/data_example.csv")
 print(trade.select(['ticker','date','bid','ask','prc','vol']).toDF())
 
 # output
-             ticker       date                 bid             ask        prc                vol
+      ticker       date        bid      ask        prc      vol
 0       AMZN 1997-05-15   23.50000   23.625   23.50000  6029815
 1       AMZN 1997-05-16   20.50000   21.000   20.75000  1232226
 2       AMZN 1997-05-19   20.50000   20.625   20.50000   512070
@@ -1633,7 +1586,7 @@ print(trade.select("ticker,date,bid,ask,prc,vol").where("date=2012.09.06").where
 `top`用于取表中的前n条记录。
 
 ```python
-trade=s.loadText(WORK_DIR+"/example.csv")
+trade=s.loadText(WORK_DIR+"/data_example.csv")
 trade.top(5).toDF()
 
 # output
@@ -1652,7 +1605,7 @@ trade.top(5).toDF()
 #### 8.3.1 多个条件过滤
 
 ```python
-trade=s.loadText(WORK_DIR+"/example.csv")
+trade=s.loadText(WORK_DIR+"/data_example.csv")
 
 # use chaining WHERE conditions and save result to DolphinDB server variable "t1" through function "executeAs"
 t1=trade.select(['date','bid','ask','prc','vol']).where('TICKER=`AMZN').where('bid!=NULL').where('ask!=NULL').where('vol>10000000').sort('vol desc').executeAs("t1")
@@ -1683,11 +1636,11 @@ select date,bid,ask,prc,vol from Tff260d29 where TICKER=`AMZN and bid!=NULL and 
 `select`的输入内容可以是包含多个列名的字符串，`where`的输入内容可以是包含多个条件的字符串。
 
 ```python
-trade=s.loadText(WORK_DIR+"/example.csv")
+trade=s.loadText(WORK_DIR+"/data_example.csv")
 print(trade.select("ticker, date, vol").where("bid!=NULL, ask!=NULL, vol>50000000").toDF())
 
 # output
-            ticker       date        vol
+   ticker       date        vol
 0    AMZN 1999-09-29   80380734
 1    AMZN 2000-06-23   52221978
 2    AMZN 2001-11-26   51543686
@@ -1701,14 +1654,14 @@ print(trade.select("ticker, date, vol").where("bid!=NULL, ask!=NULL, vol>5000000
 
 ### 8.4 `groupby`
 
-`groupby`后面需要使用聚合函数，如`count`, `sum`, `agg`和`agg2`。
+`groupby`后面需要使用聚合函数，如`count`, `sum`, `agg`与`agg2`等。
 
 准备数据库
 ```
 if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], dbPath="dfs://valuedb")
-s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
+s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
 ```
 
 ```python
@@ -1839,11 +1792,12 @@ print(df)
 如果连接列名称相同，使用on参数指定连接列，如果连接列名称不同，使用left_on和right_on参数指定连接列。可选参数how表示表连接的类型。默认的连接类型为内部连接。
 ```python
 trade = s.loadTable(dbPath="dfs://valuedb", tableName="trade")
-t1 = s.table(data={'TICKER': ['AMZN', 'AMZN', 'AMZN'], 'date': np.array(['2015-12-31', '2015-12-30', '2015-12-29'], dtype='datetime64[D]'), 'open': [695, 685, 674]})
+t1 = s.table(data={'TICKER': ['AMZN', 'AMZN', 'AMZN'], 'date': np.array(['2015-12-31', '2015-12-30', '2015-12-29'], dtype='datetime64[D]'), 'open': [695, 685, 674]}, tableAliasName="t1")
+s.run("""t1 = select TICKER,date(date) as date,open from t1""")
 print(trade.merge(t1,on=["TICKER","date"]).toDF())
 
 # output
-  TICKER        date      VOL        PRC        BID        ASK  open
+  TICKER        date                 VOL        PRC                     BID        ASK          open
 0   AMZN  2015.12.29  5734996  693.96997  693.96997  694.20001   674
 1   AMZN  2015.12.30  3519303  689.07001  689.07001  689.09998   685
 2   AMZN  2015.12.31  3749860  675.89001  675.85999  675.94000   695
@@ -1852,11 +1806,12 @@ print(trade.merge(t1,on=["TICKER","date"]).toDF())
 当连接列名称不相同时，需要指定left_on参数和right_on参数。
 ```python
 trade = s.loadTable(dbPath="dfs://valuedb", tableName="trade")
-t1 = s.table(data={'TICKER1': ['AMZN', 'AMZN', 'AMZN'], 'date1': ['2015.12.31', '2015.12.30', '2015.12.29'], 'open': [695, 685, 674]})
+t1 = s.table(data={'TICKER1': ['AMZN', 'AMZN', 'AMZN'], 'date1': ['2015.12.31', '2015.12.30', '2015.12.29'], 'open': [695, 685, 674]}, tableAliasName="t1")
+s.run("""t1 = select TICKER1,date(date1) as date1,open from t1""")
 print(trade.merge(t1,left_on=["TICKER","date"], right_on=["TICKER1","date1"]).toDF())
 
 # output
-  TICKER        date      VOL        PRC        BID        ASK  open
+  TICKER        date               VOL          PRC                   BID            ASK          open
 0   AMZN  2015.12.29  5734996  693.96997  693.96997  694.20001   674
 1   AMZN  2015.12.30  3519303  689.07001  689.07001  689.09998   685
 2   AMZN  2015.12.31  3749860  675.89001  675.85999  675.94000   695
@@ -1865,11 +1820,12 @@ print(trade.merge(t1,left_on=["TICKER","date"], right_on=["TICKER1","date1"]).to
 左连接时，把how参数设置为'left'。
 ```python
 trade = s.loadTable(dbPath="dfs://valuedb", tableName="trade")
-t1 = s.table(data={'TICKER': ['AMZN', 'AMZN', 'AMZN'], 'date': ['2015.12.31', '2015.12.30', '2015.12.29'], 'open': [695, 685, 674]})
+t1 = s.table(data={'TICKER': ['AMZN', 'AMZN', 'AMZN'], 'date': ['2015.12.31', '2015.12.30', '2015.12.29'], 'open': [695, 685, 674]}, tableAliasName="t1")
+s.run("""t1 = select TICKER,date(date) as date,open from t1""")
 print(trade.merge(t1,how="left", on=["TICKER","date"]).where('TICKER=`AMZN').where('2015.12.23<=date<=2015.12.31').toDF())
 
 # output
-  TICKER       date      VOL        PRC        BID        ASK   open
+  TICKER       date               VOL             PRC               BID               ASK          open
 0   AMZN 2015-12-23  2722922  663.70001  663.48999  663.71002    NaN
 1   AMZN 2015-12-24  1092980  662.78998  662.56000  662.79999    NaN
 2   AMZN 2015-12-28  3783555  675.20001  675.00000  675.21002    NaN
@@ -1885,17 +1841,11 @@ t2 = s.table(data={'TICKER': ['AMZN', 'NFLX', 'NFLX'], 'date': ['2015.12.29', '2
 print(t1.merge(t2, how="outer", on=["TICKER","date"]).toDF())
 
 # output
-  TICKER        date   open TMP_TBL_ec03c3d2_TICKER TMP_TBL_ec03c3d2_date  \
-0   AMZN  2015.12.29  674.0                    AMZN            2015.12.29   
-1   AMZN  2015.12.30  685.0                                                 
-2   NFLX  2015.12.31  942.0                    NFLX            2015.12.31   
-3                       NaN                    NFLX            2015.12.30   
-
-   close  
-0  690.0  
-1    NaN  
-2  951.0  
-3  936.0  
+     TICKER     date           open TMP_TBL_1b831e46_TICKER TMP_TBL_1b831e46_date  close
+0   AMZN  2015.12.29    674.0                    AMZN                                              2015.12.29                690.0
+1   AMZN  2015.12.30    685.0                                                                                                                    NaN
+2   NFLX  2015.12.31     942.0                      NFLX                                               2015.12.31               951.0
+3                                           NaN                        NFLX                                               2015.12.30               936.0  
 ```
 
 #### 8.6.2 `merge_asof`
@@ -2075,7 +2025,6 @@ print(z["Coefficient"].beta[1])
 
 ```python
 result = s.loadTable(tableName="US",dbPath="dfs://US").select("select VOL\\SHROUT as turnover, abs(RET) as absRet, (ASK-BID)/(BID+ASK)*2 as spread, log(SHROUT*(BID+ASK)/2) as logMV").where("VOL>0").ols("turnover", ["absRet","logMV", "spread"], True)
-
 ```
 
 ## 9 Python Streaming API
@@ -2305,6 +2254,10 @@ s.connect("localhost",8921, "admin", "123456")
 步骤1：加载股票交易数据，对数据进行清洗和过滤，然后为每只股票构建过去一年扣除最近一个月收益率的动量信号。注意，必须使用`executeAs`把中间结果保存到DolphinDB服务器上。数据集“US”包含了美国股票1990到2016年的交易数据。
 
 ```python
+if s.existsDatabase("dfs://US"):
+	s.dropDatabase("dfs://US")
+s.database(dbName='USdb', partitionType=keys.VALUE, partitions=["GFGC","EWST", "EGAS"], dbPath="dfs://US")
+US=s.loadTextEx(dbPath="dfs://US", partitionColumns=["TICKER"], tableName='US', remoteFilePath=WORK_DIR + "/USPrices_FIRST.csv") 
 US = s.loadTable(dbPath="dfs://US", tableName="US")
 def loadPriceData(inData):
     s.loadTable(inData).select("PERMNO, date, abs(PRC) as PRC, VOL, RET, SHROUT*abs(PRC) as MV").where("weekday(date) between 1:5, isValid(PRC), isValid(VOL)").sort(bys=["PERMNO","date"]).executeAs("USstocks")
@@ -2394,7 +2347,3 @@ US = s.loadTable(tableName="US", dbPath="dfs://US").select("PERMNO, date, PRC as
 result=alpha98(US.tableName()).where('date>2007.03.12').executeAs("result")
 print(result.top(10).toDF())
 ```
-
-
-
-
