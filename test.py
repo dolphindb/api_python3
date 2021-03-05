@@ -103,7 +103,7 @@ args = [1.3,1.4];
 result = s.run("Foo5",1.3,1.4);
 
 case = "testAnyVector"
-obj = s.run("{1, 2, {1,3, 5},{0.9, 0.8}}")
+obj = s.run("[1, 2, [1,3, 5],[0.9, 0.8]]")
 AssertTrue((obj[2]==[1,3,5]).all(),"1",case)
 
 
