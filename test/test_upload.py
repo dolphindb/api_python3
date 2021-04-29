@@ -237,6 +237,159 @@ class TestUploadObject(unittest.TestCase):
         self.assertEqual(self.s.run("eqObj(a, [1,3,2,4]$2:2)"), True)
         re = self.s.run("a")
         assert_array_equal(re[0], [[1, 2],[3, 4]])
+    
+    def test_upload_float32_dataframe(self):
+        pdf = pd.DataFrame({'tfloat': np.arange(1, 10, 1, dtype='float32')})
+        pdf.loc[1,:]=np.nan
+        self.s.upload({'t':pdf})
+        re=self.s.run("t")
+        assert_frame_equal(pdf, re, check_dtype=False)
+
+    def test_upload_numpy_scalar_dtype_datetime64_day(self):
+        a = np.datetime64('2012-06-08', 'D')
+        self.s.upload({'a': a})
+        self.assertTrue(self.s.run("eqObj(a, 2012.06.08)"))
+        re = self.s.run('a')
+        self.assertEqual(a, re)
+        # TODO:
+        # a = np.datetime64('NaT', 'D')
+        # self.s.upload({'a': a})
+        # self.assertTrue(self.s.run("eqObj(a, date())"))
+        # re = self.s.run('a')
+        # self.assertEqual(a, re)
+
+    def test_upload_numpy_scalar_dtype_datetime64_month(self):
+        a = np.datetime64('2012-06', 'M')
+        self.s.upload({'a': a})
+        self.assertTrue(self.s.run("eqObj(a, 2012.06M)"))
+        re = self.s.run('a')
+        self.assertEqual(a, re)
+        # TODO:
+        # a = np.datetime64('NaT', 'M')
+        # self.s.upload({'a': a})
+        # self.assertTrue(self.s.run("eqObj(a, month())"))
+        # re = self.s.run('a')
+        # self.assertEqual(a, re)
+
+    def test_upload_numpy_scalar_dtype_year(self):
+        pass
+        # a = np.datetime64('2012', 'Y')
+        # self.s.upload({'a': a})
+
+    def test_upload_numpy_scalar_dtype_datetime64_minute(self):
+        a = np.datetime64('2005-02-25T03:30', 'm')
+        self.s.upload({'a': a})
+        re = self.s.run('a')
+        self.assertEqual(a, re)
+        # TODO:
+        # a = np.datetime64('NaT', 'm')
+        # self.s.upload({'a': a})
+        # re = self.s.run('a')
+        # self.assertEqual(a, re)
+
+    def test_upload_numpy_scalar_dtype_datetime64_second(self):
+        a = np.datetime64('2005-02-25T03:30:25', 's')
+        self.s.upload({'a': a})
+        self.assertTrue(self.s.run("eqObj(a, 2005.02.25T03:30:25)"))
+        re = self.s.run('a')
+        self.assertEqual(a, re)
+        # TODO:
+        # a = np.datetime64('NaT', 's')
+        # self.s.upload({'a': a})
+        # re = self.s.run('a')
+        # self.assertEqual(a, re)
+
+    def test_upload_numpy_scalar_dtype_datetime64_millisecond(self):
+        a = np.datetime64('2005-02-25T03:30:25.008', 'ms')
+        self.s.upload({'a': a})
+        # self.assertTrue(self.s.run("eqObj(a, 2005.02.05T03:30:25.008)"))
+        re = self.s.run('a')
+        self.assertEqual(re, a)
+        # TODO:
+        # a = np.datetime64('NaT', 'ms')
+        # self.s.upload({'a': a})
+        # self.assertTrue(self.s.run("eqObj(a, timestamp())"))
+        # re = self.s.run('a')
+        # self.assertEqual(a, re)
+    
+    def test_upload_numpy_scalar_dtype_datetime64_nanosecond(self):
+        a = np.datetime64('2005-02-25T03:30:25.008007006', 'ns')
+        self.s.upload({'a': a})
+        self.assertTrue(self.s.run("eqObj(a, 2005.02.25T03:30:25.008007006)"))
+        re = self.s.run('a')
+        self.assertEqual(re, a)
+        # TODO:
+        # a = np.datetime64('NaT', 'ns')
+        # self.s.upload({'a': a})
+        # self.assertTrue(self.s.run("eqObj(a, nanotimestamp())"))
+        # re = self.s.run('a')
+        # self.assertEqual(a, re)
+
+
+    def test_upload_numpy_array_dtype_datetime64_D(self):
+        a = np.array(['2012-06-12', '1968-12-05', '2003-09-28'], dtype='datetime64[D]')
+        self.s.upload({'aa': a})
+        self.assertTrue(self.s.run("eqObj(aa, [2012.06.12, 1968.12.05, 2003.09.28])"))
+        re = self.s.run("aa")
+        assert_array_equal(a, re)
+        
+    def test_upload_dataframe_np_datetime64(self):
+        df = pd.DataFrame({'col1': np.array(['2012-06', '2012-07', '', '2024-12'], dtype = 'datetime64[M]'),
+                           'col2': np.array(['2012-06-01', '', '2012-07-05', '2013-09-08'], dtype = 'datetime64[D]'),
+                           'col3': np.array(['2012-06-01T12:30:00', '2012-06-01T12:30:01', '', ''], dtype = 'datetime64'),
+                           'col4': np.array(['2012-06-08T12:30:00.000','','','2012-06-08T12:30:00.001'], dtype='datetime64'),
+                           'col5': np.array(['2012-06-08T12:30:00.000001', '', '2012-06-08T12:30:00.000002', ''], dtype = 'datetime64')})
+        self.s.upload({'t': df})
+        script = '''
+        expected = table(nanotimestamp([2012.06.01, 2012.07.01, NULL, 2024.12.01]) as col1, nanotimestamp([2012.06.01, NULL, 2012.07.05, 2013.09.08]) as col2, nanotimestamp([2012.06.01T12:30:00, 2012.06.01T12:30:01, NULL, NULL]) as col3, nanotimestamp([2012.06.08T12:30:00.000, NULL, NULL, 2012.06.08T12:30:00.001]) as col4, [2012.06.08T12:30:00.000001000, NULL, 2012.06.08T12:30:00.000002000, NULL] as col5)
+        loop(eqObj, expected.values(), t.values())
+        '''
+        re = self.s.run(script)
+        assert_array_equal(re, [True, True, True, True, True])
+
+    def test_upload_dataframe_chinese_column_name(self):
+        df = pd.DataFrame({'编号':[1, 2, 3, 4, 5], '序号':['壹','贰','叁','肆','伍']})
+        self.s.upload({'t': df})
+        re = self.s.run("select * from t")
+        assert_array_equal(re['编号'], [1, 2, 3, 4, 5])
+        assert_array_equal(re['序号'], ['壹','贰','叁','肆','伍'])
+
+    def test_upload_dataframe_chinese_column_name(self):
+        df = pd.DataFrame({'编号':[1, 2, 3, 4, 5], '序号':['壹','贰','叁','肆','伍']})
+        self.s.upload({'t': df})
+        re = self.s.run("select * from t")
+        assert_array_equal(re['编号'], [1, 2, 3, 4, 5])
+        assert_array_equal(re['序号'], ['壹','贰','叁','肆','伍'])
+
+    def test_upload_numpy_scalar_dtype_datetime64_h(self):
+        a =np.datetime64("2020-01-01T01",'h')
+        self.s.upload({'a': a})
+        self.assertTrue(self.s.run("eqObj(a, datehour(2020.01.01T01:00:00))"))
+        re = self.s.run('a')
+        self.assertEqual(a, re)
+        # a = np.datetime64('NaT', 'h')
+        # self.s.upload({'a': a})
+        # self.assertTrue(self.s.run("eqObj(a, datehour())"))
+        # re = self.s.run('a')
+        # self.assertEqual(a, re)
+
+    def test_upload_numpy_array_dtype_datetime64_h(self):
+        a = np.array(['2012-06-12T01', '1968-12-05T01', '2003-09-28T01'], dtype='datetime64[h]')
+        self.s.upload({'a': a})
+        self.assertTrue(self.s.run("eqObj(a, datehour([2012.06.12T01:00:00,1968.12.05T01:00:00,2003.09.28T01:00:00]))"))
+        re = self.s.run('a')
+        assert_array_equal(a, re)
+        b = np.repeat(np.datetime64("2020-01-01T01",'h'),500000)
+        self.s.upload({'b': b})
+        self.assertTrue(self.s.run("eqObj(b, take(datehour(2020.01.01T01:00:00),500000))"))
+        re = self.s.run('b')
+        assert_array_equal(b, re)
+        c = np.repeat(np.datetime64("Nat",'h'),500000)
+        self.s.upload({'c': c})
+        self.assertTrue(self.s.run("eqObj(c, take(datehour(),500000))"))
+        re = self.s.run('c')
+        assert_array_equal(c,re)
+
 
 if __name__ == '__main__':
     unittest.main()

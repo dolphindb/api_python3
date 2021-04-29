@@ -486,24 +486,14 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_range_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=[5000, 15000])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        self.assertRaises(RuntimeError, self.s.loadTable, tbName1, dbPath, [5000, 15000])
 
     def test_loadTable_dfs_range_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_range_db()
-
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
     def test_loadTable_dfs_hash(self):
         dbPath = DBInfo.dfsDBName
@@ -517,24 +507,15 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_hash_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=[1, 2])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=[1, 2])
 
     def test_loadTable_dfs_hash_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_hash_db()
-
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
     def test_loadTable_dfs_value(self):
         dbPath = DBInfo.dfsDBName
@@ -548,24 +529,15 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_value_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
 
     def test_loadTable_dfs_value_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_value_db()
-
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
     def test_loadTable_dfs_list(self):
         dbPath = DBInfo.dfsDBName
@@ -579,24 +551,15 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_list_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["`DOP", "`BBVC"])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["`DOP", "`BBVC"])
 
     def test_loadTable_dfs_list_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_list_db()
-
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
     def test_loadTable_dfs_compo_range_range(self):
         dbPath = DBInfo.dfsDBName
@@ -610,24 +573,15 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_range_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
 
     def test_loadTable_dfs_compo_range_range_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_range_db()
-
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
     def test_loadTable_dfs_compo_range_hash(self):
         dbPath = DBInfo.dfsDBName
@@ -641,24 +595,15 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_hash_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
 
     def test_loadTable_dfs_compo_range_hash_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_hash_db()
-
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
     def test_loadTable_dfs_compo_range_value(self):
         dbPath = DBInfo.dfsDBName
@@ -672,24 +617,15 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_value_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
 
     def test_loadTable_dfs_compo_range_value_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_value_db()
-
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
     def test_loadTable_dfs_compo_range_list(self):
         dbPath = DBInfo.dfsDBName
@@ -703,24 +639,15 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_list_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
 
     def test_loadTable_dfs_compo_range_list_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_list_db()
-
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
     def test_loadTable_dfs_compo_range_hash_list(self):
         dbPath = DBInfo.dfsDBName
@@ -734,24 +661,15 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_hash_list_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
 
     def test_loadTable_dfs_compo_range_hash_list_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_hash_list_db()
-
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
     def test_loadTable_dfs_compo_range_value_list(self):
         dbPath = DBInfo.dfsDBName
@@ -765,24 +683,16 @@ class LoadTableTest(unittest.TestCase):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_value_list_db()
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
-        # dfs database does not support parameter "partitions" and loads all meta-data
-        assert_frame_equal(tmp.toDF(), rs)
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["2010.01.01", "2010.01.30"])
 
     def test_loadTable_dfs_compo_range_value_list_param_memoryMode(self):
         dbPath = DBInfo.dfsDBName
         tbName1 = DBInfo.table1
         create_dfs_compo_range_value_list_db()
+        with self.assertRaises(RuntimeError):
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
 
-        rs = self.s.run("select * from loadTable('{db}','{tb}')".format(db=dbPath, tb=tbName1))
-        before = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, memoryMode=True)
-        after = list(self.s.run("exec memSize from getSessionMemoryStat()"))
-
-        assert_frame_equal(tmp.toDF(), rs)
-        # dfs databse doesn't support parameter "memoryMode" and never loads all data into memory without specification
-        assert_array_equal(after == before, repeat(True, len(after)))
 
     def test_loadTable_disk_unpartitioned(self):
         dbPath = DBInfo.diskDBName
@@ -889,7 +799,7 @@ class LoadTableTest(unittest.TestCase):
         tbName1 = DBInfo.table1
         create_disk_list_db()
         rs = self.s.run("select * from loadTable('{db}','{tb}') where sym in `DOP`ASZ`FSD`BBVC`AWQ`DS".format(db=dbPath, tb=tbName1))
-        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["`DOP", "`FSD", "`AWQ"])
+        tmp = self.s.loadTable(tableName=tbName1, dbPath=dbPath, partitions=["DOP", "FSD", "AWQ"])
         assert_frame_equal(tmp.toDF(), rs)
 
     def test_loadTable_disk_list_param_memoryMode(self):
@@ -1084,6 +994,35 @@ class LoadTableTest(unittest.TestCase):
         assert_frame_equal(tmp.toDF(), rs)
         assert_array_equal(after >= before, repeat(True, 4))
 
+    def test_loadTable_disk_value_partition_string_scalar(self):
+        myDBName=WORK_DIR+"/db1"
+        script='''
+        login("admin","123456")
+        if(exists("{dbName}"))
+            dropDatabase("{dbName}")
+        db=database("{dbName}", VALUE, ["AAA", "BBB", "CCC"])
+        t=table(take(["AAA", "BBB", "CCC"], 1000) as sym, rand(100.0, 1000) as val)
+        db.createPartitionedTable(t, "pt", "sym").append!(t)
+        '''.format(dbName=myDBName)
+        self.s.run(script)
+        res=self.s.loadTable(tableName="pt", dbPath=myDBName, partitions="AAA", memoryMode=True).toDF()
+        expected=self.s.run("select * from loadTable('{dbName}', 'pt') where sym='AAA'".format(dbName=myDBName))
+        assert_frame_equal(res, expected)
+
+    def test_loadTable_disk_value_partition_string_vector(self):
+        myDBName=WORK_DIR+"/db1"
+        script='''
+        login("admin","123456")
+        if(exists("{dbName}"))
+            dropDatabase("{dbName}")
+        db=database("{dbName}", VALUE, ["AAA", "BBB", "CCC"])
+        t=table(take(["AAA", "BBB", "CCC"], 1000) as sym, rand(100.0, 1000) as val)
+        db.createPartitionedTable(t, "pt", "sym").append!(t)
+        '''.format(dbName=myDBName)
+        self.s.run(script)
+        res=self.s.loadTable(tableName="pt", dbPath=myDBName, partitions=["AAA", "BBB"], memoryMode=True).toDF()
+        expected=self.s.run("select * from loadTable('{dbName}', 'pt') where sym='AAA' or sym='BBB'".format(dbName=myDBName))
+        assert_frame_equal(res, expected)
 
 if __name__ == '__main__':
     unittest.main()

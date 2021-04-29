@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 from pandas.testing import assert_frame_equal
 from setup import HOST, PORT, WORK_DIR, DATA_DIR
+from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 
 class TestTable(unittest.TestCase):
@@ -221,6 +222,36 @@ class TestTable(unittest.TestCase):
                               aggFunctions=["wavg(bid,volume)", "wavg(offer,volume)"], on=["sym", "time"]).toDF()
         expected = self.s.run('select * from wj(t1,t2,-5:-1,<[wavg(bid,volume), wavg(offer,volume)]>,`sym`time)')
         assert_frame_equal(re, expected)
+
+    def test_table_chinese_column_name(self):
+        df = pd.DataFrame({'编号':[1, 2, 3, 4, 5], '序号':['壹','贰','叁','肆','伍']})
+        tmp = self.s.table(data=df, tableAliasName="t")
+        res=tmp.toDF()
+        assert_array_equal(res['编号'], [1, 2, 3, 4, 5])
+        assert_array_equal(res['序号'], ['壹','贰','叁','肆','伍'])
+        
+    def test_table_top_with_other_clause(self):
+        df = pd.DataFrame({'id': [10, 8, 5, 6, 7, 9, 1, 4, 2, 3], 'date': pd.date_range('2012-01-01', '2012-01-10', freq="D"), 'value': np.arange(0, 10)})
+        tmp = self.s.table(data=df, tableAliasName="t")
+        re = tmp.top(3).sort("id").toDF()
+        assert_array_equal(re['id'], [1, 2, 3])
+        assert_array_equal(re['date'], np.array(['2012-01-07', '2012-01-09', '2012-01-10'], dtype="datetime64[D]"))
+        assert_array_equal(re['value'], [6, 8, 9])
+        re = tmp.top(3).where("id>5").toDF()
+        assert_array_equal(re['id'], [10, 8, 6])
+        assert_array_equal(re['date'], np.array(['2012-01-01', '2012-01-02', '2012-01-04'], dtype="datetime64[D]"))
+        assert_array_equal(re['value'], [0, 1, 3])
+        df = pd.DataFrame({'sym': ["C", "MS", "MS", "MS", "IBM", "IBM", "C", "C", "C"], 
+                           'price': [49.6, 29.46, 29.52, 30.02, 174.97, 175.23, 50.76, 50.32, 51.29],
+                           'qty':[2200, 1900, 2100, 3200, 6800, 5400, 1300, 2500, 8800]})
+        tmp = self.s.table(data=df, tableAliasName="t1")
+        re = tmp.top(2).contextby("sym").sort("sym").toDF()
+        assert_array_equal(re['sym'], ["C", "C", "IBM", "IBM", "MS", "MS"])
+        assert_array_almost_equal(re['price'], [49.6, 50.76, 174.97, 175.23, 29.46, 29.52])
+        assert_array_equal(re['qty'], [2200, 1300, 6800, 5400, 1900, 2100])
+
+
+
 
 
 if __name__ == '__main__':
