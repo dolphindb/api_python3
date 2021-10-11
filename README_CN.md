@@ -1370,6 +1370,37 @@ tb = createDemoDataFrame()
 s.run("append!{{loadTable('{db}', `{tb})}}".format(db=dbPath,tb=tableName),tb)
 ```
 
+下面的例子创建了一个数据库 dfs://tableAppender 以及分布式表pt，然后通过tableAppender往这个分布式表添加数据:
+
+```python
+import pandas as pd
+import dolphindb as ddb
+import numpy as np
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+script='''
+dbPath = "dfs://tableAppender"
+if(existsDatabase(dbPath))
+    dropDatabase(dbPath)
+t = table(1000:0, `sym`date`month`time`minute`second`datetime`timestamp`nanotimestamp`qty, [SYMBOL, DATE,MONTH,TIME,MINUTE,SECOND,DATETIME,TIMESTAMP,NANOTIMESTAMP, INT])
+db=database(dbPath,RANGE,100000 200000 300000 400000 600001)
+pt = db.createPartitionedTable(t, `pt, `qty)
+'''
+s.run(script)
+appender = ddb.tableAppender("dfs://tableAppender","pt", s)
+sym = list(map(str, np.arange(100000, 600000)))
+date = np.array(np.tile(['2012-01-01', 'NaT', '1965-07-25', 'NaT', '2020-12-23', '1970-01-01', 'NaT', 'NaT', 'NaT', '2009-08-05'],50000), dtype="datetime64[D]")
+month = np.array(np.tile(['1965-08', 'NaT','2012-02', '2012-03', 'NaT'],100000), dtype="datetime64")
+time = np.array(np.tile(['2012-01-01T00:00:00.000', '2015-08-26T05:12:48.426', 'NaT', 'NaT', '2015-06-09T23:59:59.999'],100000), dtype="datetime64")
+second = np.array(np.tile(['2012-01-01T00:00:00', '2015-08-26T05:12:48', 'NaT', 'NaT', '2015-06-09T23:59:59'],100000), dtype="datetime64")
+nanotime = np.array(np.tile(['2012-01-01T00:00:00.000000000', '2015-08-26T05:12:48.008007006', 'NaT', 'NaT', '2015-06-09T23:59:59.999008007'],100000), dtype="datetime64")
+qty = np.arange(100000, 600000)
+data = pd.DataFrame({'sym': sym, 'date': date, 'month':month, 'time':time, 'minute':time, 'second':second, 'datetime':second, 'timestamp':time, 'nanotimestamp':nanotime, 'qty': qty})
+num = appender.append(data)
+print(num)
+print(s.run("select * from pt"))
+```
+
 ### 6.3 异步追加数据
 
 在高吞吐率的场景下，尤其是典型的高速小数据写入时，使用API的异步调用可以有效提高客户端的任务吞吐量。异步方式提交有如下几个特点：
