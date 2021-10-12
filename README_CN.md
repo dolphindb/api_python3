@@ -1534,11 +1534,11 @@ s.run("appendStreamingData(tb)")
 
 ### 6.4 批量异步追加数据
 
-针对单条数据批量写入的场景，DolphinDB Python API提供batchTableWrite函数用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络I/O时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，只支持批量写入数据到磁盘表和内存表。异步方式提交有如下几个特点：
+针对单条数据批量写入的场景，DolphinDB Python API提供BatchTableWrite函数用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络I/O时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，只支持批量写入数据到磁盘表和内存表。异步方式提交有如下几个特点：
 * API客户端提交任务到缓冲队列，缓冲队列接到任务后，客户端即认为任务已完成。
 * 提供getStatus等接口查看状态。
 
-batchTableWriter对象及主要方法介绍如下：
+BatchTableWriter对象及主要方法介绍如下：
 
 ```Python
 BatchTableWriter(host, port, userid="", password="", acquireLock=True)
@@ -1606,7 +1606,7 @@ getAllStatus()
 | 0 | tglobal | 0 |  5 | False | False |
 
 
-具体调用batchTableWriter插入数据的方法，可以参考以下示例：
+具体调用BatchTableWriter插入数据的方法，可以参考以下示例：
 ```python
 import numpy as np
 import pandas as pd
