@@ -37,6 +37,7 @@ $ pip install dolphindb
     - [6.1 追加数据到内存表](#61-追加数据到内存表)
     - [6.2 追加数据到分布式表](#62-追加数据到分布式表)
     - [6.3 异步追加数据](#63-异步追加数据)
+    - [6.4 批量异步追加数据](#64-批量异步追加数据)
 - [7 多线程调用线程池对象](#7-多线程调用线程池对象)
 - [8 数据库和表操作](#8-数据库和表操作)
     - [8.1 数据库和表的操作方法说明](#81-数据库和表的操作方法说明) 
@@ -1529,6 +1530,109 @@ tb = pd.DataFrame({'time': time_list,
 
 s.upload({'tb': tb})
 s.run("appendStreamingData(tb)")
+```
+
+### 6.4 批量异步追加数据
+
+针对单条数据批量写入的场景，DolphinDB Python API提供batchTableWrite函数用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络I/O时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，只支持批量写入数据到磁盘表和内存表。异步方式提交有如下几个特点：
+* API客户端提交任务到缓冲队列，缓冲队列接到任务后，客户端即认为任务已完成。
+* 提供getStatus等接口查看状态。
+
+batchTableWriter对象及主要方法介绍如下：
+
+```Python
+BatchTableWriter(host, port, userid="", password="", acquireLock=True)
+```
+函数说明：创建BatchTableWriter对象。
+参数说明：
+* host 连接服务器的IP地址。
+* port 连接服务器的端口号。
+* userid 是字符串，表示连接服务器的用户名。
+* password 是字符串，表示连接服务器的密码。
+* acquireLock 是布尔值，表示在使用过程中，API内部是否需要加锁。默认为true, 表示需要加锁。在并发调用API的场景下，建议加锁。
+
+以下是BatchTableWriter对象包含的函数方法介绍：
+
+```Python
+addTable(dbPath="", tableName="", partitioned=True)
+```
+函数说明：添加一个写入的表。
+参数说明：
+* dbName: 当为磁盘表时，需填写数据库名；若为空，则表示内存表。
+* tableName: 数据表的表名。
+* partitioned: 表示添加的表是否为分区表。设置为true表示是分区表。如果添加的表是磁盘未分区表，必需设置partitioned为false.
+
+注意:
+
+* 如果添加的是内存表，需要share该表。
+* 表名不可重复添加，需要先移除之前添加的表，否则会抛出异常。
+
+```Python
+insert( dbPath="", tableName="", *args)
+```
+函数说明：插入单行数据。
+参数说明：
+* args：是变长参数，代表插入的一行数据。
+
+注意：
+* 调用insert前需先调用addTable添加表，否则会抛出异常。
+* 变长参数个数和数据类型需要与insert表的列数及类型匹配。
+* 如果插入过程出现异常导致后台线程退出，再次调用insert会抛出异常，可以调用getUnwrittenData来获取之前所有写入缓冲队列但是没有成功写入服务器的数据（不包括本次insert的数据），然后再removeTable。如果需要再次插入数据，需要重新调用 addTable.
+* 在移除该表的过程中调用本函数，仍然能够插入成功，但这些插入的数据并不会发送到服务器。移除该表的时候调用insert算是未定义行为，不建议这样写程序。
+
+```Python
+removeTable(dbPath="", tableName="")
+```
+函数说明：释放由addTable添加的表所占用的资源。第一次调用该函数，该函数返回即表示后台线程已退出。
+
+```Python
+getUnwrittenData(dbPath="", tableName="")
+```
+函数说明：获取还未写入的数据，主要是用于的时候获取写入出现错误时，剩下未写入的数据。该函数会取出剩下未写入的数据，这些数据将不会被继续写入，如若需要重新写入，需要再次调用插入函数。
+
+```Python
+getStatus(dbPath="", tableName="")
+```
+函数说明：返回值是由一个整型和两个布尔型组合的元组，分别表示当前写入队列的深度、当前表是否被移除（true: 表示正在被移除），以及后台写入线程是否因为出错而退出（true: 表示后台线程因出错而退出）。
+
+```Python
+getAllStatus()
+```
+函数说明：获取所有当前存在的表的信息，不包含被移除的表。
+该函数的返回的值可以参考下表：
+
+| DatabaseName | TableName | WriteQueueDepth | sendedRows | Removing | Finished |
+| ------------ | --------- | --------------- | ------------ | ------------ | ------------ |
+| 0 | tglobal | 0 |  5 | False | False |
+
+
+具体调用batchTableWriter插入数据的方法，可以参考以下示例：
+```python
+import numpy as np
+import pandas as pd
+import dolphindb as ddb
+import time
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+
+script = """t = table(1000:0,`id`date`ticker`price, [INT,DATE,SYMBOL,DOUBLE])
+share t as tglobal"""
+s.run(script)
+
+writer = ddb.BatchTableWriter("localhost", 8848)
+writer.addTable(tableName="tglobal")
+writer.insert("", "tglobal", 1, np.datetime64("2019-01-01"), 'AAPL', 5.6)
+writer.insert("", "tglobal", 2, np.datetime64("2019-01-01"), 'GOOG', 8.3)
+writer.insert("", "tglobal", 3, np.datetime64("2019-01-02"), 'GOOG', 4.2)
+writer.insert("", "tglobal", 4, np.datetime64("2019-01-03"), 'AMZN', 1.4)
+writer.insert("", "tglobal", 5, np.datetime64("2019-01-05"), 'AAPL', 6.9)
+
+print(writer.getUnwrittenData(dbPath="", tableName="tglobal"))
+print(writer.getStatus(tableName="tglobal"))
+print(writer.getAllStatus())
+
+print("rows:", s.run("tglobal.rows()"))
+print(s.run("select * from tglobal"))
 ```
 
 ## 7 多线程调用线程池对象
