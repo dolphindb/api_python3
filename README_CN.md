@@ -331,7 +331,7 @@ dtype('float64')
         'date': np.array(['2019-02-03','2019-02-04','2019-02-05','2019-02-06','2019-02-07'], dtype='datetime64[D]'),
         'value': np.double([7.8, 4.6, 5.1, 9.6, 0.1]),},
         index=['one', 'two', 'three', 'four', 'five'])
-
+    
     s.upload({'a':a})
     s.run("typestr",a)
     # output
@@ -933,7 +933,7 @@ PartitionedTableAppender(dbPath, tableName, partitionColName, dbConnectionPool)
 - dbConnectionPool: 连接池
 
  使用最新的1.30版本及以上的server，可以使用Python API中的 PartitionedTableAppender对象来写入分布式表。其基本原理是设计一个连接池，然后获取分布式表的分区信息，将分区分配给连接池来并行写入，一个分区在同一时间只能由一个连接写入。
- 
+
  以下脚本创建了一个数据库 dfs://Rangedb 以及一个分布式表pt，然后创建了连接池pool并传入PartitionedTableAppender，使用append方法往分布式表并发写入本地数据:
 
 ```python
@@ -1410,7 +1410,7 @@ print(s.run("select * from pt"))
 - API客户端的异步任务提交时间取决于提交参数的序列化及其网络传输时间。
 
 **但请注意**：异步方式不适用前后任务之间有依赖的场景。比如两个任务，一个任务向分布式数据库写入数据，后一个任务将新写入的数据结合历史数据做分析。这样后一个任务对前一任务有依赖的场景，不能使用异步的方式。
-Python API打开ASYN（异步）模式可以参照1.1节建立DolphinDB连接的部分，即设置session的`enableASYN`参数为`True`.
+Python API打开ASYN（异步）模式可以参照[1.1 建立DolphinDB连接](#11-建立dolphindb连接)，即设置session的`enableASYN`参数为`True`.
 
 ```python
 s=ddb.session(enableASYN=True)
