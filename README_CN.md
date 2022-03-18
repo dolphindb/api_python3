@@ -544,7 +544,7 @@ import numpy as np
 
 def createDemoDict():
     return {'id': [1, 2, 2, 3],
-            'date': np.array(['2021.05.06', '2021.05.07', '2021.05.06', '2021.05.07'], dtype='datetime64[D]'),
+            'date': np.array(['2021-05-06', '2021-05-07', '2021-05-06', '2021-05-07'], dtype='datetime64[D]'),
             'ticker': ['AAPL', 'AAPL', 'AMZN', 'AMZN'],
             'price': [129.74, 130.21, 3306.37, 3291.61]}
 ```
@@ -2758,7 +2758,8 @@ print(t1.merge(t2, how="outer", on=["TICKER","date"]).toDF())
 `merge_asof` 对应 DolphinDB 中的 [asof join (aj)](https://www.dolphindb.cn/cn/help/SQLStatements/TableJoiners/asofjoin.html)。asof join 为非同时连接，它与 left join 非常相似，主要有以下区别：
 
 - 1. asof join 的最后一个连接列通常是时间类型。对于左表中某行的时间 t，在右表最后一个连接列之外的其它连接列一致的记录中，如果右表没有与 t 对应的时间，asof join 会取右表中 t 之前的最近时间对应的记录；如果有多个相同的时间，会取最后一个时间对应的记录。
-- 1. 如果只有一个连接列，右表必须按照连接列排好序。如果有多个连接列，右表必须在其它连接列决定的每个组内根据最后一个连接列排好序。如果右表不满足这些条件，计算结果将会不符合预期。右表不需要按照其他连接列排序，左表不需要排序。
+  
+- 2. 如果只有一个连接列，右表必须按照连接列排好序。如果有多个连接列，右表必须在其它连接列决定的每个组内根据最后一个连接列排好序。如果右表不满足这些条件，计算结果将会不符合预期。右表不需要按照其他连接列排序，左表不需要排序。
 
 本节与下节的例子使用了 [trades.csv](data/trades.csv) 和 [quotes.csv](data/quotes.csv)，它们含有 NYSE 网站下载的 AAPL 和 FB 的 2016 年 10 月 24 日的交易与报价数据。
 
