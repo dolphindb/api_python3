@@ -1293,6 +1293,11 @@ s.run(script)
 若 Python 程序获取的数据可以组织成 List 方式，且保证数据类型正确的情况下，可以直接使用 `tableInsert` 函数来批量保存多条数据。这个函数可以接受多个数组作为参数，将数组追加到数据表中。这样做的好处是，可以在一次访问服务器请求中将上传数据对象和追加数据这两个步骤一次性完成，相比 `insert into` 做法减少了一次访问 DolphinDB 服务器的请求。
 
 ```python
+import dolphindb as ddb
+import numpy as np
+
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
 ids = [1,2,3]
 dates = np.array(['2019-03-03','2019-03-04','2019-03-05'], dtype="datetime64[D]")
 tickers=['AAPL','GOOG','AAPL']
@@ -1319,6 +1324,12 @@ s.run("tglobal")
 可直接通过部分应用的方式，将一个 DataFrame 直接上传到服务器并追加到内存表。
 
 ```python
+import dolphindb as ddb
+
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+
+import pandas as pd
 script = """t = table(1000:0,`id`ticker`price, [INT,SYMBOL,DOUBLE])
 share t as tglobal"""
 s.run(script)
@@ -1346,15 +1357,27 @@ s.run("tglobal")
 由于 Python pandas 中所有 [有关时间的数据类型均为 datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)，上传一个 DataFrame 到 DolphinDB 以后所有时间类型的列均为 nanotimestamp 类型，因此在追加一个带有时间列的 DataFrame 时，我们需要在 DolphinDB 服务端对时间列进行数据类型转换：先将该 DataFrame 上传到服务端，通过 select 语句对表内的每一个时间列进行时间类型转换（下例将 nanotimestamp 类型转换为 date 类型），再追加到内存表中，具体如下：
 
 ```python
+import dolphindb as ddb
+
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
 script = """t = table(1000:0,`id`date`ticker`price, [INT,DATE,SYMBOL,DOUBLE])
 share t as tglobal"""
 s.run(script)
 
 import pandas as pd
+import numpy as np
+def createDemoDict():
+		return {'id': [1, 2, 2, 3],
+            'date': np.array(['2019-02-04', '2019-02-05', '2019-02-09', '2019-02-13'], dtype='datetime64[D]'),
+            'ticker': ['AAPL', 'AMZN', 'AMZN', 'A'],
+            'price': [22.0, 3.5, 21.0, 26.0]}
+
+
 tb=pd.DataFrame(createDemoDict())
 s.upload({'tb':tb})
 s.run("tableInsert(tglobal,(select id, date(date) as date, ticker, price from tb))")
-s.run("tglobal")
+print(s.run("tglobal"))
 
 #output
    id	      date ticker	price
@@ -1382,9 +1405,15 @@ s.run(script)
 也可使用 `insert into` 语句一次性插入多条数据:
 
 ```python
+
+import dolphindb as ddb
+
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+
 import numpy as np
 import random
-
+import pandas as pd
 rowNum = 5
 ids = np.arange(1, rowNum+1, 1, dtype=np.int32)
 dates = np.array(pd.date_range('4/1/2019', periods=rowNum), dtype='datetime64[D]')
@@ -2863,9 +2892,11 @@ print(trades.merge_window(quotes, -5000000000, 0, aggFunctions=["avg(Bid_Price)"
 使用 window join 计算交易成本：
 
 ```python
-trades.merge_window(quotes,-1000000000, 0, aggFunctions="[wavg(Offer_Price, Offer_Size) as Offer_Price, wavg(Bid_Price, Bid_Size) as Bid_Price]", on=["Symbol","Time"], prevailing=True).select("sum(Trade_Volume*abs(Trade_Price-(Bid_Price+Offer_Price)/2))/sum(Trade_Volume*Trade_Price)*10000 as cost").groupby("Symbol").executeAs("tradingCost")
-
-print(s.loadTable(tableName="tradingCost").toDF())
+tb = trades.merge_window(quotes,-1000000000, 0, aggFunctions="[wavg(Offer_Price, Offer_Size) as Offer_Price, wavg(Bid_Price, Bid_Size) as Bid_Price]",
+                         on=["Symbol","Time"], prevailing=True)\
+                         .select("sum(Trade_Volume*abs(Trade_Price-(Bid_Price+Offer_Price)/2))/sum(Trade_Volume*Trade_Price)*10000 as cost")\
+                         .groupby("Symbol")
+print(tb.toDF())
 
 # output
   Symbol       cost
@@ -2891,6 +2922,33 @@ print(s.run('AMZN'))
 
 `ols` 函数用于计算最小二乘回归系数，返回的结果是一个字典。
 
+```python
+import dolphindb.settings as keys
+if s.existsDatabase("dfs://US"):
+	s.dropDatabase("dfs://US")
+s.database(dbName='USdb', partitionType=keys.VALUE, partitions=["GFGC","EWST", "EGAS"], dbPath="dfs://US")
+US=s.loadTextEx(dbPath="dfs://US", partitionColumns=["TICKER"], tableName='US', remoteFilePath=WORK_DIR + "/US.csv")
+
+result = s.loadTable(tableName="US",dbPath="dfs://US")\
+         .select("select VOL\\SHROUT as turnover, abs(RET) as absRet, (ASK-BID)/(BID+ASK)*2 as spread, log(SHROUT*(BID+ASK)/2) as logMV")\
+         .where("VOL>0").ols("turnover", ["absRet","logMV", "spread"], True)
+
+print(result)
+
+#output
+{'Coefficient':       factor       beta  stdError      tstat        pvalue
+0  intercept -14.107396  1.044444 -13.507088  0.000000e+00
+1     absRet  75.524082  3.113285  24.258651  0.000000e+00
+2      logMV   1.473178  0.097839  15.057195  0.000000e+00
+3     spread -15.644738  1.888641  -8.283596  2.220446e-16, 'ANOVA':     Breakdown    DF             SS           MS           F  Significance
+0  Regression     3   15775.710620  5258.570207  258.814918           0.0
+1    Residual  5462  110976.255372    20.317879         NaN           NaN
+2       Total  5465  126751.965992          NaN         NaN           NaN, 'RegressionStat':            item   statistics
+0            R2     0.124461
+1    AdjustedR2     0.123980
+2      StdError     4.507536
+3  Observations  5466.000000}
+```
 ```python
 trade = s.loadTable(tableName="trade",dbPath="dfs://valuedb")
 z=trade.select(['bid','ask','prc']).ols('PRC', ['BID', 'ASK'])
@@ -3189,7 +3247,7 @@ s.connect("localhost",8921, "admin", "123456")
 if s.existsDatabase("dfs://US"):
 	s.dropDatabase("dfs://US")
 s.database(dbName='USdb', partitionType=keys.VALUE, partitions=["GFGC","EWST", "EGAS"], dbPath="dfs://US")
-US=s.loadTextEx(dbPath="dfs://US", partitionColumns=["TICKER"], tableName='US', remoteFilePath=WORK_DIR + "/USPrices_FIRST.csv")
+US=s.loadTextEx(dbPath="dfs://US", partitionColumns=["TICKER"], tableName='US', remoteFilePath=WORK_DIR + "/US.csv")
 US = s.loadTable(dbPath="dfs://US", tableName="US")
 def loadPriceData(inData):
     s.loadTable(inData).select("PERMNO, date, abs(PRC) as PRC, VOL, RET, SHROUT*abs(PRC) as MV").where("weekday(date) between 1:5, isValid(PRC), isValid(VOL)").sort(bys=["PERMNO","date"]).executeAs("USstocks")
@@ -3206,51 +3264,51 @@ priceData = loadPriceData(US.tableName())
 def genTradeTables(inData):
     return s.loadTable(inData).select(["date", "PERMNO", "MV", "signal"]).where("PRC>5, MV>100000, VOL>0, isValid(signal)").sort(bys=["date"]).executeAs("tradables")
 
-
 def formPortfolio(startDate, endDate, tradables, holdingDays, groups, WtScheme):
     holdingDays = str(holdingDays)
     groups=str(groups)
-    ports = tradables.select("date, PERMNO, MV, rank(signal,,"+groups+") as rank, count(PERMNO) as symCount, 0.0 as wt").where("date between"+startDate+":"+endDate).contextby("date").having("count(PERMNO)>=100").executeAs("ports")
+    ports = tradables.select("date, PERMNO, MV, rank(signal,,"+groups+") as rank, count(PERMNO) as symCount, 0.0 as wt").where("date between "+startDate+":"+endDate).contextby("date").having("count(PERMNO)>=100").executeAs("ports")
     if WtScheme == 1:
         ports.where("rank=0").contextby("date").update(cols=["wt"], vals=["-1.0/count(PERMNO)/"+holdingDays]).execute()
         ports.where("rank="+groups+"-1").contextby("date").update(cols=["wt"], vals=["1.0/count(PERMNO)/"+holdingDays]).execute()
     elif WtScheme == 2:
-        ports.where("rank=0").contextby("date").update(cols=["wt"], vals=["-MV/sum(MV)/"+holdingDays]).execute()
-        ports.where("rank="+groups+"-1").contextby("date").update(cols=["wt"], vals=["MV/sum(MV)/"+holdingDays]).execute()
+        ports.contextby("date").update(cols=["wt"], vals=["-MV/sum(MV)/"+holdingDays]).where("rank=0").execute()
+        ports.contextby("date").update(cols=["wt"], vals=["MV/sum(MV)/"+holdingDays]).where("rank="+groups+"-1").execute()
     else:
         raise Exception("Invalid WtScheme. valid values:1 or 2")
-    return ports.select("PERMNO, date as tranche, wt").where("wt!=0").sort(bys=["PERMNO","date"]).executeAs("ports")
+    return ports.select("PERMNO, date as tranche, wt").where("wt!=0.0").sort(bys=["PERMNO","date"]).executeAs("ports")
 
 tradables=genTradeTables(priceData.tableName())
-startDate="1996.01.01"
+startDate="2016.01.01"
 endDate="2017.01.01"
 holdingDays=5
 groups=10
 ports=formPortfolio(startDate=startDate,endDate=endDate,tradables=tradables,holdingDays=holdingDays,groups=groups,WtScheme=2)
-dailyRtn=priceData.select("date, PERMNO, RET as dailyRet").where("date between"+startDate+":"+endDate).executeAs("dailyRtn")
+dailyRtn=priceData.select("date, PERMNO, RET as dailyRet").where("date between "+startDate+":"+endDate).executeAs("dailyRtn")
 ```
 
 步骤 3：计算投资组合中每只股票接下来 5 天的利润或损失。在投资组合形成后的 5 天后关停投资组合。
 
 ```python
-def calcStockPnL(ports, dailyRtn, holdingDays, endDate):
+def calcStockPnL(ports,inData, dailyRtn, holdingDays, endDate):
     s.table(data={'age': list(range(1,holdingDays+1))}).executeAs("ages")
     ports.select("tranche").sort("tranche").executeAs("dates")
     s.run("dates = sort distinct dates.tranche")
     s.run("dictDateIndex=dict(dates,1..dates.size())")
     s.run("dictIndexDate=dict(1..dates.size(), dates)")
+    inData.select("max(date) as date").groupby("PERMNO").executeAs("lastDaysTable")
+    s.run("lastDays=dict(lastDaysTable.PERMNO,lastDaysTable.date)")
     ports.merge_cross(s.table(data="ages")).select("dictIndexDate[dictDateIndex[tranche]+age] as date, PERMNO, tranche, age, take(0.0,age.size()) as ret, wt as expr, take(0.0,age.size()) as pnl").where("isValid(dictIndexDate[dictDateIndex[tranche]+age]), dictIndexDate[dictDateIndex[tranche]+age]<=min(lastDays[PERMNO],"+endDate+")").executeAs("pos")
     t1= s.loadTable("pos")
-    t1.merge(dailyRtn, on=["date","PERMNO"], merge_for_update=True).update(["ret"],["dailyRet"]).execute()
+    # t1.merge(dailyRtn, on=["date","PERMNO"], merge_for_update=True).update(["ret"],["dailyRet"]).execute()
+    t1.merge(dailyRtn, on=["date","PERMNO"]).update(["ret"],["dailyRet"]).execute()
+
     t1.contextby(["PERMNO","tranche"]).update(["expr"], ["expr*cumprod(1+ret)"]).execute()
     t1.update(["pnl"],["expr*ret/(1+ret)"]).execute()
     return t1
 
-lastDaysTable = priceData.select("max(date) as date").groupby("PERMNO").executeAs("lastDaysTable")
-s.run("lastDays=dict(lastDaysTable.PERMNO,lastDaysTable.date)")
-# undefine priceData to release memory
-s.undef(priceData.tableName(), 'VAR')
-stockPnL = chuzhaoalcStockPnL(ports=ports, dailyRtn=dailyRtn, holdingDays=holdingDays, endDate=endDate)
+
+stockPnL = calcStockPnL(ports=ports,inData=priceData, dailyRtn=dailyRtn, holdingDays=holdingDays, endDate=endDate)
 ```
 
 步骤 4：计算投资组合的利润或损失。
