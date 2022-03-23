@@ -2483,17 +2483,6 @@ s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='tra
 
 ```
 
-```python
-trade = s.loadTable(tableName="trade",dbPath="dfs://valuedb")
-print(trade.select(['sum(vol)','sum(prc)']).groupby(['ticker']).toDF())
-
-# output
-  ticker  count_ticker
-0   NVDA          4516
-1   NFLX          3679
-2   AMZN          4941
-```
-
 分别计算每个股票的 vol 总和与 prc 总和：
 
 ```python
