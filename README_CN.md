@@ -2475,6 +2475,7 @@ print(trade.select("ticker, date, vol").where("bid!=NULL, ask!=NULL, vol>5000000
 准备数据库
 
 ```
+import dolphindb.settings as keys
 if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], dbPath="dfs://valuedb")
@@ -2484,7 +2485,7 @@ s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='tra
 
 ```python
 trade = s.loadTable(tableName="trade",dbPath="dfs://valuedb")
-print(trade.select('count(*)').groupby(['ticker']).sort(bys=['ticker desc']).toDF())
+print(trade.select(['sum(vol)','sum(prc)']).groupby(['ticker']).toDF())
 
 # output
   ticker  count_ticker
@@ -2497,7 +2498,7 @@ print(trade.select('count(*)').groupby(['ticker']).sort(bys=['ticker desc']).toD
 
 ```python
 trade = s.loadTable(tableName="trade",dbPath="dfs://valuedb")
-print(trade.select(['vol','prc']).groupby(['ticker']).sum().toDF())
+print(trade.select(['sum(vol)','sum(prc)']).groupby(['ticker']).toDF())
 
 # output
   ticker      sum_vol       sum_prc
@@ -2922,6 +2923,8 @@ print(s.run('AMZN'))
 
 `ols` 函数用于计算最小二乘回归系数，返回的结果是一个字典。
 
+下例中 US.csv 压缩后存放于 WORK_DIR，请下载解压后使用。
+
 ```python
 import dolphindb.settings as keys
 if s.existsDatabase("dfs://US"):
@@ -3236,6 +3239,7 @@ Event().wait()
 **Create server session**
 
 ```python
+import dolphindb.settings as keys
 import dolphindb as ddb
 s=ddb.session()
 s.connect("localhost",8921, "admin", "123456")
