@@ -2151,7 +2151,7 @@ errorCode     : A1
 if writeStatus.hasError():
     print("Error in writing:")
     unwrittendata = writer.getUnwrittenData()
-    print("Unwriterdata: %d" % len(unwrittendata))
+    print("Unwrittendata: %d" % len(unwrittendata))
     # 重新获取新的 MTW 对象
     newwriter = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","dfs://valuedb3","pdatetest",False,False,[],10000,1,5,"id",["LZ4","LZ4","DELTA"])
     try:
@@ -2179,7 +2179,7 @@ else:
 print(s.run("select count(*) from pt"))
 """
 Error in writing:
-Unwriterdata: 110
+Unwrittendata: 110
 Write again:
  errorCode     : None
  errorInfo     : 
