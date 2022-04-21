@@ -2,7 +2,7 @@
 
 windows 版本的 DolphinDB Python API 支持 Python 3.6-3.8 版本；linux 版本的 DolphinDB Python API 支持 Python 3.6-3.9 版本
 
-注意：DolphinDB Python API 暂不支持 pandas 1.3.0 版本，会导致反序列化失败。
+注意：DolphinDB Python API 暂不支持 pandas 1.3.0 版本。
 
 通过执行如下指令进行安装：
 
@@ -36,6 +36,7 @@ $ pip install dolphindb
       - [3.1.3 创建基于 LIST 分区的数据库及数据表](#313-创建基于-list-分区的数据库及数据表)
       - [3.1.4 创建基于 HASH 分区的数据库及数据表](#314-创建基于-hash-分区的数据库及数据表)
       - [3.1.5 创建基于 COMPO 分区的数据库及数据表](#315-创建基于-compo-分区的数据库及数据表)
+      - [3.1.6 创建 TSDB 引擎下的数据库](#316-创建-tsdb-引擎下的数据库)
     - [3.2 使用 `run` 方法创建](#32-使用-run-方法创建)
   - [4 导入数据到 DolphinDB 数据库](#4-导入数据到-dolphindb-数据库)
     - [4.1 导入内存表](#41-导入内存表)
@@ -63,6 +64,9 @@ $ pip install dolphindb
     - [6.2 追加数据到分布式表](#62-追加数据到分布式表)
     - [6.3 异步追加数据](#63-异步追加数据)
     - [6.4 批量异步追加数据](#64-批量异步追加数据)
+      - [6.4.1 BatchTableWriter](#641-batchtablewriter)
+      - [6.4.2 MultithreadedTableWriter](#642-multithreadedtablewriter)
+    - [6.5 从 Python 上传数据到 DolphinDB 时的数据转换](#65-从-python-上传数据到-dolphindb-时的数据转换)
   - [7 多线程调用线程池对象](#7-多线程调用线程池对象)
   - [8 数据库和表操作](#8-数据库和表操作)
     - [8.1 数据库和表的操作方法说明](#81-数据库和表的操作方法说明)
@@ -115,7 +119,13 @@ $ pip install dolphindb
 
 ### 1.1 建立 DolphinDB 连接
 
-Python 应用通过会话（Session）在 DolphinDB 服务器上执行脚本和函数以及在两者之间双向传递数据。常用的 Session 类的函数如下：
+Python 应用通过会话（Session）在 DolphinDB 服务器上执行脚本和函数，以及在两者之间双向传递数据。其接口如下：
+
+```
+session(host, port, userid, password, enableSSL, enableASYN, keepAliveTime, enableChunkGranularityConfig, compress)
+```
+
+常用的 Session 类的函数如下：
 
 | 方法名                                      | 详情                                       |
 | :--------------------------------------- | :--------------------------------------- |
@@ -131,7 +141,6 @@ Python 应用通过会话（Session）在 DolphinDB 服务器上执行脚本和�
 | close()                                  | 关闭当前会话                                   |
 
 以下脚本中，通过 import 语句导入 API 以后，在 Python 中创建一个会话，然后使用指定的域名或 IP 地址和端口号把该会话连接到 DolphinDB 服务器。请注意，在执行以下 Python 脚本前，需要先启动 DolphinDB 服务器。
-
 ```python
 import dolphindb as ddb
 s = ddb.session()
@@ -208,7 +217,7 @@ s=ddb.session(compress=True)
 
 ### 1.2 运行 DolphinDB 脚本
 
-DolphinDB 脚本都可以通过 `run(script) ` 方法来运行。如果脚本在 DolphinDB 中返回对象，会转换成 Python 中对象。脚本运行失败的话，会有相应的错误提示。
+DolphinDB 脚本都可以通过 `run(script)` 方法来运行。如果脚本在 DolphinDB 中返回对象，会转换成 Python 中对象。脚本运行失败的话，会有相应的错误提示。
 
 ```python
 s = ddb.session()
@@ -226,7 +235,7 @@ repr(a)
 s.run("def getTypeStr(input){ \nreturn typestr(input)\n}")
 ```
 
-对多行脚本，可以采用三引号的方式将其格式化，这样更易于维护，例如：
+对多行脚本，可以采用三引号的方式将其格式化，这样更易于维护。例如：
 
 ```
 script="""
@@ -378,7 +387,7 @@ dtype('float64')
     'NANOTIMESTAMP'
     ```
 
-    由于 DolphinDB 中的 TIME, MINUTE, SECOND, NANOTIME 等类型没有日期信息，datetime64 类型无法由 Python API 直接转换为这些类型。若需要根据 Python 中数据在 DolphinDB 中产生这些类型数据，可先将 datetime64 类型数据上传到 DolphinDB Server，然后去除日期信息。上传数据方法可参见 [上传本地对象到 DolphinDB 服务器](#2 - 上传本地对象到 - dolphindb - 服务器)。
+    由于 DolphinDB 中的 TIME, MINUTE, SECOND, NANOTIME 等类型没有日期信息，datetime64 类型无法由 Python API 直接转换为这些类型。若需要根据 Python 中数据在 DolphinDB 中产生这些类型数据，可先将 datetime64 类型数据上传到 DolphinDB Server，然后去除日期信息。上传数据方法可参见 [上传本地对象到 DolphinDB 服务器](#2-上传本地对象到-dolphindb-服务器)。
 
     ```python
     import numpy as np
@@ -451,7 +460,7 @@ dtype('float64')
 
 `undef` 方法释放 session 中的指定对象；`undefAll` 方法释放 session 中的全部对象。`undef` 支持的对象类型包括："VAR"(变量)、"SHARED"(共享变量) 与 "DEF"(函数定义)。默认类型为变量 "VAR"。"SHARED" 指内存中跨 session 的共享变量，例如流数据表。
 
-假设 session 中有一个 DolphinDB 的表对象 t1, 可以通过 `session.undef("t1","VAR")` 将该表释放掉。释放后，并不一定能够看到内存马上释放。这与 DolphinDB 的内存管理机制有关。DolphinDB 从操作系统申请的内存，释放后不会立即还给操作系统，因为这些释放的内存在 DolphinDB 中可以立即使用。申请内存首先从 DolphinDB 内部的池中申请内存，不足才会向操作系统去申请。配置文件 (dolphindb.cfg) 中参数 *maxMemSize* 设置的内存上限会尽量保证。譬如说设置为 8GB，那么 DolphinDB 会尽可能利用 8GB 内存。所以如果用户需要反复 undef 内存中的一个变量以释放内存，为后面程序腾出更多内存空间，则需要将 *maxMemSize* 调整到一个合理的数值，否则当前内存没有释放，而后面需要的内存超过了系统的最大内存，DolphinDB 的进程就有可能被操作系统杀掉或者出现 out of memory 的错误。
+假设 session 中有一个 DolphinDB 的表对象 t1，可以通过 `session.undef("t1","VAR")` 将该表释放掉。释放后，并不一定能够看到内存马上释放。这与 DolphinDB 的内存管理机制有关。DolphinDB 从操作系统申请的内存，释放后不会立即还给操作系统，因为这些释放的内存在 DolphinDB 中可以立即使用。申请内存首先从 DolphinDB 内部的池中申请内存，不足才会向操作系统去申请。配置文件 (dolphindb.cfg) 中参数 *maxMemSize* 设置的内存上限会尽量保证。譬如说设置为 8GB，那么 DolphinDB 会尽可能利用 8GB 内存。所以如果用户需要反复 undef 内存中的一个变量以释放内存，为后面程序腾出更多内存空间，则需要将 *maxMemSize* 调整到一个合理的数值，否则当前内存没有释放，而后面需要的内存超过了系统的最大内存，DolphinDB 的进程就有可能被操作系统杀掉或者出现 out of memory 的错误。
 
 ### 1.5 查询完毕后自动清除变量
 
@@ -561,11 +570,11 @@ dt = s.table(data=createDemoDict(), tableAliasName="testDict")
 print(s.loadTable("testDict").toDF())
 
 # output
-        date ticker    price
-0 2021-05-06   AAPL   129.74
-1 2021-05-07   AAPL   130.21
-2 2021-05-06   AMZN  3306.37
-3 2021-05-07   AMZN  3291.61
+   id       date ticker    price
+0   1 2021-05-06   AAPL   129.74
+1   2 2021-05-07   AAPL   130.21
+2   2 2021-05-06   AMZN  3306.37
+3   3 2021-05-07   AMZN  3291.61
 ```
 
 - 上传 pandas DataFrame
@@ -648,17 +657,15 @@ t1=s.table(data=createDemoDict(), tableAliasName="t1")
 print(t1.toDF())
 
 #output
-        date ticker    price
-0 2021-05-06   AAPL   129.74
-1 2021-05-07   AAPL   130.21
-2 2021-05-06   AMZN  3306.37
-3 2021-05-07   AMZN  3291.61
+   id       date ticker    price
+0   1 2021-05-06   AAPL   129.74
+1   2 2021-05-07   AAPL   130.21
+2   2 2021-05-06   AMZN  3306.37
+3   3 2021-05-07   AMZN  3291.61
 ```
 
 <!---
-
 如果重复执行以上语句，会发生找到不到 t1 的异常。原因是上传结束后，在重新给 Python 端 t1 分配 DolphinDB 的表对象前，Python 端会取消对 server 端表 t1 的原有引用，DolphinDB 端会对 session 中的对应的表 t1 进行释放（通过函数 `undef` 取消它在 session 中的定义），所以会出现无法找到 t1 的异常。
-
 ```python
 t1=s.table(data=createDemoDict(), tableAliasName="t1")
 print(t1.toDF())
@@ -668,7 +675,6 @@ print(t1.toDF())
 ```
 
 若要避免这种情况，可将这个 table 对象赋值给另一个 Python 本地变量，但代价是 server 端保存了两份同样的 table 对象，因为 Python 端有两个引用：t1 和 t2。
-
 ```python
 t2=s.table(data=createDemoDict(), tableAliasName="t1")
 print(t2.toDF())
@@ -682,7 +688,6 @@ print(t2.toDF())
 ```
 
 如果需要反复通过同一个本地变量 t1 指向相同的或者不同的上传表，建议不指定 DolphinDB 表名。此时会为用户随机产生一个临时表名。这个表名可以通过 t1.tableName() 来获取。那么 server 端是不是会产生很多表对象，造成内存溢出呢？由于 Python 端使用了同一个变量名，所以在重新上传数据的时候，系统会将上一个表对象释放掉 (TMP_TBL_876e0ce5)，而用一个新的 table 对象 TMP_TBL_4c5647af 来对应 Python 端的 t1，所以 server 端始终只有一个对应的表对象。
-
 ```python
 t1=s.table(data=createDemoDict())
 print(t1.tableName())
@@ -825,7 +830,7 @@ re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 dbPath="dfs://db_hash_int"
 if s.existsDatabase(dbPath):
     s.dropDatabase(dbPath)
-db = s.database(dbName='mydb', partitionType=keys.HASH, partitions=[keys.DT_INT, 2], dbPath=dbPath)
+db = s.database(dbName='mydb', partitionType=keys.HASH, partitions=[keys.INT, 2], dbPath=dbPath)
 df = pd.DataFrame({'id':[1,2,3,4,5], 'val':[10, 20, 30, 40, 50]})
 t = s.table(data=df)
 pt = db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id')
@@ -850,6 +855,35 @@ df = pd.DataFrame({'date':np.array(['2012-01-01', '2012-01-01', '2012-01-06', '2
 t = s.table(data=df)
 db.createPartitionedTable(table=t, tableName='pt', partitionColumns=['date', 'val']).append(t)
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
+```
+
+#### 3.1.6 创建 TSDB 引擎下的数据库
+
+TSDB 引擎数据库的创建方法和 OLAP 几乎一致，只需要在 database 函数中指定 engine = "TSDB"，并在调用建表函数 createTable，createPartitionedTable 时指定 sortColumns。 函数参数介绍请参见用户手册 [database](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/d/database.html), [createPartitionedTable](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/c/createPartitionedTable.html) 和 [createTable](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/c/createTable.html)。
+
+```
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
+
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+
+dates = np.array(pd.date_range(start='20120101', end='20120110'), dtype="datetime64[D]")
+
+dbPath = "dfs://tsdb"
+if s.existsDatabase(dbPath): s.dropDatabase(dbPath)
+db = s.database(dbName='mydb_tsdb', partitionType=keys.VALUE, partitions=dates, dbPath=dbPath, engine="TSDB")
+
+df = pd.DataFrame({'datetime': np.array(
+    ['2012-01-01T00:00:00', '2012-01-02T00:00:00', '2012-01-04T00:00:00', '2012-01-05T00:00:00', '2012-01-08T00:00:00'],
+    dtype='datetime64'),
+    'sym': ['AA', 'BB', 'BB', 'AA', 'BB'], 'val': [1, 2, 3, 4, 5]})
+t = s.table(data=df)
+
+db.createPartitionedTable(table=t, tableName='pt', partitionColumns='datetime', sortColumns=["sym", "datetime"]).append(t)
+re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
+print(re)
 ```
 
 ### 3.2 使用 `run` 方法创建
@@ -891,7 +925,7 @@ t1.toDF()
 
 DolphinDB 数据库根据存储方式主要有 2 种类型：内存数据库以及分布式文件系统（DFS）中的数据库。DFS 数据库的部署方式请参考 [多服务器集群部署](https://github.com/dolphindb/Tutorials_CN/blob/master/multi_machine_cluster_deploy.md)。
 
-下面的例子中，我们使用了一个 csv 文件：[data_example.csv](data/example.csv)。请下载该文件并存于下例中指定的 WORK_DIR 文件夹中。
+下面的例子中，我们使用了一个 csv 文件：[example.csv](data/example.csv)。请下载该文件并存于下例中指定的 WORK_DIR 文件夹中。
 
 ### 4.1 导入内存表
 
@@ -903,7 +937,7 @@ DolphinDB 数据库根据存储方式主要有 2 种类型：内存数据库以�
 WORK_DIR = "C:/DolphinDB/Data"
 
 # 返回一个 Python 中的 DolphinDB 表对象
-trade=s.loadText(WORK_DIR+"/data_example.csv")
+trade=s.loadText(WORK_DIR+"/example.csv")
 
 # 将返回的 DolphinDB 表对象转化为 pandas DataFrame。表的数据传输发生在此步骤。
 df = trade.toDF()
@@ -967,7 +1001,7 @@ s.database(dbName='mydb', partitionType=keys.VALUE, partitions=['AMZN','NFLX', '
 - remoteFilePath 表示文本文件在 DolphinDB 服务器上的绝对路径。
 - delimiter 表示文本文件的分隔符（默认分隔符是逗号）
 
-下面的例子使用函数 `loadTextEx` 创建了分区表 trade，并把 data_example.csv 中的数据加载到表中。
+下面的例子使用函数 `loadTextEx` 创建了分区表 trade，并把 example.csv 中的数据加载到表中。
 
 ```python
 import dolphindb.settings as keys
@@ -976,7 +1010,7 @@ if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX", "NVDA"], dbPath="dfs://valuedb")
 
-trade = s.loadTextEx(dbPath="mydb", tableName='trade',partitionColumns=["TICKER"], remoteFilePath=WORK_DIR + "/data_example.csv")
+trade = s.loadTextEx(dbPath="mydb", tableName='trade',partitionColumns=["TICKER"], remoteFilePath=WORK_DIR + "/example.csv")
 print(trade.toDF())
 
 # output
@@ -1008,12 +1042,12 @@ print(trade.cols)
 #展示表的结构：
 print(trade.schema)
 # output
-     name typeString  typeInt
-0  TICKER     SYMBOL       17
-1    date       DATE        6
-2     VOL        INT        4
-3     PRC     DOUBLE       16
-4     BID     DOUBLE       16
+     name typeString  typeInt comment
+0  TICKER     SYMBOL       17        
+1    date       DATE        6        
+2     VOL        INT        4        
+3     PRC     DOUBLE       16        
+4     BID     DOUBLE       16        
 5     ASK     DOUBLE       16
 ```
 
@@ -1036,7 +1070,7 @@ import dolphindb.settings as keys
 
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], dbPath="")
 
-trade=s.loadTextEx(dbPath="mydb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
+trade=s.loadTextEx(dbPath="mydb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
 trade.toDF()
 ```
 
@@ -1045,7 +1079,7 @@ trade.toDF()
 `ploadText` 函数可以并行加载文本文件到内存分区表中。它的加载速度要比 `loadText` 函数快。
 
 ```python
-trade=s.ploadText(WORK_DIR+"/data_example.csv")
+trade=s.ploadText(WORK_DIR+"/example.csv")
 print(trade.rows)
 
 # output
@@ -1069,33 +1103,61 @@ PartitionedTableAppender(dbPath, tableName, partitionColName, dbConnectionPool)
 
  使用最新的 1.30 版本及以上的 server，可以使用 Python API 中的 `PartitionedTableAppender` 对象来写入分布式表。其基本原理是设计一个连接池，然后获取分布式表的分区信息，将分区分配给连接池来并行写入，一个分区在同一时间只能由一个连接写入。
 
- 以下脚本创建了一个数据库 dfs://Rangedb 以及一个分布式表 pt，然后创建了连接池 pool 并传入 PartitionedTableAppender，使用 append 方法往分布式表并发写入本地数据:
+ 以下脚本创建了一个数据库 dfs://Rangedb 以及一个分布式表 pt，然后创建了连接池 pool 并传入 PartitionedTableAppender，使用 append 方法往分布式表并发写入本地数据。与 tableAppender 一样，`PartitionedTableAppender` 追加时间类型的数据会自动进行类型转换。
 
 ```python
 import pandas as pd
 import dolphindb as ddb
 import numpy as np
+import random
+
 s = ddb.session()
 s.connect("localhost", 8848, "admin", "123456")
-script='''
-dbPath = "dfs://Rangedb"
+script = '''
+dbPath = "dfs://valuedb"
         if(existsDatabase(dbPath))
             dropDatabase(dbPath)
-        t = table(100:100,`id`val1`val2,[INT,DOUBLE,SYMBOL])
-        db=database(dbPath,RANGE,  1  100  200  300)
+        t = table(100:100,`id`time`vol,[SYMBOL,DATE, INT])
+        db=database(dbPath,VALUE, `APPL`IBM`AMZN)
         pt = db.createPartitionedTable(t, `pt, `id)
 '''
 s.run(script)
-s.close()
 
-pool = ddb.DBConnectionPool ("localhost", 8848, 20, "admin", "123456")
-appender = ddb.PartitionedTableAppender("dfs://Rangedb","pt", "id", pool)
-v = []
-for i in range(0,10000000):
-    v.append("a"+str(i%100))
-data = pd.DataFrame({"id":np.random.randint(1,300,10000000),"val1":np.random.rand(10000000),"val2":v})
+
+
+pool = ddb.DBConnectionPool("localhost", 8848, 20, "admin", "123456")
+appender = ddb.PartitionedTableAppender("dfs://valuedb", "pt", "id", pool)
+n = 100
+
+date = []
+for i in range(n):
+    date.append(np.datetime64(
+        "201{:d}-0{:1d}-{:2d}".format(random.randint(0, 9), random.randint(1, 9), random.randint(10, 28))))
+
+data = pd.DataFrame({"id": np.random.choice(['AMZN', 'IBM', 'APPL'], n), "time": date,
+                     "vol": np.random.randint(100, size=n)})
 re = appender.append(data)
+
 print(re)
+print(s.run("pt = loadTable('dfs://valuedb', 'pt'); select * from pt;"))
+
+# output
+
+100
+      id       time  vol
+0   AMZN 2011-07-13   69
+1   AMZN 2016-04-11   40
+2   AMZN 2014-04-14   56
+3   AMZN 2015-09-14   68
+4   AMZN 2016-03-10   99
+..   ...        ...  ...
+95   IBM 2012-01-19   29
+96   IBM 2010-05-10    5
+97   IBM 2014-09-27   90
+98   IBM 2010-01-25   33
+99   IBM 2014-01-12   48
+
+[100 rows x 3 columns]
 ```
 
 ## 5 从 DolphinDB 数据库中加载数据
@@ -1145,7 +1207,7 @@ import dolphindb.settings as keys
 if s.existsDatabase("dfs://valuedb"  or os.path.exists("dfs://valuedb")):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX", "NVDA"], dbPath="dfs://valuedb")
-t = s.loadTextEx(dbPath="mydb",  tableName='trade',partitionColumns=["TICKER"], remoteFilePath=WORK_DIR + "/data_example.csv")
+t = s.loadTextEx(dbPath="mydb",  tableName='trade',partitionColumns=["TICKER"], remoteFilePath=WORK_DIR + "/example.csv")
 
 trade = s.loadTableBySQL(tableName="trade", dbPath="dfs://valuedb", sql="select * from trade where date>2010.01.01")
 print(trade.rows)
@@ -1211,13 +1273,15 @@ DolphinDB Python API 使用 Python 原生的各种形式的数据对象来存放
 
 |DolphinDB|Python|DolphinDB 生成数据 | Python 数据 |
 |-------------|----------|-------------|-----------|
-|scalar|Numbers, Strings, NumPy.datetime64 | 见 6.3.2 小节 | 见 6.3.2 小节
+|scalar|Numbers, Strings, NumPy.datetime64 | 见 6.3.2 小节 | 见 6.3.2 小节|
 |vector|NumPy.array|1..3|[1 2 3]|
+|array vector|Numpy.Ndarray|[[1, 2, 3], [4, 5], [6]]|[np.array([1, 2, 3]), np.array([4, 5]), np.array([6])]|
 |pair|Lists|1:5|[1, 5]|
 |matrix|Lists|1..6$2:3|[array([[1, 3, 5],[2, 4, 6]], dtype=int32), None, None]|
 |set|Sets|set(3 5 4 6)|{3, 4, 5, 6}|
 |dictionary|Dictionaries|dict(['IBM','MS','ORCL'], 170.5 56.2 49.5)|{'MS': 56.2, 'IBM': 170.5, 'ORCL': 49.5}|
-|table|pandas.DataFame | 见 [第 6.1 小节](#61 - 使用 loadtable 函数)| 见 [第 6.1 小节](#61 - 使用 loadtable 函数)|
+|table|pandas.DataFame | 见 [第 6.1 小节](#61-使用-loadtable-函数)| 见 [第 6.1 小节](#61-使用-loadtable-函数)|
+
 
 #### 5.4.2 数据类型的转换
 
@@ -1676,79 +1740,81 @@ s.run("appendStreamingData(tb)")
 
 ### 6.4 批量异步追加数据
 
-针对单条数据批量写入的场景，DolphinDB Python API 提供 `BatchTableWrite` 函数用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络 I/O 时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，只支持批量写入数据到磁盘表和内存表。异步方式提交有如下几个特点：
+针对单条数据批量写入的场景，DolphinDB Python API 提供 `BatchTableWrite` ，`MultithreadedTableWriter` 类对象用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络 I/O 时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，`BatchTableWrite` 支持批量写入数据到内存表、分区表；而 `MultithreadedTableWriter` 支持批量写入数据到内存表、分区表和维度表。
 
-- API 客户端提交任务到缓冲队列，缓冲队列接到任务后，客户端即认为任务已完成。
-- 提供 `getStatus` 等接口查看状态。
+注意对于异步写入：
+
+* API 客户端提交任务到缓冲队列，缓冲队列接到任务后，客户端即认为任务已完成。
+* 提供 `getStatus` 等接口查看状态。
+
+#### 6.4.1 BatchTableWriter
 
 `BatchTableWriter` 对象及主要方法介绍如下：
 
-```python
-BatchTableWriter(host, port, userid="", password="", acquireLock=True)
+```Python
+BatchTableWriter(host, port, userid, password, acquireLock=True)
 ```
-
-函数说明：创建 `BatchTableWriter` 对象。
 参数说明：
 
-- **host** 连接服务器的 IP 地址。
-- **port** 连接服务器的端口号。
-- **userid** 是字符串，表示连接服务器的用户名。
-- **password** 是字符串，表示连接服务器的密码。
-- **acquireLock** 是布尔值，表示在使用过程中，API 内部是否需要加锁。默认为 true, 表示需要加锁。在并发调用 API 的场景下，建议加锁。
+* **host** 连接服务器的 IP 地址。
+* **port** 连接服务器的端口号。
+* **userid** 是字符串，表示连接服务器的用户名。
+* **password** 是字符串，表示连接服务器的密码。
+* **acquireLock** 是布尔值，表示在使用过程中，API 内部是否需要加锁。默认为 true, 表示需要加锁。在并发调用 API 的场景下，建议加锁。
 
 以下是 `BatchTableWriter` 对象包含的函数方法介绍：
 
-```python
+```Python
 addTable(dbPath="", tableName="", partitioned=True)
 ```
 
 函数说明：添加一个写入的表。
 参数说明：
 
-- **dbName**: 当为磁盘表时，需填写数据库名；若为空，则表示内存表。
-- **tableName**: 数据表的表名。
-- **partitioned**: 表示添加的表是否为分区表。设置为 true 表示是分区表。如果添加的表是磁盘未分区表，必需设置 *partitioned* 为 false.
+* **dbName**: 当为磁盘表时，需填写数据库名；若为空，则表示内存表。
+* **tableName**: 数据表的表名。
+* **partitioned**: 表示添加的表是否为分区表。设置为 true 表示是分区表。如果添加的表是磁盘未分区表，必需设置 *partitioned* 为 false.
 
 注意:
 
-- 如果添加的是内存表，需要 share 该表。
-- 表名不可重复添加，需要先移除之前添加的表，否则会抛出异常。
+* 如果添加的是内存表，需要 share 该表。
+* 表名不可重复添加，需要先移除之前添加的表，否则会抛出异常。
 
-```python
+```Python
 insert(dbPath="", tableName="", *args)
 ```
 
 函数说明：插入单行数据。
 参数说明：
 
-- **args**：是变长参数，代表插入的一行数据。
+* **args**：是变长参数，代表插入的一行数据。
 
 注意：
 
-- 调用 `insert` 前需先调用 `addTable` 添加表，否则会抛出异常。
-- 变长参数个数和数据类型需要与 `insert` 表的列数及类型匹配。
-- 如果插入过程出现异常导致后台线程退出，再次调用 `insert` 会抛出异常，可以调用 `getUnwrittenData` 来获取之前所有写入缓冲队列但是没有成功写入服务器的数据（不包括本次 `insert` 的数据），然后再 `removeTable`。如果需要再次插入数据，需要重新调用 `addTable`。
-- 在移除该表的过程中调用本函数，仍然能够插入成功，但这些插入的数据并不会发送到服务器。移除该表的时候调用 `insert` 算是未定义行为，不建议这样写程序。
+* 调用 `insert` 前需先调用 `addTable` 添加表，否则会抛出异常。
+* 变长参数个数和数据类型需要与 `insert` 表的列数及类型匹配。
+* 如果插入过程出现异常导致后台线程退出，再次调用 `insert` 会抛出异常，可以调用 `getUnwrittenData` 来获取之前所有写入缓冲队列但是没有成功写入服务器的数据（不包括本次 `insert` 的数据），然后再 `removeTable`。如果需要再次插入数据，需要重新调用 `addTable`。
+* 在移除该表的过程中调用本函数，仍然能够插入成功，但这些插入的数据并不会发送到服务器。移除该表的时候调用 `insert` 算是未定义行为，不建议这样写程序。
 
-```python
+```Python
 removeTable(dbPath="", tableName="")
 ```
 
 函数说明：释放由 `addTable` 添加的表所占用的资源。第一次调用该函数，该函数返回即表示后台线程已退出。
 
-```python
+```Python
 getUnwrittenData(dbPath="", tableName="")
 ```
 
 函数说明：获取还未写入的数据，主要是用于的时候获取写入出现错误时，剩下未写入的数据。该函数会取出剩下未写入的数据，这些数据将不会被继续写入，如若需要重新写入，需要再次调用插入函数。
 
-```python
+```Python
 getStatus(dbPath="", tableName="")
 ```
 
 函数说明：返回值是由一个整型和两个布尔型组合的元组，分别表示当前写入队列的深度、当前表是否被移除（true: 表示正在被移除），以及后台写入线程是否因为出错而退出（true: 表示后台线程因出错而退出）。
 
-```python
+```Python
 getAllStatus()
 ```
 
@@ -1789,12 +1855,451 @@ print("rows:", s.run("tglobal.rows()"))
 print(s.run("select * from tglobal"))
 ```
 
+#### 6.4.2 MultithreadedTableWriter
+
+`MultithreadedTableWriter` 是对 `BatchTableWriter` 的升级，它的默认功能和 `BatchTableWriter` 一致，但 `MultithreadedTableWriter` 支持多线程的并发写入。
+
+`MultithreadedTableWriter` 对象及主要方法介绍如下：
+
+```Python
+MultithreadedTableWriter(hostName, port, userId, password, dbName, tableName, useSSL, enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount, partitionCol, compressMethods)
+```
+
+参数说明：
+
+* **hostName** 字符串，表示所连接的服务器的地址
+* **port** 整数，表示服务器端口。 
+* **userId** / **password**: 字符串，登录时的用户名和密码。
+* **dbName** 字符串，表示分布式数据库地址或内存表的表名。
+* **tableName** 字符串，表示分布式表名。内存表无需指定该参数。
+* **useSSL** 布尔值，默认值为 False。表示是否启用加密通讯。
+* **enableHighAvailability** 布尔值，默认为 False。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 True。
+* **highAvailabilitySites** 列表类型，表示所有可用节点的 ip:port 构成的 list。
+* **batchSize** 整数，表示批处理的消息的数量，默认值是 1，表示客户端写入数据后就立即发送给服务器。如果该参数大于 1，表示数据量达到 *batchSize* 时，*客户端*才会将数据发送给服务器。
+* **throttle** 大于 0 的数，单位为秒。若客户端有数据写入，但数据量不足 batchSize，则等待 throttle的时间再发送数据。
+* **threadCount** 整数，表示创建的工作线程数量，默认为 1，表示单线程。对于维度表，其值必须为1。
+* **partitionCol** 字符串类型，默认为空，仅在 threadCount 大于1时起效。对于分区表，必须指定为分区字段名；如果是流表，必须指定为表的字段名；对于维度表，该参数不起效。
+* **compressMethods** 列表类型，用于指定每一列采用的压缩传输方式，为空表示不压缩。每一列可选的压缩方式（大小写不敏感）包括：
+  * "LZ4": LZ4 压缩
+  * "DELTA": DELTAOFDELTA 压缩
+
+以下是 `MultithreadedTableWriter` 对象包含的函数方法介绍：
+
+```Python
+insert(*args)
+```
+
+函数说明：
+
+插入单行数据。返回一个类，包含 errorCode 和 errorInfo，分别表示错误代码和错误信息。当 errorCode 表示 MTW 写入失败。此时，errorInfo 会显示失败的详细信息。之后的版本中会对错误信息进行详细说明，给出错误信息的代码、错误原因及解决办法。
+
+参数说明：
+
+* **args**：是变长参数，代表插入的一行数据。
+
+示例：
+```Python
+import numpy as np
+import pandas as pd
+import dolphindb as ddb
+import time
+import random
+
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+
+script = """t=table(1000:0, `date`ticker`price, [DATE,SYMBOL,LONG])
+share t as tglobal"""
+s.run(script)
+
+writer = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","tglobal","",False,False,[],10,1,5,"date")
+for i in range(10):
+  res = writer.insert(np.datetime64('2022-03-23'),"AAAAAAAB", random.randint(1,10000))
+writer.waitForThreadCompletion()
+print(writer.getStatus())
+
+# output
+"""
+errorCode     : None
+ errorInfo     : 
+ isExiting     : True
+ sentRows      : 10
+ unsentRows    : 0
+ sendFailedRows: 0
+ threadStatus  : 
+ 	threadId	sentRows	unsentRows	sendFailedRows
+	     508	       0	         0	             0
+	   16124	       0	         0	             0
+	   24020	       0	         0	             0
+	    4636	       0	         0	             0
+	    4092	      10	         0	             0
+<dolphindb.session.MultithreadedTableWriterStatus object at 0x000001E3FCF02808>
+"""
+```
+
+```Python
+getUnwrittenData()
+```
+
+函数说明：
+
+返回一个嵌套列表，表示未写入服务器的数据，包含发送失败的数据以及待发送的数据两部分。
+
+注意：该方法获取到数据资源后， `MultithreadedTableWriter` 将释放这些数据资源。
+
+```Python
+insertUnwrittenData(unwrittenData)
+```
+
+函数说明：
+
+将数据插入数据表。返回值同 insert 方法。与 insert 方法的区别在于，insert 只能插入单行数据，而 insertUnwrittenData 可以同时插入多行数据。
+
+参数说明：
+
+* **unwrittenData**：需要再次写入的数据。可以通过方法 getUnwrittenData 获取该对象。
+
+```Python
+getStatus()
+```
+
+函数说明：
+
+获取 `MultithreadedTableWriter` 对象当前的运行状态。返回一个类，具有以下属性。
+
+* isExiting：写入线程是否正在退出。
+* errorCode：错误码。
+* errorInfo：错误信息。
+* sentRows：成功发送的总记录数。
+* unsentRows：待发送的总记录数。
+* sendFailedRows：发送失败的总记录数。
+* threadStatus：写入线程状态列表。
+  - threadId：线程 Id。
+  - sentRows：该线程成功发送的记录数。
+  - unsentRows：该线程待发送的记录数。
+  - sendFailedRows：该线程发送失败的记录数。
+
+```Python
+waitForThreadCompletion()
+```
+
+函数说明：
+
+调用此方法后，MTW 会进入等待状态，待后台工作线程全部完成后退出等待状态。
+
+`MultithreadedTableWriter` 常规处理流程如下：
+
+```python
+# 准备数据 data
+# 插入数据或其他任务
+writer.insert(data)
+...
+# 等待 MTW 工作完成
+writer.waitForThreadCompletion()
+# 获取 MTW 工作状态，通过 writeStatus.hasError() 和 writeStatus.succeed() 判断是否正常执行完成
+writeStatus=writer.getStatus()
+if writeStatus.hasError():
+    # 获取并修正失败数据后将失败数据重新写入MTW
+    unwriterdata = writer.getUnwrittenData()
+    unwriterdata = revise(unwriterdata)
+    newwriter.insertUnwrittenData(unwriterdata)
+else
+    print("Write successfully!")
+```
+
+下例以写入分布式表为例，介绍 `MultithreadedTableWriter` 多线程插入数据的流程：
+
+创建 DolphinDB 数据库分布式表
+
+```python
+import numpy as np
+import pandas as pd
+import dolphindb as ddb
+import time
+import random
+import threading
+
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+
+script = """
+    dbName = 'dfs://valuedb3';
+    if(exists(dbName)){
+        dropDatabase(dbName);
+    }
+    datetest=table(1000:0,`date`symbol`id,[DATE,SYMBOL,LONG]);
+    db = database(directory=dbName, partitionType=HASH, partitionScheme=[INT, 10]);
+    pt=db.createPartitionedTable(datetest,'pdatetest','id');
+"""
+s.run(script)
+```
+
+创建 MultithreadedTableWriter 对象
+
+```python
+writer = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","dfs://valuedb3","pdatetest",False,False,[],10000,1,5,"id",["LZ4","LZ4","DELTA"])
+```
+
+调用 writer.insert() 方法向 writer 中写入数据，并通过 writer.getStatus() 获取 writer 的状态。
+
+```python
+try:
+    # 插入100行正确数据 
+    for i in range(100):
+        res = writer.insert(random.randint(1,10000),"AAAAAAAB", random.randint(1,10000))
+except Exception as ex:
+    # MTW 抛出异常
+    print("MTW exit with exception %s" % ex)
+# 等待 MTW 插入完成
+writer.waitForThreadCompletion()
+writeStatus=writer.getStatus()
+if writeStatus.succeed():
+    print("Write successfully!")
+print("writeStatus: \n", writeStatus)
+print(s.run("select count(*) from pt"))
+"""
+Write successfully!
+writeStatus: 
+ errorCode     : None
+ errorInfo     : 
+ isExiting     : True
+ sentRows      : 100
+ unsentRows    : 0
+ sendFailedRows: 0
+ threadStatus  : 
+ 	threadId	sentRows	unsentRows	sendFailedRows
+	       0	       0	         0	             0
+	    9252	      17	         0	             0
+	    8104	      26	         0	             0
+	   14376	      18	         0	             0
+	   20780	      21	         0	             0
+	   19536	      18	         0	             0
+<dolphindb.session.MultithreadedTableWriterStatus object at 0x000002557E4D1488>
+   count
+0    100
+"""
+```
+通过以上脚本的输出信息可以看出，`MultithreadedTableWriter` 对象中的所有数据均成功写入分布式表，此时 errorCode 为 None。
+
+`MultithreadedTableWriter` 将数据写入 MTW 队列和 MTW 工作线程转换数据类型，并追加数据到服务器是异步进行的。MTW 队列仅对插入的数据做简单的错误判断（例如数据列数不一致），并返回错误信息，但不会终止工作线程；MTW 工作线程在追加数据前会对数据进行转换，此时若发现数据类型不匹配，会立刻终止所有工作线程。<!--感觉需要对何时抛出错误，何时抛出异常做个总结，列个表什么的-->
+
+下例分批插入数据到 `MultithreadedTableWriter` 对象。通过 getStatus 查看 `MultithreadedTableWriter` 的状态及错误原因。
+```python
+writer = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","dfs://valuedb3","pdatetest",False,False,[],10000,1,5,"id",["LZ4","LZ4","DELTA"])
+try:
+    # 插入100行正确数据 （类型和列数都正确），MTW正常运行
+    for i in range(100):
+        res = writer.insert(np.datetime64('2022-03-23'),"AAAAAAAB", random.randint(1,10000))
+    # 插入10行类型错误数据，此时 MTW 队列并不会进行类型判断，这些数据能够进入 MTW 队列
+    # 直到工作线程对这些数据进行转换时，检测到类型不匹配，就会立刻终止 MTW 所有工作线程
+    for i in range(10):
+        res = writer.insert(np.datetime64('2022-03-23'),222, random.randint(1,10000))
+        if res.hasError():
+            # 此处不会执行到
+            print("Insert wrong format data:\n", res)
+    # 插入1行数据(列数不匹配)，MTW 立刻发现待插入数据列数与待插入表的列数不匹配，立刻返回错误信息
+    res = writer.insert(np.datetime64('2022-03-23'),"AAAAAAAB")
+    if res.hasError():
+        # 数据错误，插入列数不匹配数据
+        print("Column counts don't match:\n", res)
+    # sleep 1秒，等待 MTW 工作线程处理数据直至检测到第2次插入的10行数据类型不匹配
+    # 此时 MTW 立刻终止所有工作线程，并修改状态为错误状态
+    time.sleep(1)
+
+    # 再插入1行正确数据，MTW 会因为工作线程终止而抛出异常，且不会写入该行数据
+    res = writer.insert(np.datetime64('2022-03-23'),"AAAAAAAB", random.randint(1,10000))
+    print("MTW has exited")
+except Exception as ex:
+    # MTW 抛出异常
+    print("MTW exit with exception %s" % ex)
+# 等待 MTW 插入完成
+writer.waitForThreadCompletion()
+writeStatus=writer.getStatus()
+if writeStatus.hasError():
+    print("Error in writing:")
+print(writeStatus)
+print(s.run("select count(*) from pt"))
+"""
+Column counts don't match:
+ errorCode: A2
+ errorInfo: Column counts don't match 3
+<dolphindb.session.ErrorCodeInfo object at 0x000002557CCCDF48>
+MTW exit with exception <Exception> in insert: thread is exiting.
+Error in writing:
+errorCode     : A1
+ errorInfo     : Data conversion error: Cannot convert long to SYMBOL
+ isExiting     : True
+ sentRows      : 0
+ unsentRows    : 100
+ sendFailedRows: 10
+ threadStatus  : 
+ 	threadId	sentRows	unsentRows	sendFailedRows
+	       0	       0	         0	            10
+	   19708	       0	        24	             0
+	   13480	       0	        23	             0
+	    5820	       0	        15	             0
+	   23432	       0	        19	             0
+	   18756	       0	        19	             0
+<dolphindb.session.MultithreadedTableWriterStatus object at 0x000002557E52D908>
+   count
+0    100
+"""
+```
+
+当 MTW 写入数据时发生错误<!--需要准确描述一下，并不是发生错误-->，会终止所有工作线程。此时可以通过 writer.getUnwrittenData() 方法获取失败数据，通过 insertUnwrittenData(unwriterdata)将失败数据重新写入。注意，因为原 MTW 对象的工作线程已经终止，无法再次使用它来写入数据，需要重新构造一个新的 MTW 对象，将失败数据重新写入新 MTW 对象中。
+```python
+if writeStatus.hasError():
+    print("Error in writing:")
+    unwriterdata = writer.getUnwrittenData()
+    print("Unwriterdata: %d" % len(unwriterdata))
+    # 重新获取新的 MTW 对象
+    newwriter = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","dfs://valuedb3","pdatetest",False,False,[],10000,1,5,"id",["LZ4","LZ4","DELTA"])
+    try:
+        # 修正失败数据后将失败数据重新写入 MTW
+        for row in unwriterdata:
+            row[1]="aaaaa"
+        res = newwriter.insertUnwrittenData(unwriterdata)
+        if res.succeed():
+            # 使用 waitForThreadCompletion() 方法等待数据写入完成，并终止所有 MTW 的工作线程
+            newwriter.waitForThreadCompletion()
+            writeStatus=newwriter.getStatus()
+            print("Write again:\n", writeStatus)
+        else:
+            # 数据写入失败
+            print("Failed to write data again: \n",res) 
+    except Exception as ex:
+        # MTW 抛出异常
+        print("MTW exit with exception %s" % ex)
+    finally:
+        # 确保 newwriter工作线程结束运行
+        newwriter.waitForThreadCompletion()
+else:
+    print("Write successfully:\n", writeStatus)
+
+print(s.run("select count(*) from pt"))
+"""
+Error in writing:
+Unwriterdata: 110
+Write again:
+ errorCode     : None
+ errorInfo     : 
+ isExiting     : True
+ sentRows      : 110
+ unsentRows    : 0
+ sendFailedRows: 0
+ threadStatus  : 
+ 	threadId	sentRows	unsentRows	sendFailedRows
+	       0	       0	         0	             0
+	   26056	      25	         0	             0
+	     960	      25	         0	             0
+	   22072	      19	         0	             0
+	    1536	      21	         0	             0
+	   26232	      20	         0	             0
+<dolphindb.session.MultithreadedTableWriterStatus object at 0x000002557CCCDF48>
+   count
+0    210
+"""
+```
+注意，使用 writer.waitForThreadCompletion() 方法等待 MTW 写入完毕，会终止 MTW 所有工作线程，保留最后一次写入信息。此时如果需要再次将数据写入 MTW，需要重新获取新的 MTW 对象，才能继续写入数据。
+
+由上例可以看出，MTW 内部使用多线程完成数据转换和写入任务。但在 MTW 外部，API 客户端同样支持以多线程方式将数据写入 MTW，且保证了多线程安全。具体示例如下：
+
+```python
+# 创建MTW对象
+# 创建MTW对象
+writer = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","dfs://valuedb3","pdatetest",False,False,[],10000,1,5,"id",["LZ4","LZ4","DELTA"])
+
+def insert_MTW(writer):
+    try:
+        # 插入100行正确数据 
+        for i in range(100):
+            res = writer.insert(random.randint(1,10000),"AAAAAAAB", random.randint(1,10000))
+    except Exception as ex:
+        # MTW 抛出异常
+        print("MTW exit with exception %s" % ex)
+
+# 创建线程，在线程中将数据写入MTW
+thread=threading.Thread(target=insert_MTW, args=(writer,))
+thread.setDaemon(True)
+thread.start()
+# 完成其他任务，此处用 sleep 模拟
+time.sleep(1)
+
+# 现在需要结束任务
+# 1 - 等待线程退出
+thread.join()
+# 2 - 结束MTW工作线程
+writer.waitForThreadCompletion()
+# 3 - 检查输出结果
+writeStatus=writer.getStatus()
+print("writeStatus:\n", writeStatus)
+print(s.run("select count(*) from pt"))
+"""
+writeStatus:
+ errorCode     : None
+ errorInfo     : 
+ isExiting     : True
+ sentRows      : 100
+ unsentRows    : 0
+ sendFailedRows: 0
+ threadStatus  : 
+ 	threadId	sentRows	unsentRows	sendFailedRows
+	       0	       0	         0	             0
+	   22388	      16	         0	             0
+	   10440	      20	         0	             0
+	   22832	      16	         0	             0
+	    5268	      30	         0	             0
+	   23488	      18	         0	             0
+<dolphindb.session.MultithreadedTableWriterStatus object at 0x000002557E4C0548>
+   count
+0    310
+"""
+```
+
+### 6.5 从 Python 上传数据到 DolphinDB 时的数据转换
+
+上传数据时，建议使用 `MultithreadedTableWriter` 以支持更广泛的数据类型和数据形式。
+
+以下是使用 `MultithreadedTableWriter` 上传 Python 客户端数据到 DolphinDB 服务端的转换对照表：
+
+| 编号 | DolphinDB 形式/类型                                          | Python类型           |
+| ---- | ------------------------------------------------------------ | -------------------- |
+| 1    | Vector                                                       | tuple                |
+| 2    | Vector                                                       | list                 |
+| 3    | Vector, Matrix                                               | Numpy.array          |
+| 4    | Vector, Matrix                                               | Pandas.series        |
+| 5    | Table                                                        | Pandas.dataframe     |
+| 6    | Set                                                          | Set                  |
+| 7    | Dictionary                                                   | Dict                 |
+| 8    | VOID                                                      | None                 |
+| 9    | BOOL                                                      | Bool                 |
+| 10   | NANOTIME, NANOTIMESTAMP, TIMESTAMP, DATE, MONTH, TIME, SECOND, MINUTE, DATETIME, DATEHOUR, LONG, INT, SHORT, CHAR | Int                  |
+| 11   | FLOAT, DOUBLE                                          | Float                |
+| 12   | INT128, UUID, IP, SYMBOL, STRING, BLOB     | Str                  |
+| 13   | INT128, UUID, IP, SYMBOL, STRING, BLOB     | Bytes                |
+| 14   | NANOTIMESTAMP                                             | Numpy.datetime64[ns] |
+| 15   | DATE                                                      | Numpy.datetime64[D]  |
+| 16   | MONTH                                                     | Numpy.datetime64[M]  |
+| 17   | DATETIME                                                  | Numpy.datetime64[m]  |
+| 18   | DATETIME                                                  | Numpy.datetime64[s]  |
+| 19   | DATEHOUR                                                  | Numpy.datetime64[h]  |
+| 20   | TIMESTAMP                                                 | Numpy.datetime64[ms] |
+| 21   | NANOTIME                                                  | Numpy.datetime64[us] |
+| 22   | DATETIME                                                  | Numpy.datetime64     |
+| 23   | BOOL                                                      | Numpy.bool           |
+| 24   | LONG, INT, SHORT, CHAR                           | Numpy.int8           |
+| 25   | LONG, INT, SHORT, CHAR                           | Numpy.int16          |
+| 26   | LONG, INT, SHORT, CHAR                           | Numpy.int32          |
+| 27   | NANOTIME, NANOTIMESTAMP, TIMESTAMP, DATE, MONTH, TIME, SECOND, MINUTE, DATETIME, DATEHOUR, LONG, INT, SHORT, CHAR | Numpy.int64          |
+| 28   | FLOAT, DOUBLE                                          | Numpy.float32        |
+| 29   | FLOAT, DOUBLE                                          | Numpy.float64        |
+
 ## 7 多线程调用线程池对象
 
 DolphinDB Python API 中的 `Session` 调用 `run` 方法执行脚本时只能串行执行。如果需要并发地执行脚本，可以使用 `DBConnectionPool` 来提高任务运行的效率。`DBConnectionPool` 创建了多个线程（由 threadNum 参数指定）用于执行任务。可以通过调用 `DBConnectionPool` 对象的方法函数 `getSessionId()` 来获取其创建的所有线程会话的 session id。
 
-```python
-pool = ddb.DBConnectionPool(host, port, threadNum=10, userid="", password="", loadBalance=False, highAvailability=False, reConnectFlag=True)
+```Python
+pool = ddb.DBConnectionPool(host, port, threadNum, userid, password, loadBalance, highAvailability, reConnectFlag, compress)
 # userid 和 password 可以省略
 ```
 
@@ -1951,13 +2456,16 @@ pool.shutDown()
 
 在 Python 中得到一个表对象以后，可以对这个对象调用如下的 Table 类方法。
 
-| 方法名                  | 详情                                       |
-| :------------------- | :--------------------------------------- |
-| append               | 向表中追加数据                                  |
-| drop(colNameList)    | 删除表中的某列                                  |
-| executeAs(tableName) | 执行结果保存为指定表名的内存表                          |
-| execute()            | 执行脚本。与 `update` 或 `delete` 一起使用          |
-| toDF()               | 把 DolphinDB 表对象转换成 pandas 的 DataFrame 对象 |
+| 方法名               | 详情                                                         |
+| :------------------- | :----------------------------------------------------------- |
+| append               | 向表中追加数据                                               |
+| drop(colNameList)    | 删除表中的某列                                               |
+| executeAs(tableName) | 执行结果保存为指定表名的内存表                               |
+| execute()            | 执行脚本。与 `update` 或 `delete` 一起使用                   |
+| toDF()               | 把 DolphinDB 表对象转换成 pandas 的 DataFrame 对象           |
+| toList()             | 把 DolphinDB 表对象转换成 由 numpy.ndarray 组成的 list 对象，list中对象的顺序和列的顺序保持一致。 |
+
+注意：可以通过 toList() 方法将表中的 [array vector](https://www.dolphindb.cn/cn/help/200/DataTypesandStructures/DataForms/Vector/arrayVector.html) 转为二维的 numpy.ndarray，使用户在客户端更高效的使用 arrayvector 数据。另外该方法仅对每一个元素等长的 array vector 起效，若 array vector 内元素长度不一致，将会报错。
 
 以上只是列出其中最为常用的方法。关于 Session 类和 Table 类提供的所有方法请参见 session.py 和 table.py 文件。
 <!---
@@ -1973,7 +2481,7 @@ tdata = {'id': [1, 2, 2, 3],
 s.table(data=tdata).executeAs('tb')
 ```
 
-1. 调用 Session 类提供的 `upload` 方法：
+2. 调用 Session 类提供的 `upload` 方法：
 
 ```python
 tdata = pd.DataFrame({'id': [1, 2, 2, 3],
@@ -1983,8 +2491,7 @@ tdata = pd.DataFrame({'id': [1, 2, 2, 3],
 s.upload({'tb': tdata})
 ```
 
-1. 调用 Session 类提供的 `run` 方法：
-
+3. 调用 Session 类提供的 `run` 方法：
 ```python
 s.run("tb=table([1, 2, 2, 3] as id, [2019.02.04,2019.02.05,2019.02.09,2019.02.13] as date, ['AAPL','AMZN','AMZN','A'] as ticker, [22, 3.5, 21, 26] as price)")
 ```
@@ -1993,7 +2500,6 @@ s.run("tb=table([1, 2, 2, 3] as id, [2019.02.04,2019.02.05,2019.02.09,2019.02.13
 
 ```
 tb=table([1, 2, 2, 3] as id, [2019.02.04,2019.02.05,2019.02.09,2019.02.13] as date, ['AAPL','AMZN','AMZN','A'] as ticker, [22, 3.5, 21, 26] as price)
-
 ```
 
 下面，我们在 Python 环境中调用 Session 类提供的各种方法创建分布式数据库和表，并向表中追加数据。
@@ -2114,12 +2620,12 @@ import dolphindb.settings as keys
 if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], dbPath="dfs://valuedb")
-trade=s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
+trade=s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
 print(trade.rows)
 # output
 13136
 
-s.dropPartition("dfs://valuedb", partitionPaths=["'AMZN'","'NFLX'"]) # or s.dropPartition("dfs://valuedb", partitionPaths=["`AMZN`NFLX"])
+s.dropPartition("dfs://valuedb", partitionPaths=["'AMZN'","'NFLX'"], tableName="trade") # or s.dropPartition("dfs://valuedb", partitionPaths=["`AMZN`NFLX"], tableName="trade")
 trade = s.loadTable(tableName="trade", dbPath="dfs://valuedb")
 print(trade.rows)
 # output
@@ -2135,20 +2641,20 @@ print(trade.select("distinct TICKER").toDF())
 
 #### 8.3.1 加载数据库中的表
 
-请参考 [从 dolphindb 数据库中加载数据](#5 - 从 - dolphindb - 数据库中加载数据)。
+请参考 [从 dolphindb 数据库中加载数据](#5-从-dolphindb-数据库中加载数据)。
 
 #### 8.3.2 添加数据到数据表
 
-关于向内存表添加数据，请参考 [第 6.1 小节：追加数据到内存表](#6.1 - 追加数据到内存表)。
+关于向内存表添加数据，请参考 [第 6.1 小节：追加数据到内存表](#6.1-追加数据到内存表)。
 
-关于向 DFS 数据表添加数据，请参考 [第 6.2 小节：追加数据到分布式表](#6.2 - 追加数据到分布式表)。
+关于向 DFS 数据表添加数据，请参考 [第 6.2 小节：追加数据到分布式表](#6.2-追加数据到分布式表)。
 
 ### 8.3.3 更新表
 
 `update` 更新内存表，必须和 `execute` 一起使用。
 
 ```python
-trade=s.loadText(WORK_DIR+"/data_example.csv")
+trade=s.loadText(WORK_DIR+"/example.csv")
 trade = trade.update(["VOL"],["999999"]).where("TICKER=`AMZN").where(["date=2015.12.16"]).execute()
 t1=trade.where("ticker=`AMZN").where("VOL=999999")
 print(t1.toDF())
@@ -2200,10 +2706,10 @@ print(t1.toDF())
 
 #### 8.3.4 删除表中的记录
 
-`delete` 必须与 `execute` 一起使用来删除表中的记录。
+`delete` 必须与 `execute` 一同使用来删除表中的记录。
 
 ```python
-trade=s.loadText(WORK_DIR+"/data_example.csv")
+trade=s.loadText(WORK_DIR+"/example.csv")
 trade.delete().where('date<2013.01.01').execute()
 print(trade.rows)
 
@@ -2211,7 +2717,7 @@ print(trade.rows)
 3024
 ```
 
-`delete` 删除分布式表中记录，必须和 `execute` 一起使用。
+`delete` 删除分布式表中记录，必须和 `execute` 一同使用。
 
 ```python
 import dolphindb as ddb
@@ -2249,7 +2755,7 @@ print(t1.toDF())
 #### 8.3.5 删除表中的列
 
 ```python
-trade=s.loadText(WORK_DIR+"/data_example.csv")
+trade=s.loadText(WORK_DIR+"/example.csv")
 t1=trade.drop(['ask', 'bid'])
 print(t1.top(5).toDF())
 
@@ -2268,7 +2774,7 @@ print(t1.top(5).toDF())
 if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], dbPath="dfs://valuedb")
-s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
+s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
 s.dropTable(dbPath="dfs://valuedb", tableName="trade")
 ```
 
@@ -2291,7 +2797,7 @@ DolphinDB 提供了灵活的方法来生成 SQL 语句。
 #### 9.1.1 使用一系列的列名作为输入内容
 
 ```python
-trade=s.loadText(WORK_DIR+"/data_example.csv")
+trade=s.loadText(WORK_DIR+"/example.csv")
 print(trade.select(['ticker','date','bid','ask','prc','vol']).toDF())
 
 # output
@@ -2333,7 +2839,7 @@ select 子句总是生成一张表，即使只选择一列亦是如此。若需�
 `exec` 只选择一列时生成一个 dolphinDB 的向量。在 Python 中，使用 toDF() 加载该对象，可以打印出一个 `array` 对象：
 
 ```sql
-trade = s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
+trade = s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
 print(trade.exec('ticker').toDF())
 
 # output
@@ -2343,7 +2849,7 @@ print(trade.exec('ticker').toDF())
 如果 `exec` 语句选择了多列，那么结果和 `select` 语句一致，生成一个 dolphinDB 的 table 类型。在 Python 中，使用 toDF() 加载该对象，可以打印出一个 `DataFrame` 对象：
 
 ```sql
-trade = s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
+trade = s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
 print(trade.exec(['ticker','date','bid','ask','prc','vol']).toDF())
 
 # output
@@ -2368,16 +2874,16 @@ print(trade.exec(['ticker','date','bid','ask','prc','vol']).toDF())
 `top` 用于取表中的前 n 条记录。
 
 ```python
-trade=s.loadText(WORK_DIR+"/data_example.csv")
+trade=s.loadText(WORK_DIR+"/example.csv")
 trade.top(5).toDF()
 
 # output
-      TICKER        date       VOL        PRC        BID       ASK
-0       AMZN  1997.05.16   6029815   23.50000   23.50000   23.6250
-1       AMZN  1997.05.17   1232226   20.75000   20.50000   21.0000
-2       AMZN  1997.05.20    512070   20.50000   20.50000   20.6250
-3       AMZN  1997.05.21    456357   19.62500   19.62500   19.7500
-4       AMZN  1997.05.22   1577414   17.12500   17.12500   17.2500
+  TICKER       date      VOL     PRC     BID     ASK
+0   AMZN 1997-05-15  6029815  23.500  23.500  23.625
+1   AMZN 1997-05-16  1232226  20.750  20.500  21.000
+2   AMZN 1997-05-19   512070  20.500  20.500  20.625
+3   AMZN 1997-05-20   456357  19.625  19.625  19.750
+4   AMZN 1997-05-21  1577414  17.125  17.125  17.250
 ```
 
 `limit` 子句和 `top` 子句功能类似。两者的区别在于：
@@ -2420,7 +2926,7 @@ print(t1.toDF())
 #### 9.4.1 多个条件过滤
 
 ```python
-trade=s.loadText(WORK_DIR+"/data_example.csv")
+trade=s.loadText(WORK_DIR+"/example.csv")
 
 # use chaining WHERE conditions and save result to DolphinDB server variable "t1" through function "executeAs"
 t1=trade.select(['date','bid','ask','prc','vol']).where('TICKER=`AMZN').where('bid!=NULL').where('ask!=NULL').where('vol>10000000').sort('vol desc').executeAs("t1")
@@ -2452,7 +2958,7 @@ select date,bid,ask,prc,vol from Tff260d29 where TICKER=`AMZN and bid!=NULL and 
 `select` 的输入内容可以是包含多个列名的字符串，`where` 的输入内容可以是包含多个条件的字符串。
 
 ```python
-trade=s.loadText(WORK_DIR+"/data_example.csv")
+trade=s.loadText(WORK_DIR+"/example.csv")
 print(trade.select("ticker, date, vol").where("bid!=NULL, ask!=NULL, vol>50000000").toDF())
 
 # output
@@ -2479,7 +2985,7 @@ import dolphindb.settings as keys
 if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX","NVDA"], dbPath="dfs://valuedb")
-s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/data_example.csv")
+s.loadTextEx(dbPath="dfs://valuedb", partitionColumns=["TICKER"], tableName='trade', remoteFilePath=WORK_DIR + "/example.csv")
 
 ```
 
@@ -2852,29 +3358,17 @@ window join 和 prevailing window join 的唯一区别是，如果右表中没�
 print(trades.merge_window(quotes, -5000000000, 0, aggFunctions=["avg(Bid_Price)","avg(Offer_Price)"], on=["Symbol","Time"]).where("Time>=07:59:59").top(10).toDF())
 
 # output
-                        Time  Exchange Symbol  Trade_Volume \
-0 1970-01-01 08:00:00.022239        75   AAPL           300
-1 1970-01-01 08:00:00.022287        75   AAPL           500
-2 1970-01-01 08:00:00.022317        75   AAPL           335
-3 1970-01-01 08:00:00.022341        75   AAPL           100
-4 1970-01-01 08:00:00.022368        75   AAPL            31
-5 1970-01-01 08:00:02.668076        68   AAPL          2434
-6 1970-01-01 08:02:20.116025        68   AAPL            66
-7 1970-01-01 08:06:31.149930        75   AAPL           100
-8 1970-01-01 08:06:32.826399        75   AAPL           100
-9 1970-01-01 08:06:33.168833        75   AAPL            74
-
-   avg_Bid_Price  avg_Offer_Price
-0          26.90            27.49
-1          26.90            27.49
-2          26.90            27.49
-3          26.90            27.49
-4          26.90            27.49
-5          26.75            27.36
-6            NaN              NaN
-7            NaN              NaN
-8            NaN              NaN
-9            NaN              NaN
+Time                          Exchange Symbol  Trade_Volume  Trade_Price  avg_Bid_Price  avg_Offer_Price
+0 1970-01-01 08:00:00.022239        75   AAPL           300        27.00          26.90            27.49
+1 1970-01-01 08:00:00.022287        75   AAPL           500        27.25          26.90            27.49
+2 1970-01-01 08:00:00.022317        75   AAPL           335        27.26          26.90            27.49
+3 1970-01-01 08:00:00.022341        75   AAPL           100        27.27          26.90            27.49
+4 1970-01-01 08:00:00.022368        75   AAPL            31        27.40          26.90            27.49
+5 1970-01-01 08:00:02.668076        68   AAPL          2434        27.42          26.75            27.36
+6 1970-01-01 08:02:20.116025        68   AAPL            66        27.00            NaN              NaN
+7 1970-01-01 08:06:31.149930        75   AAPL           100        27.25            NaN              NaN
+8 1970-01-01 08:06:32.826399        75   AAPL           100        27.25            NaN              NaN
+9 1970-01-01 08:06:33.168833        75   AAPL            74        27.25            NaN              NaN
 
 [10 rows x 6 columns]
 ```
@@ -2898,7 +3392,7 @@ print(tb.toDF())
 
 `executeAs` 可以把结果保存为 server 端的表对象，表名由参数 *newTableName* 指定，执行后返回一个 `Table` 对象管理新创建的表。
 
-**注意**：必须在客户端创建一个表变量来对 server 端新创建的表对象进行引用，否则  `executeAs` 创建的表对象将被释放。详见 [Python API 创建的表对象的生命周期](#23 - 上传的数据表的生命周期)。
+**注意**：必须在客户端创建一个表变量来对 server 端新创建的表对象进行引用，否则  `executeAs` 创建的表对象将被释放。详见 [Python API 创建的表对象的生命周期](#23-上传的数据表的生命周期)。
 
 ```python
 trade = s.loadTable(dbPath="dfs://valuedb", tableName="trade")
@@ -3030,11 +3524,11 @@ s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=Fals
 - **batchSize** 是一个整数，表示批处理的消息的数量。如果它是正数，直到消息的数量达到 *batchSize* 时，*handler* 才会处理进来的消息。如果它没有指定或者是非正数，消息到达之后，*handler* 就会马上处理消息。
 - **throttle** 是一个整数，表示 *handler* 处理到达的消息之前等待的时间，以秒为单位。默认值为 1。如果没有指定 *batchSize*，*throttle* 将不会起作用。
 
-示例：
-
 请注意，发布节点需要配置 *maxPubConnections* 参数，具体请参照 [DolphinDB 流数据教程](https://github.com/dolphindb/Tutorials_CN/blob/master/streaming_tutorial.md)。
 
-在 DolphinDB 中创建共享的流数据表，指定进行过滤的列为 sym，并为 5 个 symbol 各插入 2 条记录共 10 条记录：
+订阅示例：
+
+(1) 在 DolphinDB 中创建共享的流数据表，指定进行过滤的列为 sym，并为 5 个 symbol 各插入 2 条记录共 10 条记录：
 
 ```
 share streamTable(10000:0,`time`sym`price`id, [TIMESTAMP,SYMBOL,DOUBLE,INT]) as trades
@@ -3043,9 +3537,16 @@ insert into trades values(take(now(), 10), take(`000905`600001`300201`000908`600
 
 ```
 
-在 Python 中订阅 trades 表, 设置 filter 为只接收 symbol 为 000905 的数据：
+(2) 在 Python 中订阅 trades 表, 设置 filter 为只接收 symbol 为 000905 的数据：
 
 ```python
+from threading import Event 
+
+import dolphindb as ddb
+import numpy as np
+s = ddb.session()
+s.enableStreaming(10020)
+
 def handler(lst):
     print(lst)
 
@@ -3055,6 +3556,15 @@ s.subscribe("192.168.1.103",8921,handler,"trades","action",0,False,np.array(['00
 [numpy.datetime64('2020-10-29T10:23:31.411'), '000905', 94.3, 1]
 [numpy.datetime64('2020-10-29T10:23:31.411'), '000905', 35.0, 6]
 ```
+
+**请注意:**，因为订阅是异步执行的，所以订阅完成后需要保持主线程不退出，例如：
+
+```python
+from threading import Event     # 加在第一行
+Event().wait()                  # 加在最后一行
+```
+
+否则订阅线程会在主线程退出前立刻终止，导致无法收到订阅消息。
 
 #### 10.2.2 获取订阅主题
 
@@ -3079,15 +3589,6 @@ s.unsubscribe(host,port,tableName,actionName="")
 ```python
 s.unsubscribe("192.168.1.103", 8921,"trades","action")
 ```
-
-**请注意:**，因为订阅是异步执行的，所以订阅完成后需要保持主线程不退出，例如：
-
-```python
-from threading import Event     # 加在第一行
-Event().wait()                  # 加在最后一行
-```
-
-否则订阅线程会在主线程退出前立刻终止，导致无法收到订阅消息。
 
 ## 10.2.4 流数据订阅实例
 
@@ -3132,20 +3633,21 @@ share streamTable(100:0, `Symbol`Datetime`Price`Volume,[SYMBOL,DATETIME,DOUBLE,I
 import dolphindb as ddb
 import pandas as pd
 import numpy as np
-csv_file = "trades.csv"
-csv_data = pd.read_csv(csv_file,parse_dates=['Datetime'], dtype={'Symbol':str})
+
+csv_file = WORK_DIR + "/trades.csv"
+csv_data = pd.read_csv(csv_file,parse_dates=['Time'], dtype={'Symbol':str})
 csv_df = pd.DataFrame(csv_data)
-s = ddb.session();
+s = ddb.session()
 s.connect("192.168.1.103", 8921,"admin","123456")
 #上传 DataFrame 到 DolphinDB，并对 Datetime 字段做类型转换
 s.upload({"tmpData":csv_df})
-s.run("data = select Symbol, datetime(Datetime) as Datetime, Price, Volume from tmpData;tableInsert(Trade,data)")
+s.run("data = select Symbol, datetime(Time) as Datetime, Trade_Price, Trade_Volume from tmpData;tableInsert(Trade,data)")
 ```
 
 这个方法的缺点是，s.upload 和 s.run 涉及两次网络数据传输，有可能会出现网络延迟。可以考虑先在 Python 端中过滤数据，然后再单步 `tableInsert` 到服务器端。
 
 ```
-csv_df=csv_df['Symbol', 'Datetime', 'Price', 'Volume']
+csv_df=csv_df[['Symbol', 'Time', 'Trade_Price', 'Trade_Volume']]
 s.run("tableInsert{Trade}", csv_df)
 
 ```
@@ -3159,33 +3661,22 @@ s.run("tableInsert{Trade}", csv_df)
 可通过设定 `createTimeSeriesAggregator` 函数的 windowSize 和 step 参数以实现这两个场景。场景一 windowSize 与 step 相等；场景二 windowSize 是 step 的倍数。
 
 首先定义输出表:
-
 ```
 share streamTable(100:0, `datetime`symbol`open`high`low`close`volume,[DATETIME, SYMBOL, DOUBLE,DOUBLE,DOUBLE,DOUBLE,LONG]) as OHLC
-
 ```
-
 根据应用场景的不同，在以下两行代码中选择一行，以定义时序聚合引擎：
 
 场景一：
-
 ```
 tsAggrKline = createTimeSeriesAggregator(name="aggr_kline", windowSize=300, step=300, metrics=<[first(Price),max(Price),min(Price),last(Price),sum(volume)]>, dummyTable=Trade, outputTable=OHLC, timeColumn=`Datetime, keyColumn=`Symbol)
-
 ```
-
 场景二：
-
 ```
 tsAggrKline = createTimeSeriesAggregator(name="aggr_kline", windowSize=300, step=60, metrics=<[first(Price),max(Price),min(Price),last(Price),sum(volume)]>, dummyTable=Trade, outputTable=OHLC, timeColumn=`Datetime, keyColumn=`Symbol)
-
 ```
-
 最后，定义流数据订阅。若此时流数据表 Trade 中已经有实时数据写入，那么实时数据会马上被订阅并注入聚合引擎：
-
 ```
 subscribeTable(tableName="Trade", actionName="act_tsaggr", offset=0, handler=append!{tsAggrKline}, msgAsTable=true)
-
 ```
 
 #### 10.3.3 在 Python 中展示 K 线数据
@@ -3218,6 +3709,7 @@ Event().wait()
 ```
 
 也可通过 [Grafana](https://github.com/dolphindb/grafana-datasource/blob/master/README_CN.md) 等可视化系统来连接 DolphinDB database，对输出表进行查询并将结果以图表方式展现。
+
 
 ## 11 更多实例
 
@@ -3307,8 +3799,7 @@ stockPnL = calcStockPnL(ports=ports,inData=priceData, dailyRtn=dailyRtn, holding
 步骤 4：计算投资组合的利润或损失。
 
 ```python
-portPnl = stockPnL.select("pnl").groupby("date").sum().sort(bys=["date"]).executeAs("portPnl")
-
+portPnl = stockPnL.select("sum(pnl)").groupby("date").sort(bys=["date"]).executeAs("portPnl")
 print(portPnl.toDF())
 ```
 
@@ -3319,35 +3810,36 @@ print(portPnl.toDF())
 ```python
 def alpha98(t):
     t1 = s.table(data=t)
-    # add two calcualted columns through function update
     t1.contextby(["date"]).update(cols=["rank_open","rank_adv15"], vals=["rank(open)","rank(adv15)"]).execute()
-    # add two more calculated columns
-    t1.contextby(["PERMNO"]).update(["decay7", "decay8"], ["mavg(mcorr(vwap, msum(adv5, 26), 5), 1..7)","mavg(mrank(9 - mimin(mcorr(rank_open, rank_adv15, 21), 9), true, 7), 1..8)"]).execute()
-    # return the final results with three columns: PERMNO, date, and A98
-    return t1.select("PERMNO, date, rank(decay7)-rank(decay8) as A98").contextby(["date"]).executeAs("alpha98")
+    t1.contextby(["PERMNO"]).update(["decay7", "decay8"], ["mavg(mcorr(vwap, msum(adv5, 26), 5), 1..7)",\
+               "mavg(mrank(9 - mimin(mcorr(rank_open, rank_adv15, 21), 9), true, 7), 1..8)"]).execute()
+    # from previous update the server's schema is changed, so you may reload it
+    t1 = s.table(data=t)
+    return t1.select("PERMNO, date,decay7, decay8, rank(decay7)-rank(decay8) as A98")\
+        .contextby(["date"])\
+        .executeAs("alpha98")
 
-US = s.loadTable(tableName="US", dbPath="dfs://US").select("PERMNO, date, PRC as vwap, PRC+rand(1.0, PRC.size()) as open, mavg(VOL, 5) as adv5, mavg(VOL,15) as adv15").where("2007.01.01<=date<=2016.12.31").contextby("PERMNO").executeAs("US")
+
+US = s.loadTable(tableName="US", dbPath="dfs://US")\
+    .select("PERMNO, date, PRC as vwap, PRC+rand(1.0, PRC.size()) as open, mavg(VOL, 5) as adv5\
+            , mavg(VOL,15) as adv15")\
+    .where("2007.01.01<=date<=2016.12.31")\
+    .contextby("PERMNO")\
+    .executeAs("US")
 result=alpha98(US.tableName()).where('date>2007.03.12').executeAs("result")
-print(result.top(10).toDF())
+print(result.toDF())
+s.close()
 ```
-
 ## 12 常见问题
 
 - 某些版本如 1.10.20, 1.20.10, 1.30.0 的 dolphindb 可能会有以下报错信息：
-
 ```
 <Server Exception> in run: Received invalid serialized data during deserialization!
-
 ```
-
 ```
 <Server Exception> in run: Failed to read response header from the socket with IO error type
-
 ```
-
 ```
 <Server Exception> in run: Error when Unpickle socket data!
-
 ```
-
 解决方案：该问题已于 dolphindb 1.30.3 版本修复。请更新到 1.30.3 及以上版本。
