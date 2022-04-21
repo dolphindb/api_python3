@@ -1891,7 +1891,7 @@ insert(*args)
 
 函数说明：
 
-插入单行数据。返回一个类，包含 errorCode 和 errorInfo，分别表示错误代码和错误信息。当 errorCode 表示 MTW 写入失败。此时，errorInfo 会显示失败的详细信息。之后的版本中会对错误信息进行详细说明，给出错误信息的代码、错误原因及解决办法。
+插入单行数据。返回一个类，包含 errorCode 和 errorInfo，分别表示错误代码和错误信息。当 errorCode 不为 "None" 时，表示 MTW 写入失败，此时，errorInfo 会显示失败的详细信息。之后的版本中会对错误信息进行详细说明，给出错误信息的代码、错误原因及解决办法。
 
 参数说明：
 
@@ -2000,9 +2000,9 @@ writer.waitForThreadCompletion()
 writeStatus=writer.getStatus()
 if writeStatus.hasError():
     # 获取并修正失败数据后将失败数据重新写入MTW
-    unwriterdata = writer.getUnwrittenData()
-    unwriterdata = revise(unwriterdata)
-    newwriter.insertUnwrittenData(unwriterdata)
+    unwrittendata = writer.getUnwrittenData()
+    unwrittendata = revise(unwrittendata)
+    newwriter.insertUnwrittenData(unwrittendata)
 else
     print("Write successfully!")
 ```
@@ -2079,7 +2079,7 @@ writeStatus:
 0    100
 """
 ```
-通过以上脚本的输出信息可以看出，`MultithreadedTableWriter` 对象中的所有数据均成功写入分布式表，此时 errorCode 为 None。
+通过以上脚本的输出信息可以看出，`MultithreadedTableWriter` 对象中的所有数据均成功写入分布式表，此时 errorCode 为 "None"。
 
 `MultithreadedTableWriter` 将数据写入 MTW 队列和 MTW 工作线程转换数据类型，并追加数据到服务器是异步进行的。MTW 队列仅对插入的数据做简单的错误判断（例如数据列数不一致），并返回错误信息，但不会终止工作线程；MTW 工作线程在追加数据前会对数据进行转换，此时若发现数据类型不匹配，会立刻终止所有工作线程。<!--感觉需要对何时抛出错误，何时抛出异常做个总结，列个表什么的-->
 
@@ -2146,19 +2146,19 @@ errorCode     : A1
 """
 ```
 
-当 MTW 写入数据时发生错误<!--需要准确描述一下，并不是发生错误-->，会终止所有工作线程。此时可以通过 writer.getUnwrittenData() 方法获取失败数据，通过 insertUnwrittenData(unwriterdata)将失败数据重新写入。注意，因为原 MTW 对象的工作线程已经终止，无法再次使用它来写入数据，需要重新构造一个新的 MTW 对象，将失败数据重新写入新 MTW 对象中。
+当 MTW 写入数据时发生错误<!--需要准确描述一下，并不是发生错误-->，会终止所有工作线程。此时可以通过 writer.getUnwrittenData() 方法获取失败数据，通过 insertUnwrittenData(unwrittendata)将失败数据重新写入。注意，因为原 MTW 对象的工作线程已经终止，无法再次使用它来写入数据，需要重新构造一个新的 MTW 对象，将失败数据重新写入新 MTW 对象中。
 ```python
 if writeStatus.hasError():
     print("Error in writing:")
-    unwriterdata = writer.getUnwrittenData()
-    print("Unwriterdata: %d" % len(unwriterdata))
+    unwrittendata = writer.getUnwrittenData()
+    print("Unwriterdata: %d" % len(unwrittendata))
     # 重新获取新的 MTW 对象
     newwriter = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","dfs://valuedb3","pdatetest",False,False,[],10000,1,5,"id",["LZ4","LZ4","DELTA"])
     try:
         # 修正失败数据后将失败数据重新写入 MTW
-        for row in unwriterdata:
+        for row in unwrittendata:
             row[1]="aaaaa"
-        res = newwriter.insertUnwrittenData(unwriterdata)
+        res = newwriter.insertUnwrittenData(unwrittendata)
         if res.succeed():
             # 使用 waitForThreadCompletion() 方法等待数据写入完成，并终止所有 MTW 的工作线程
             newwriter.waitForThreadCompletion()
