@@ -624,7 +624,7 @@ print(s.loadTable("testDataFrame").toDF())
 2    3   True      3       3     3  ...                        NaT       NaN        NaN
 ```
 
-例2. 使用 `table` 方法，创建包含 array vector 表并上传到服务器。
+例2. 使用 `table` 方法，创建包含 array vector 类型字段的表并上传到服务器。
 
 ```python
 import numpy as np
