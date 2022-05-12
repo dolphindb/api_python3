@@ -6,7 +6,7 @@ windows 版本的 DolphinDB Python API 支持 Python 3.6-3.8 版本，但仅支�
 
 通过执行如下指令进行安装：
 
-```console
+```Console
 $ pip install dolphindb
 ```
 
@@ -155,11 +155,11 @@ True
 connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime])
 ```
 
-- **host / port**：所连接的服务器的地址和端口。
-- **username / password**：登录时的用户名密码。
-- **startup**：启动脚本，可以用于执行一些预加载任务。它可以包含加载插件、加载分布式表、定义并加载流数据表等脚本。
-- **highAvailability / highAvailabilitySites**：API 高可用相关配置参数。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 true，*highAvailabilitySites* 里指定所有可用节点的 `ip:port`。
-- **keepAliveTime**：通过配置 *keepAliveTime* 参数可以设置 TCP 的存活检测机制的检测时长，从而能够在网络不稳定条件下，及时释放半打开的 TCP 连接。
+* **host / port**：所连接的服务器的地址和端口。
+* **username / password**：登录时的用户名密码。
+* **startup**：启动脚本，可以用于执行一些预加载任务。它可以包含加载插件、加载分布式表、定义并加载流数据表等脚本。
+* **highAvailability / highAvailabilitySites**：API 高可用相关配置参数。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 true，*highAvailabilitySites* 里指定所有可用节点的 `ip:port`。
+* **keepAliveTime**：通过配置 *keepAliveTime* 参数可以设置 TCP 的存活检测机制的检测时长，从而能够在网络不稳定条件下，及时释放半打开的 TCP 连接。
 
 如果需要使用用户名和密码连接，可使用以下脚本。其中 "admin" 为 DolphinDB 默认的管理员用户名，"123456" 为密码。
 
@@ -322,7 +322,7 @@ dtype('float64')
 通过 `run` 调用 DolphinDB 的内置函数时，客户端上传参数的数据结构可以是标量 (scalar)，列表 (list)，字典 (dict)，NumPy 的对象，pandas 的 DataFrame 和 Series 等等。
 
 > 需要注意：
->
+> 
 > 1. NumPy array 的维度不能超过 2。
 > 2. pandas 的 DataFrame 和 Series 若有 index，在上传到 DolphinDB 以后会丢失。如果需要保留 index 列，则需要使用 pandas 的 DataFrame 函数 reset_index。
 > 3. 如果 DolphinDB 函数的参数是时间或日期类型，Python 客户端上传时，参数应该先转换为 numpy.datetime64 类型。
@@ -332,7 +332,7 @@ dtype('float64')
 - 将 list 对象作为参数
 
   使用 DolphinDB 的 `add` 函数对两个 Python 的 list 进行相加：
-
+  
 ```python
   s.run("add",[1,2,3,4],[1,2,1,1])
   # output
@@ -344,7 +344,7 @@ dtype('float64')
   除了 NumPy 的 array 对象之外，NumPy 的数值型标量也可以作为参数参与运算，例如，将 np.int 或 np.datetime64 等对象上传到 DolphinDB 作为函数参数。
 
   - np.int 作为参数
-
+  
     ```python
     import numpy as np
     s.run("add{1,}",np.int(4))
@@ -421,7 +421,7 @@ dtype('float64')
   pandas 的 DataFrame 和 Series 若有 index，在上传到 DolphinDB 后会丢失。
 
   - Series 作为参数：
-
+  
     ```python
     import pandas as pd
     import numpy as np
@@ -440,12 +440,12 @@ dtype('float64')
         'date': np.array(['2019-02-03','2019-02-04','2019-02-05','2019-02-06','2019-02-07'], dtype='datetime64[D]'),
         'value': np.double([7.8, 4.6, 5.1, 9.6, 0.1]),},
         index=['one', 'two', 'three', 'four', 'five'])
-
+    
     s.upload({'a':a})
     s.run("typestr",a)
     # output
     'IN-MEMORY TABLE'
-
+    
     s.run('a')
     # output
        id date        value
@@ -544,7 +544,7 @@ print(s.run("t1.x.avg()"))
 
 在 Python 中可使用 `table` 方法创建 DolphinDB 表对象，并上传到 server 端。table 方法的输入可以是字典、DataFrame 或 DolphinDB 中的表名。
 
-- 上传 dict
+* 上传 dict
 
 下面的程序定义了一个函数 `createDemoDict()` 以创建一个字典。
 
@@ -577,7 +577,9 @@ print(s.loadTable("testDict").toDF())
 3   3 2021-05-07   AMZN  3291.61
 ```
 
-- 上传 pandas DataFrame
+* 上传 pandas DataFrame
+  
+例1.
 
 以下程序定义函数 `createDemoDataFrame()`，以创建一个 pandas 的 DataFrame 对象。
 
@@ -612,12 +614,36 @@ def createDemoDataFrame():
 ```python
 dt = s.table(data=createDemoDataFrame(), tableAliasName="testDataFrame")
 print(s.loadTable("testDataFrame").toDF())
+```
 
+```
 # output
    cid  cbool  cchar  cshort  cint  ...             cnanotimestamp    cfloat    cdouble csymbol cstring
 0    1   True      1       1     1  ... 2019-01-01 15:00:00.807060  2.100000   0.000000       A     abc
 1    2  False      2       2     2  ... 2019-01-01 15:30:00.807060  2.658956  47.456213       B     def
 2    3   True      3       3     3  ...                        NaT       NaN        NaN
+```
+
+例2. 使用 `table` 方法，创建包含 array vector 表并上传到服务器。
+
+```python
+import numpy as np
+import pandas as pd
+import dolphindb as ddb
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+df = pd.DataFrame({
+                'value': [np.array([1,2,3,4,5,6,7,8,9],dtype=np.int64),np.array([11,12,13,14],dtype=np.int64),np.array([22,13,11,12,13,14],dtype=np.int64)]
+        })
+tmp = s.table(data=df, tableAliasName="testArrayVector")
+
+print(s.loadTable("testArrayVector").toDF())
+
+# output
+                         value
+0  [1, 2, 3, 4, 5, 6, 7, 8, 9]
+1             [11, 12, 13, 14]
+2     [22, 13, 11, 12, 13, 14]
 ```
 
 ### 2.3 上传的数据表的生命周期
@@ -631,7 +657,7 @@ t0=s.table(data=createDemoDict(), tableAliasName="t1")
 释放 server 端对象有三种方法：
 
 - `undef` 方法
-
+  
 ```python
 s.undef("t1", "VAR")
 ```
@@ -861,7 +887,8 @@ re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 
 TSDB 引擎数据库的创建方法和 OLAP 几乎一致，只需要在 database 函数中指定 engine = "TSDB"，并在调用建表函数 createTable，createPartitionedTable 时指定 sortColumns。 函数参数介绍请参见用户手册 [database](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/d/database.html), [createPartitionedTable](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/c/createPartitionedTable.html) 和 [createTable](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/c/createTable.html)。
 
-```
+例1. 
+```python
 import dolphindb.settings as keys
 import numpy as np
 import pandas as pd
@@ -884,6 +911,56 @@ t = s.table(data=df)
 db.createPartitionedTable(table=t, tableName='pt', partitionColumns='datetime', sortColumns=["sym", "datetime"]).append(t)
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 print(re)
+
+# output
+
+    datetime sym  val
+0 2012-01-01  AA    1
+1 2012-01-02  BB    2
+2 2012-01-04  BB    3
+3 2012-01-05  AA    4
+4 2012-01-08  BB    5
+```
+
+例2. 创建一个包含 array vector 类型字段的分布式表
+```python
+import dolphindb.settings as keys
+import numpy as np
+import pandas as pd
+
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+
+dates = np.array(pd.date_range(start='20120101', end='20120110'), dtype="datetime64[D]")
+values = np.array([np.array([11,12,13,14],dtype=np.int64),
+    np.array([15,16,17,18],dtype=np.int64),
+    np.array([19,10,11,12],dtype=np.int64),
+    np.array([13,14,15],dtype=np.int64),
+    np.array([11,14,17,12,15],dtype=np.int64),
+],dtype=object)
+
+dbPath = "dfs://tsdb"
+if s.existsDatabase(dbPath): s.dropDatabase(dbPath)
+db = s.database(dbName='mydb_tsdb', partitionType=keys.VALUE, partitions=dates, dbPath=dbPath, engine="TSDB")
+
+df = pd.DataFrame({'datetime': np.array(
+    ['2012-01-01T00:00:00', '2012-01-02T00:00:00', '2012-01-04T00:00:00', '2012-01-05T00:00:00', '2012-01-08T00:00:00'],
+    dtype='datetime64'),
+    'sym': ['AA', 'BB', 'BB', 'AA', 'BB'], 'val': values})
+t = s.table(data=df)
+
+db.createPartitionedTable(table=t, tableName='pt', partitionColumns='datetime', sortColumns=["sym", "datetime"]).append(t)
+re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
+print(re)
+
+# output
+
+    datetime sym                   val
+0 2012-01-01  AA      [11, 12, 13, 14]
+1 2012-01-02  BB      [15, 16, 17, 18]
+2 2012-01-04  BB      [19, 10, 11, 12]
+3 2012-01-05  AA          [13, 14, 15]
+4 2012-01-08  BB  [11, 14, 17, 12, 15]
 ```
 
 ### 3.2 使用 `run` 方法创建
@@ -1124,7 +1201,6 @@ dbPath = "dfs://valuedb"
 s.run(script)
 
 
-
 pool = ddb.DBConnectionPool("localhost", 8848, 20, "admin", "123456")
 appender = ddb.PartitionedTableAppender("dfs://valuedb", "pt", "id", pool)
 n = 100
@@ -1281,7 +1357,6 @@ DolphinDB Python API 使用 Python 原生的各种形式的数据对象来存放
 |set|Sets|set(3 5 4 6)|{3, 4, 5, 6}|
 |dictionary|Dictionaries|dict(['IBM','MS','ORCL'], 170.5 56.2 49.5)|{'MS': 56.2, 'IBM': 170.5, 'ORCL': 49.5}|
 |table|pandas.DataFame | 见 [第 6.1 小节](#61-使用-loadtable-函数)| 见 [第 6.1 小节](#61-使用-loadtable-函数)|
-
 
 #### 5.4.2 数据类型的转换
 
@@ -1740,7 +1815,7 @@ s.run("appendStreamingData(tb)")
 
 ### 6.4 批量异步追加数据
 
-针对单条数据批量写入的场景，DolphinDB Python API 提供 `BatchTableWrite` ，`MultithreadedTableWriter` 类对象用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络 I/O 时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，`BatchTableWrite` 支持批量写入数据到内存表、分区表；而 `MultithreadedTableWriter` 支持批量写入数据到内存表、分区表和维度表。
+针对单条数据批量写入的场景，DolphinDB Python API 提供 `BatchTableWrite`, `MultithreadedTableWriter` 类对象用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络 I/O 时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，`BatchTableWrite` 支持批量写入数据到内存表、分区表；而 `MultithreadedTableWriter` 支持批量写入数据到内存表、分区表和维度表。
 
 注意对于异步写入：
 
@@ -1806,7 +1881,7 @@ removeTable(dbPath="", tableName="")
 getUnwrittenData(dbPath="", tableName="")
 ```
 
-函数说明：获取还未写入的数据，主要是用于的时候获取写入出现错误时，剩下未写入的数据。该函数会取出剩下未写入的数据，这些数据将不会被继续写入，如若需要重新写入，需要再次调用插入函数。
+函数说明：获取还未写入的数据。写入出现错误时，用于获取剩下未写入的数据。这些未写入的数据不会尝试重写，若需要重新写入，则调用 insert 函数。
 
 ```Python
 getStatus(dbPath="", tableName="")
@@ -1862,15 +1937,15 @@ print(s.run("select * from tglobal"))
 `MultithreadedTableWriter` 对象及主要方法介绍如下：
 
 ```Python
-MultithreadedTableWriter(hostName, port, userId, password, dbName, tableName, useSSL, enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount, partitionCol, compressMethods)
+MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL, enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount, partitionCol, compressMethods)
 ```
 
 参数说明：
 
-* **hostName** 字符串，表示所连接的服务器的地址
+* **host** 字符串，表示所连接的服务器的地址
 * **port** 整数，表示服务器端口。 
 * **userId** / **password**: 字符串，登录时的用户名和密码。
-* **dbName** 字符串，表示分布式数据库地址或内存表的表名。
+* **dbPath** 字符串，表示分布式数据库地址或内存表的表名。
 * **tableName** 字符串，表示分布式表名。内存表无需指定该参数。
 * **useSSL** 布尔值，默认值为 False。表示是否启用加密通讯。
 * **enableHighAvailability** 布尔值，默认为 False。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 True。
@@ -1891,7 +1966,9 @@ insert(*args)
 
 函数说明：
 
-插入单行数据。返回一个类，包含 errorCode 和 errorInfo，分别表示错误代码和错误信息。当 errorCode 不为 "None" 时，表示 MTW 写入失败，此时，errorInfo 会显示失败的详细信息。之后的版本中会对错误信息进行详细说明，给出错误信息的代码、错误原因及解决办法。
+插入单行数据。返回一个 ErrorCodeInfo 类，包含 errorCode 和 errorInfo，分别表示错误代码和错误信息。当 errorCode 不为 "None" 时，表示 MTW 写入失败，此时，errorInfo 会显示失败的详细信息。之后的版本中会对错误信息进行详细说明，给出错误信息的代码、错误原因及解决办法。另外，ErrorCodeInfo 类提供了 hasError() 和 succeed() 方法用于获取数据插入的结果。hasError() 返回 True，则表示存在错误，否则表示无错误。hasError() 返回 True，则表示存在错误，否则表示无错误。succeed() 返回 True，则表示插入成功，否则表示插入失败。
+
+获取 `MultithreadedTableWriter` 对象当前的运行状态。返回一个类，具有以下属性。
 
 参数说明：
 
@@ -1965,7 +2042,9 @@ getStatus()
 
 函数说明：
 
-获取 `MultithreadedTableWriter` 对象当前的运行状态。返回一个类，具有以下属性。
+获取 `MultithreadedTableWriter` 对象当前的运行状态。返回一个类，具有以下属性和方法。
+
+属性：
 
 * isExiting：写入线程是否正在退出。
 * errorCode：错误码。
@@ -1978,6 +2057,11 @@ getStatus()
   - sentRows：该线程成功发送的记录数。
   - unsentRows：该线程待发送的记录数。
   - sendFailedRows：该线程发送失败的记录数。
+
+方法：
+
+* hasError()：True 表示数据写入存在错误；False 表示数据写入无错误。
+* succeed()：True 表示数据写入成功；False 表示数据写入失败。
 
 ```Python
 waitForThreadCompletion()
@@ -2205,7 +2289,6 @@ Write again:
 由上例可以看出，MTW 内部使用多线程完成数据转换和写入任务。但在 MTW 外部，API 客户端同样支持以多线程方式将数据写入 MTW，且保证了多线程安全。具体示例如下：
 
 ```python
-# 创建MTW对象
 # 创建MTW对象
 writer = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","dfs://valuedb3","pdatetest",False,False,[],10000,1,5,"id",["LZ4","LZ4","DELTA"])
 
@@ -2436,7 +2519,7 @@ pool.shutDown()
 
 除了第 1 节列出的常用方法之外，Session 类还提供了一些与 DolphinDB 内置函数作用相同的方法，用于操作数据库和表，具体如下：
 
-- 数据库 / 分区相关
+* 数据库 / 分区相关
 
 | 方法名                                      | 详情         |
 | :--------------------------------------- | :--------- |
@@ -2445,7 +2528,7 @@ pool.shutDown()
 | dropPartition(dbPath, partitionPaths, tableName) | 删除数据库的某个分区 |
 | existsDatabase                           | 判断是否存在数据库  |
 
-- 数据表相关
+* 数据表相关
 
 | 方法名                          | 详情        |
 | :--------------------------- | :-------- |
@@ -2465,7 +2548,7 @@ pool.shutDown()
 | toDF()               | 把 DolphinDB 表对象转换成 pandas 的 DataFrame 对象           |
 | toList()             | 把 DolphinDB 表对象转换成 由 numpy.ndarray 组成的 list 对象，list中对象的顺序和列的顺序保持一致。 |
 
-注意：可以通过 toList() 方法将表中的 [array vector](https://www.dolphindb.cn/cn/help/200/DataTypesandStructures/DataForms/Vector/arrayVector.html) 转为二维的 numpy.ndarray，使用户在客户端更高效的使用 arrayvector 数据。另外该方法仅对每一个元素等长的 array vector 起效，若 array vector 内元素长度不一致，将会报错。
+注意：可以通过 toList() 方法将表中的 [array vector](https://www.dolphindb.cn/cn/help/200/DataTypesandStructures/DataForms/Vector/arrayVector.html) 转为二维的 numpy.ndarray，使用户在客户端更高效的使用 array vector 数据。另外该方法仅对每一个元素等长的 array vector 起效，若 array vector 内元素长度不一致，将会报错。
 
 以上只是列出其中最为常用的方法。关于 Session 类和 Table 类提供的所有方法请参见 session.py 和 table.py 文件。
 <!---
@@ -2888,8 +2971,8 @@ trade.top(5).toDF()
 
 `limit` 子句和 `top` 子句功能类似。两者的区别在于：
 
-- top 子句中的整型常量不能为负数。在与 context by 子句一同使用时，limit 子句标量值可以为负整数，返回每个组最后指定数目的记录。其他情况 limit 子句标量值为非负整数。
-- 可使用 limit 子句从某行开始选择一定数量的行。
+* top 子句中的整型常量不能为负数。在与 context by 子句一同使用时，limit 子句标量值可以为负整数，返回每个组最后指定数目的记录。其他情况 limit 子句标量值为非负整数。
+* 可使用 limit 子句从某行开始选择一定数量的行。
 
 ```python
 tb = s.loadTable(dbPath="dfs://valuedb", tableName="trade")
@@ -3283,7 +3366,7 @@ print(t1.merge(t2, how="outer", on=["TICKER","date"]).toDF())
 `merge_asof` 对应 DolphinDB 中的 [asof join (aj)](https://www.dolphindb.cn/cn/help/SQLStatements/TableJoiners/asofjoin.html)。asof join 为非同时连接，它与 left join 非常相似，主要有以下区别：
 
 - 1. asof join 的最后一个连接列通常是时间类型。对于左表中某行的时间 t，在右表最后一个连接列之外的其它连接列一致的记录中，如果右表没有与 t 对应的时间，asof join 会取右表中 t 之前的最近时间对应的记录；如果有多个相同的时间，会取最后一个时间对应的记录。
-  
+
 - 2. 如果只有一个连接列，右表必须按照连接列排好序。如果有多个连接列，右表必须在其它连接列决定的每个组内根据最后一个连接列排好序。如果右表不满足这些条件，计算结果将会不符合预期。右表不需要按照其他连接列排序，左表不需要排序。
 
 本节与下节的例子使用了 [trades.csv](data/trades.csv) 和 [quotes.csv](data/quotes.csv)，它们含有 NYSE 网站下载的 AAPL 和 FB 的 2016 年 10 月 24 日的交易与报价数据。
@@ -3358,7 +3441,7 @@ window join 和 prevailing window join 的唯一区别是，如果右表中没�
 print(trades.merge_window(quotes, -5000000000, 0, aggFunctions=["avg(Bid_Price)","avg(Offer_Price)"], on=["Symbol","Time"]).where("Time>=07:59:59").top(10).toDF())
 
 # output
-Time                          Exchange Symbol  Trade_Volume  Trade_Price  avg_Bid_Price  avg_Offer_Price
+ Time                          Exchange Symbol  Trade_Volume  Trade_Price  avg_Bid_Price  avg_Offer_Price
 0 1970-01-01 08:00:00.022239        75   AAPL           300        27.00          26.90            27.49
 1 1970-01-01 08:00:00.022287        75   AAPL           500        27.25          26.90            27.49
 2 1970-01-01 08:00:00.022317        75   AAPL           335        27.26          26.90            27.49
@@ -3618,14 +3701,14 @@ DolphinDB database 中计算实时 K 线的流程如下图所示：
 
 #### 10.3.1 使用 Python 接收实时数据，并写入 DolphinDB 流数据表
 
-- DolphinDB 中建立流数据表
+* DolphinDB 中建立流数据表
 
 ```
 share streamTable(100:0, `Symbol`Datetime`Price`Volume,[SYMBOL,DATETIME,DOUBLE,INT]) as Trade
 
 ```
 
-- Python 程序从数据源 trades.csv 文件中读取数据写入 DolphinDB。
+* Python 程序从数据源 trades.csv 文件中读取数据写入 DolphinDB。
 
 实时数据中 Datetime 的数据精度是秒，由于 pandas DataFrame 中仅能使用 DateTime[64] 即 nanatimestamp 类型，所以下列代码在写入前有一个数据类型转换的过程。这个过程也适用于大多数数据需要清洗和转换的场景。
 
@@ -3721,7 +3804,6 @@ Event().wait()
 
 ```python
 import dolphindb.settings as keys
-import dolphindb as ddb
 s=ddb.session()
 s.connect("localhost",8921, "admin", "123456")
 ```
