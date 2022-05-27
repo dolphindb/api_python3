@@ -350,6 +350,12 @@ class ExistsDatabaseTest(unittest.TestCase):
         dropDB(dbName)
         self.assertEqual(self.s.existsDatabase(dbName), False)
 
-
+    def test_existsDatabase_peremata(self):
+        dbName = DBInfo.diskDBName
+        create_disk_compo_range_range_db()
+        with self.assertRaises(TypeError):
+            self.s.existsDatabase(dbUrl_ERROR=dbName)
+        self.s.existsDatabase(dbUrl=dbName)
+        dropDB(dbName)
 if __name__ == '__main__':
     unittest.main()

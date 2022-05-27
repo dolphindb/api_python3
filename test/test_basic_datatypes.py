@@ -2,11 +2,14 @@ import unittest
 import dolphindb as ddb
 import numpy as np
 import pandas as pd
-from setup import HOST, PORT, WORK_DIR, DATA_DIR
+from setup.settings import HOST, PORT, WORK_DIR, DATA_DIR
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 from pandas.testing import assert_series_equal
 from pandas.testing import assert_frame_equal
+import numpy
 
+
+import numpy
 class TestBasicDataTypes(unittest.TestCase):
     @classmethod
     def setUp(cls):
@@ -1001,6 +1004,230 @@ class TestBasicDataTypes(unittest.TestCase):
         datehour = np.append(np.repeat(np.datetime64("2021-06-13T13"),n-10000),np.repeat(np.datetime64("NaT"),10000))
         ex = pd.DataFrame({"datehour":datehour, "id":id})
         assert_frame_equal(re, ex)
-        
+
+    def test_input_date_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = 2012.10.01 +1..1025
+            x.rename!(label, take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        s = numpy.arange('2012-10-02', '2015-07-24', dtype='datetime64[ns]', step=1000000000 * 60 * 60 * 24)
+        assert_array_equal(re[1], s)
+
+    def test_input_month_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = 2012.10M +1..1025
+            x.rename!(label, take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        assert_array_equal(re[1], numpy.arange('2012-11', '2098-04', dtype='datetime64'))
+
+    def test_input_time_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = 00:00:00+1..1025
+            x.rename!(label, take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        s = numpy.arange('1970-01-01T00:00:01', '1970-01-01T00:17:06', dtype='datetime64[ns]', step=1000000000)
+        assert_array_equal(re[1], s)
+
+    def test_input_minute_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = 02:30m+1..1025
+            x.rename!(label, take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        s = numpy.arange('1970-01-01T02:31', '1970-01-01T19:36', dtype='datetime64[ns]', step=1000000000 * 60)
+        assert_array_equal(re[1], s)
+
+    def test_input_seconds_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label= 13:30:00+1..1025
+            x.rename!(label, take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        assert_array_equal(re[1], numpy.arange('1970-01-01T13:30:01', '1970-01-01T13:47:06', dtype='datetime64[ns]',
+                                               step=1000000000))
+
+    def test_input_datetime_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label= 2012.10.01T15:00:04 + 1..1025
+            x.rename!(label, take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        assert_array_equal(re[1], numpy.arange('2012-10-01T15:00:05.000000000', '2012-10-01T15:17:10.000000000',
+                                               dtype='datetime64[ns]', step=1000000000))
+
+    def test_input_timestamp_matrix(self):
+        script = '''
+              x=matrix(`DOUBLE,1025,1, ,1.5)
+              label= 2012.06.13T13:30:10.008+1..1025
+              x.rename!(label, take("col",1))
+              x
+          '''
+        re = self.s.run(script)
+        assert_array_equal(re[1],
+                           numpy.arange('2012-06-13T13:30:10.009', '2012-06-13T13:30:11.034', dtype='datetime64[ns]',
+                                        step=1000000))
+
+    def test_input_nanotime_matrix(self):
+        script = '''
+              x=matrix(`DOUBLE,1025,1, ,1.5)
+              label= 13:30:10.008007006+1..1025
+              x.rename!(label, take("col",1))
+              x
+          '''
+        re = self.s.run(script)
+        # print(re[1])
+        assert_array_equal(re[1], numpy.arange(np.datetime64('1970-01-01T13:30:10.008007007'),
+                                               np.datetime64('1970-01-01T13:30:10.008008032'), dtype='datetime64[ns]'))
+
+    def test_input_nanotimestamp_matrix(self):
+        script = '''
+              x=matrix(`DOUBLE,1025,1, ,1.5)
+              label= 2012.06.13T13:30:10.008007006+1..1025
+              x.rename!(label, take("col",1))
+              x
+          '''
+        re = self.s.run(script)
+        assert_array_equal(re[1], numpy.arange(np.datetime64('2012-06-13T13:30:10.008007007'),
+                                               np.datetime64('2012-06-13T13:30:10.008008032'), dtype='datetime64[ns]'))
+
+    def test_input_uuid_matrix(self):
+        script = '''
+              x=matrix(`DOUBLE,1025,1, ,1.5)
+              label= take(uuid('5d212a78-cc48-e3b1-4235-b4d91473ee87'), 1025)
+              x.rename!(label, take("col",1))
+              x
+          '''
+        re = self.s.run(script)
+        #print(re[1])
+        s = numpy.repeat(["5d212a78-cc48-e3b1-4235-b4d91473ee87"] , 1025)
+        assert_array_equal(re[1], s)
+
+    def test_input_ipaddr_matrix(self):
+        script = '''
+              x=matrix(`DOUBLE,1025,1, ,1.5)
+              label= take(ipaddr('192.168.1.135'), 1025)
+              x.rename!(label, take("col",1))
+              x
+          '''
+        re = self.s.run(script)
+        # print(re[1])
+        s = numpy.repeat(["192.168.1.135" ], 1025)
+        assert_array_equal(re[1], s)
+
+
+    def test_input_int128_matrix(self):
+        script = '''
+              x=matrix(`DOUBLE,1025,1, ,1.5)
+              label= take(int128('e1671797c52e15f763380b45e841ec32'), 1025)
+              x.rename!(label, take("col",1))
+              x
+          '''
+        re = self.s.run(script)
+        # print(re[1])
+        s = numpy.repeat(["e1671797c52e15f763380b45e841ec32"] , 1025)
+        assert_array_equal(re[1], s)
+
+
+    def test_input_symbol_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = symbol("A"+string(1..1025)) 
+            x.rename!(label,take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        s = numpy.array(["A"+str(i+1) for i in range(1025)])
+        assert_array_equal(re[1], s)
+
+    def test_input_bool_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = take(false,1025)
+            x.rename!(label,take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        s = numpy.repeat([False] , 1025)
+        assert_array_equal(s, re[1])
+
+    def test_input_char_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = take(char(99), 1025)
+            x.rename!(label,take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        #print(re[1])
+        assert_array_equal(re[1], numpy.repeat([99], 1025))
+
+
+    def test_input_short_matirx(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = take(10h, 1025)
+            x.rename!(label,take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        assert_array_equal(re[1], numpy.repeat([10], 1025))
+
+    def test_input_int_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = take(120, 1025)
+            x.rename!(label,take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        assert_array_equal(re[1], numpy.repeat([120], 1025))
+
+    def test_input_long_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = take(78l, 1025)
+            x.rename!(label,take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        assert_array_equal(re[1], numpy.repeat([78] , 1025))
+
+
+    def test_input_double_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = rand(10.0,1025)
+            x.rename!(label,take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        self.assertEqual(len(re[1]), 1025)
+
+    def test_input_float_matrix(self):
+        script = '''
+            x=matrix(`DOUBLE,1025,1, ,1.5)
+            label = take(12.5f, 1025)
+            x.rename!(label,take("col",1))
+            x
+        '''
+        re = self.s.run(script)
+        assert_array_equal(re[1], numpy.repeat([12.5], 1025))
+
 if __name__ == '__main__':
     unittest.main()
+

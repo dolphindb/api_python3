@@ -9,7 +9,7 @@ syms = '`IBM`AAPL`MSFT`GS`YHOO`TS`TSL`C`MC`HA'
 script='data = table(1:0,`date`sym`price, [DATE,SYMBOL,DOUBLE])'
 print(script)
 t = s.run(script)
-##创建分布式分区表
+## Create a partitioned DFS table
 userName = 'admin'
 pwd = '123456'
 symRange = 'cutPoints({a},3)'.format(a=syms)
@@ -22,7 +22,7 @@ dbDateScript='dbDate=database("",VALUE,{a})'.format(a=dates)
 dbSymScript='dbSym=database("",RANGE,{b})'.format(b=symRange)
 script= '{login};{db1};{db2};db = database("{db}",COMPO,[dbDate,dbSym])'.format(login=lgnScript, db1=dbDateScript, db2=dbSymScript, db=dbPath)
 s.run(script)
-## 向分布式数据库写入数据
+## Write to the DFS table
 script='db.createPartitionedTable(data,`{a}, `date`sym)'.format(a=tableName)
 print(script)
 s.run(script)

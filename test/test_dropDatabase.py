@@ -350,6 +350,18 @@ class DropDatabaseTest(unittest.TestCase):
         self.s.dropDatabase(dbName)
         self.assertEqual(existsDB(dbName), False)
 
+    def test_dropDatabase_paramete(self):
+        dbName = DBInfo.diskDBName
+        self.assertEqual(existsDB(dbName), False)
+        create_disk_value_db()
+        self.assertEqual(existsDB(dbName), True)
+        with self.assertRaises(TypeError):
+            self.s.dropDatabase(dbPath_error=dbName)    
+        self.s.dropDatabase(dbPath= dbName)
+        self.assertEqual(existsDB(dbName), False)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

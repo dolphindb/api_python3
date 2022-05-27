@@ -26,7 +26,13 @@ class LoadTextTest(unittest.TestCase):
         tb = self.s.loadText(data, ";")
         rs = self.s.run("select * from loadText('{data}', ';')".format(data=data))
         assert_frame_equal(tb.toDF(), rs)
-
-
+    
+    def test_loadText_param_delimiter(self):
+        data = DATA_DIR + "/trades.csv"
+        with self.assertRaises(TypeError): 
+            self.s.loadText(remoteFilePath_ERROR=data, delimiter=";")
+        with self.assertRaises(TypeError): 
+            self.s.loadText(remoteFilePath=data, delimiter_ERROR=";")
+        self.s.loadText(remoteFilePath=data, delimiter=";")
 if __name__ == '__main__':
     unittest.main()

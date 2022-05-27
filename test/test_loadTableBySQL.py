@@ -660,6 +660,21 @@ class LoadTableBySQLTest(unittest.TestCase):
                                     sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
         assert_frame_equal(rs, tmp.toDF())
 
+    def test_loadTableBySQL_paramete(self):
+        dbPath = DBInfo.dfsDBName
+        tbName1 = DBInfo.table1
+        create_dfs_value_db()
+        with self.assertRaises(TypeError):
+            tmp = self.s.loadTableBySQL(tableName_ERROR=tbName1, dbPath=dbPath,
+                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+        with self.assertRaises(TypeError):
+            tmp = self.s.loadTableBySQL(tableName=tbName1, dbPath_ERROR=dbPath,
+                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+        with self.assertRaises(TypeError):
+            tmp = self.s.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
+                                    sql_ERROR="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
+        tmp = self.s.loadTableBySQL(tableName=tbName1, dbPath=dbPath,
+                                    sql="select * from {tb} where date in [2010.01.05,2010.01.15,2010.01.19]".format(tb=tbName1))
 
 if __name__ == '__main__':
     unittest.main()

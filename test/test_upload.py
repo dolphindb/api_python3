@@ -5,6 +5,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_frame_equal, assert_series_equal
 from setup import HOST, PORT, WORK_DIR, DATA_DIR
+from datetime import datetime
 
 
 class TestUploadObject(unittest.TestCase):
@@ -53,7 +54,7 @@ class TestUploadObject(unittest.TestCase):
         self.s.upload({'list': list})
         self.assertEqual(self.s.run("eqObj(list, ['abcd', 786, 2.23, 'runoob', 70.2])"), True)
         re = self.s.run("list")
-        self.assertEqual((re == list).all(), True)
+        self.assertEqual(re == list, True)
 
     def test_upload_int_list(self):
         a = [4, 5, 7, -3]
@@ -82,14 +83,23 @@ class TestUploadObject(unittest.TestCase):
         self.assertEqual(self.s.run("eqObj(a[0], [1, 2, 3])"), True)
         self.assertEqual(self.s.run("eqObj(a[1], [4, 5, 6])"), True)
         re = self.s.run("a")
-        assert_array_equal(re, [[1, 2, 3], [4, 5, 6]])
-        
+        assert_array_equal(re[0], np.array([1, 2, 3]))
+        assert_array_equal(re[1], np.array([4, 5, 6]))
+
+    def test_upload_list_list(self):
+        a = [[1, 2, 3], [4, 5, 6]]
+        self.s.upload({"a": a})
+        self.assertEqual(self.s.run("eqObj(a[0], [1, 2, 3])"), True)
+        self.assertEqual(self.s.run("eqObj(a[1], [4, 5, 6])"), True)
+        re = self.s.run("a")
+        assert_array_equal(re, [[1, 2, 3], [4, 5, 6]])   
+     
     def test_upload_tuple(self):
         tuple = ('abcd', 786 , 2.23, 'runoob', 70.2)
         self.s.upload({"tuple": tuple})
         self.assertEqual(self.s.run("eqObj(tuple, ['abcd', 786, 2.23, 'runoob', 70.2])"), True)
         re = self.s.run("tuple")
-        self.assertEqual((re==tuple).all(), True)
+        self.assertEqual(re, ['abcd', 786, 2.23, 'runoob', 70.2])
 
     def test_upload_set(self):
         a = set('abracadabra')
@@ -391,5 +401,298 @@ class TestUploadObject(unittest.TestCase):
         assert_array_equal(c,re)
 
 
+    
+    def test_upload_dict_twice(self):
+        data = {'id': [1, 2, 2, 3],
+            'date': np.array(['2019-02-04', '2019-02-05', '2019-02-09', '2019-02-13'], dtype='datetime64[D]'),
+            'ticker': ['AAPL', 'AMZN', 'AMZN', 'A'],
+            'price': [22.2, 3.5, 21.4, 26.5]}
+        self.s.upload({"t1": data})
+        self.s.upload({"t1": data})
+        re=self.s.run("t1")
+        assert_array_equal(data['id'], re['id'])
+        assert_array_equal(data['date'], re['date'])
+        assert_array_equal(data['ticker'], re['ticker'])
+        assert_array_equal(data['price'], re['price'])
+
+
+
+    def test_upload_dict_repeatedly(self):
+        data = {'id': [1, 2, 2, 3],
+            'date': np.array(['2019-02-04', '2019-02-05', '2019-02-09', '2019-02-13'], dtype='datetime64[D]'),
+            'ticker': ['AAPL', 'AMZN', 'AMZN', 'A'],
+            'price': [22.2, 3.5, 21.4, 26.5]}
+        for i in range(1,100): {
+            self.s.upload({"t1": data})
+        }
+        re=self.s.run("t1")
+        assert_array_equal(data['id'], re['id'])
+        assert_array_equal(data['date'], re['date'])
+        assert_array_equal(data['ticker'], re['ticker'])
+        assert_array_equal(data['price'], re['price'])
+
+    def test_upload_list_twice(self):
+        data = [1,2,3]
+        self.s.upload({"t1": data})
+        self.s.upload({"t1": data})
+        re=self.s.run("t1")
+        assert_array_equal(data, re)
+
+    def test_upload_list_repeatedly(self):
+        data = [1,2,3]
+        for i in range(1,100): {
+            self.s.upload({"t1": data})
+        }
+        re=self.s.run("t1")
+        assert_array_equal(data, re)
+    
+    def test_upload_array_twice(self):
+        data = np.array([1,2,3.0],dtype=np.double)
+        self.s.upload({'arr':data})
+        self.s.upload({'arr':data})
+        re = self.s.run("arr")
+        assert_array_equal(data, re)
+
+    def test_upload_array_repeatedly(self):
+        data = np.array([1,2,3.0],dtype=np.double)
+        for i in range(1,100):{
+            self.s.upload({'arr':data})
+        }
+        re = self.s.run("arr")
+        assert_array_equal(data, re)
+
+    def test_upload_DataFrame_twice(self):
+        df = pd.DataFrame({'id': np.int32([1, 2, 3, 6, 8]), 'x': np.int32([5, 4, 3, 2, 1])})
+        self.s.upload({'t1': df})
+        self.s.upload({'t1': df})
+        re = self.s.run("t1.x.avg()")
+        assert_array_equal(3.0, re)
+
+    def test_upload_DataFrame_repeatedly(self):
+        df = pd.DataFrame({'id': np.int32([1, 2, 3, 6, 8]), 'x': np.int32([5, 4, 3, 2, 1])})
+        for i in range(1,1000):{
+            self.s.upload({'t1': df})
+        }      
+        re = self.s.run("t1.x.avg()")
+        assert_array_equal(3.0, re)
+
+    def test_upload_paramete(self):         
+        df = pd.DataFrame({'id': np.int32([1, 2, 3, 6, 8]), 'x': np.int32([5, 4, 3, 2, 1])})
+        with self.assertRaises(TypeError):
+            self.s.upload(nameObjectDict_ERROR={'t1': df})
+        self.s.upload(nameObjectDict={'t1': df})
+    
+    def test_upload_table_and_update(self):
+        tb=pd.DataFrame({'id': [1, 2, 2, 3],
+                 'ticker': ['AAPL', 'AMZN', 'AMZN', 'A'],
+                 'price': [22, 3.5, 21, 26]})
+        memtab="test_upload"
+        tt = self.s.table(data=tb.to_dict(), tableAliasName=memtab)
+        self.s.run("update " + memtab + " set wd_time=price")
+        cols = self.s.run("test_upload.colNames()")
+        self.assertEqual(len(cols), 4)
+
+    def test_upload_DataFrame_None(self):
+        df = pd.DataFrame({'organization_code': [None, None,None]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(['','',''], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"object")
+        
+    def test_upload_DataFrame_nan_None(self):
+        df = pd.DataFrame({'organization_code': [np.nan, None,None]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal([np.NaN,np.NaN,np.NaN], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"float64")
+
+    def test_upload_DataFrame_None_nan(self):
+        df = pd.DataFrame({'organization_code': [None, None,np.nan]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal([np.NaN,np.NaN,np.NaN], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"float64")
+        
+    def test_upload_DataFrame_NaT_None(self):
+        df = pd.DataFrame({'organization_code': [pd.NaT, None,None]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(np.array([None,None,None], dtype="datetime64[ms]"), dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"datetime64[ns]")
+
+    def test_upload_DataFrame_None_NaT(self):
+        df = pd.DataFrame({'organization_code': [None,pd.NaT,None]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(np.array([None,None,None], dtype="datetime64[ms]"), dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"datetime64[ns]")
+
+    def test_upload_DataFrame_None_nan_NaT(self):
+        df = pd.DataFrame({'organization_code': [None, np.nan,pd.NaT]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(np.array([None,None,None], dtype="datetime64[ms]"), dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"datetime64[ns]")
+
+    def test_upload_DataFrame_NaT_None_nan(self):
+        df = pd.DataFrame({'organization_code': [pd.NaT, None,np.nan]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(np.array([None,None,None], dtype="datetime64[ms]"), dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"datetime64[ns]")
+
+    def test_upload_DataFrame_None_value(self):
+        df = pd.DataFrame({'organization_code': [None, None, None,10]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal([np.nan,np.nan,np.nan,10], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"float64")
+
+    def test_upload_DataFrame_nan_value(self):
+        df = pd.DataFrame({'organization_code': [np.nan,np.nan,np.nan,10]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal([np.nan,np.nan,np.nan,10], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"float64")
+
+    def test_upload_DataFrame_NaT_value(self):
+        df = pd.DataFrame({'organization_code': [pd.NaT,pd.NaT,pd.NaT,10]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal([np.nan,np.nan,np.nan,10], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"float64")
+
+    def test_upload_DataFrame_None_nan_value(self):
+        df = pd.DataFrame({'organization_code': [None,10,np.nan,None]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal([np.nan,10,np.nan,np.nan], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"float64")
+
+    def test_upload_DataFrame_None_NaT_value(self):
+        df = pd.DataFrame({'organization_code': [None,10,pd.NaT,None]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        print(dbvalue['organization_code'])
+        assert_array_equal([np.nan,10,np.nan,np.nan], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"float64")
+
+    def test_upload_DataFrame_nan_NaT_value(self):
+        df = pd.DataFrame({'organization_code': [np.nan,10,pd.NaT,pd.NaT]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal([np.nan,10,np.nan,np.nan], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"float64")
+
+    def test_upload_DataFrame_NaT_None_nan_value(self):
+        df = pd.DataFrame({'organization_code': [pd.NaT, None,np.nan,10]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal([np.nan,np.nan,np.nan,10], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"float64")
+
+    def test_upload_DataFrame_None_string(self):
+        df = pd.DataFrame({'organization_code': [None, None, None,"string"]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(["","","","string"], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"object")
+
+    def test_upload_DataFrame_nan_string(self):
+        df = pd.DataFrame({'organization_code': [np.nan,np.nan,np.nan,"string"]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(["","","","string"], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"object")
+
+    def test_upload_DataFrame_NaT_string(self):
+        df = pd.DataFrame({'organization_code': [pd.NaT,pd.NaT,pd.NaT,"string"]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(["","","","string"], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"object")
+        
+    def test_upload_DataFrame_None_nan_string(self):
+        df = pd.DataFrame({'organization_code': [None,"string",np.nan,None]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(["","string","",""], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"object")
+
+    def test_upload_DataFrame_None_NaT_string(self):
+        df = pd.DataFrame({'organization_code': [None,"string",pd.NaT,None]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(["","string","",""], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"object")
+
+    def test_upload_DataFrame_nan_NaT_string(self):
+        df = pd.DataFrame({'organization_code': [np.nan,"string",pd.NaT,pd.NaT]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(["","string","",""], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"object")
+
+    def test_upload_DataFrame_NaT_None_nan_string(self):
+        df = pd.DataFrame({'organization_code': [pd.NaT, None,np.nan,"string"]})
+        self.s.upload({'tb_temp': df})
+        dbvalue=self.s.run("tb_temp")
+        assert_array_equal(["","","","string"], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes,"object")
+
+    def test_upload_DataFrame_None_num_string(self):
+        df = pd.DataFrame({'organization_code': [None, None, None, "123"]})
+        self.s.upload({'tb_temp': df})
+        dbvalue = self.s.run("tb_temp")
+        assert_array_equal(["", "", "", "123"], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes, "object")
+
+    def test_upload_DataFrame_nan_num_string(self):
+        df = pd.DataFrame(
+            {'organization_code': [np.nan, np.nan, np.nan, "123"]})
+        self.s.upload({'tb_temp': df})
+        dbvalue = self.s.run("tb_temp")
+        assert_array_equal(["", "", "", "123"], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes, "object")
+
+    def test_upload_DataFrame_NaT_num_string(self):
+        df = pd.DataFrame(
+            {'organization_code': [pd.NaT, pd.NaT, pd.NaT, "123"]})
+        with self.assertRaises(RuntimeError):
+            self.s.upload({'tb_temp': df})
+
+    def test_upload_DataFrame_None_nan_num_string(self):
+        df = pd.DataFrame({'organization_code': [None, "123", np.nan, None]})
+        self.s.upload({'tb_temp': df})
+        dbvalue = self.s.run("tb_temp")
+        assert_array_equal(["", "123", "", ""], dbvalue['organization_code'])
+        self.assertEqual(dbvalue['organization_code'].dtypes, "object")
+
+    def test_upload_DataFrame_None_NaT_num_string(self):
+        df = pd.DataFrame({'organization_code': [None, "123", pd.NaT, None]})
+        with self.assertRaises(RuntimeError):
+            self.s.upload({'tb_temp': df})
+
+    def test_upload_DataFrame_nan_NaT_num_string(self):
+        df = pd.DataFrame(
+            {'organization_code': [np.nan, "123", pd.NaT, pd.NaT]})
+        with self.assertRaises(RuntimeError):
+            self.s.upload({'tb_temp': df})
+
+    def test_upload_DataFrame_NaT_None_nan_num_string(self):
+        df = pd.DataFrame({'organization_code': [pd.NaT, None, np.nan, "123"]})
+        with self.assertRaises(RuntimeError):
+            self.s.upload({'tb_temp': df})    
+            
+    def test_upload_pd_to_datetime(self):
+        self.s.upload({"hh":pd.to_datetime("2022-05-23T14:51:45.421")})
+        dbvalue = self.s.run("hh")
+        self.assertEqual(pd.to_datetime("2022-05-23T14:51:45.421"), dbvalue)
+        
+    def test_upload_pd_Timestamp(self):
+        self.s.upload({"hh":pd.Timestamp("2021-01-01")})
+        dbvalue = self.s.run("hh")
+        self.assertEqual(pd.Timestamp("2021-01-01"), dbvalue)
+    
 if __name__ == '__main__':
     unittest.main()

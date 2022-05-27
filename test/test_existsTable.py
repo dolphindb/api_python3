@@ -457,6 +457,16 @@ class ExistsTableTest(unittest.TestCase):
         self.assertEqual(self.s.existsTable(dbName, tbName1), False)
         self.assertEqual(self.s.existsTable(dbName, tbName2), False)
 
+    def test_existsTable_dfs_dimension(self):
+        dbName = DBInfo.dfsDBName
+        tbName1 = DBInfo.table1
+        create_dfs_dimension_db()
+        with self.assertRaises(TypeError): 
+            self.s.existsTable(dbUrl_ERROR=dbName, tableName=tbName1)
+        with self.assertRaises(TypeError): 
+            self.s.existsTable(dbUrl=dbName, tableName_ERROR=tbName1)
+        self.s.existsTable(dbUrl=dbName, tableName=tbName1)
+
 
 if __name__ == '__main__':
     unittest.main()

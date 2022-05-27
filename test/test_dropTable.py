@@ -456,6 +456,20 @@ class DropTableTest(unittest.TestCase):
         self.s.dropTable(dbName, tbName2)
         self.assertEqual(existsTB(dbName, tbName1), False)
         self.assertEqual(existsTB(dbName, tbName2), False)
+    def test_dropTable_paramete(self):
+        dbName = DBInfo.dfsDBName
+        tbName1 = DBInfo.table1
+        tbName2 = DBInfo.table2
+        self.assertEqual(existsTB(dbName, tbName1), False)
+        self.assertEqual(existsTB(dbName, tbName2), False)
+        create_dfs_hash_db()
+        self.assertEqual(existsTB(dbName, tbName1), True)
+        self.assertEqual(existsTB(dbName, tbName2), True)
+        with self.assertRaises(TypeError):   
+            self.s.dropTable(dbPath_ERROR=dbName, tableName=tbName1)
+        with self.assertRaises(TypeError):   
+            self.s.dropTable(dbPath=dbName, tableName_ERROR=tbName1)
+        self.s.dropTable(dbPath=dbName, tableName=tbName1)
 
 
 if __name__ == '__main__':

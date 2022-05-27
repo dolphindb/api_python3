@@ -1,3 +1,4 @@
+from ast import Assert
 import unittest
 import dolphindb as ddb
 import numpy as np
@@ -5,7 +6,8 @@ import pandas as pd
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 from pandas.testing import assert_frame_equal, assert_series_equal
 from setup import HOST, PORT, WORK_DIR, DATA_DIR
-
+import time
+import threading
 
 class TestRunFunction(unittest.TestCase):
     @classmethod
@@ -313,6 +315,7 @@ class TestRunFunction(unittest.TestCase):
                                 select * from t''',clearMemory = True)
         def secondRun():
             self.s.run("t")
+        time.sleep(10)
         self.assertRaises(RuntimeError, secondRun)
 
     def test_BlockReader_Table(self):
@@ -444,7 +447,45 @@ class TestRunFunction(unittest.TestCase):
         self.assertFalse(br.hasNext())
         self.assertEqual(len(temp),fetchSize)
 
-
+    def test_Run_multithread(self):
+        def job1():
+            tmp = ddb.session()
+            tmp.connect(HOST, PORT, "admin", "123456")
+            tmp.run("1+1;sleep(2000)")
+        
+        def job2():
+            tmp = ddb.session()
+            tmp.connect(HOST, PORT, "admin", "123456")
+            tmp.run("1+1;sleep(2000)")
+        
+        def job3():
+            tmp = ddb.session()
+            tmp.connect(HOST, PORT, "admin", "123456")
+            tmp.run("1+1;sleep(2000)")
+        
+        def job4():
+            tmp = ddb.session()
+            tmp.connect(HOST, PORT, "admin", "123456")
+            tmp.run("1+1;sleep(2000)")
+        
+        startTime = time.time()
+        job1_thread = threading.Thread(target=job1)
+        job2_thread = threading.Thread(target=job2)
+        job3_thread = threading.Thread(target=job3)
+        job4_thread = threading.Thread(target=job4)
+        job1_thread.start()
+        job2_thread.start()
+        job3_thread.start()
+        job4_thread.start()
+        job1_thread.join()
+        job2_thread.join()
+        job3_thread.join()
+        job4_thread.join()
+        endTime =  time.time()
+        re = endTime-startTime
+        print(re)
+        self.assertTrue(re>2)
+        self.assertTrue(re<8)
 
 if __name__ == '__main__':
     unittest.main()

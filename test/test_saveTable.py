@@ -52,6 +52,20 @@ class SaveTableTest(unittest.TestCase):
         rs = self.s.loadTable(tbName, dbPath)
         assert_frame_equal(rs.toDF(), df)
 
+    def test_saveTable_paramete(self):
+        dbPath = DBInfo.diskDBName
+        tbName = DBInfo.table
+        n = 1000
+        df = pd.DataFrame({"id": np.arange(1, n + 1, 1),
+                           "date": pd.date_range("2020.01.01", periods=n),
+                           "sym": np.random.choice(["ASA", "SADSA", "WQE"], n),
+                           "val": np.random.rand(n) * 100})
+        data = self.s.table(data=df, tableAliasName=tbName)
+        with self.assertRaises(TypeError):
+            self.s.saveTable(tbl_ERROR = data, dbPath = dbPath)
+        with self.assertRaises(TypeError):
+            self.s.saveTable(tbl = data, dbPath_ERROR = dbPath)
+        self.s.saveTable(tbl = data, dbPath = dbPath)   
 
 if __name__ == '__main__':
     unittest.main()

@@ -196,7 +196,7 @@ class TestAutoFitTableAppender(unittest.TestCase):
         self.s.run("share table(1000:0, `sym`time`qty, [SYMBOL, NANOTIMESTAMP, INT]) as t")
         appender = ddb.tableAppender(tableName="t", ddbSession=self.s)
         sym = ['A1', 'A2', 'A3', 'A4', 'A5']
-        time = np.array(np.repeat('Nat',5), dtype="datetime64")
+        time = np.array(np.repeat('Nat',5), dtype="datetime64[ns]")
         qty = np.arange(1, 6)
         data = pd.DataFrame({'sym': sym, 'time': time, 'qty': qty})
         num = appender.append(data)
@@ -340,7 +340,7 @@ class TestAutoFitTableAppender(unittest.TestCase):
         self.s.run("t = table(datehour([2021.01.01T01:01:01,2021.01.01T02:01:01])  as time,1 2 as qty)")
         appender = ddb.tableAppender(tableName="t", ddbSession=self.s)
         n = 100000
-        time = np.array(np.repeat('Nat',n), dtype="datetime64")
+        time = np.array(np.repeat('Nat',n), dtype="datetime64[ns]")
         qty = np.arange(3, n+3)
         data = pd.DataFrame({'time': time, 'qty': qty})
         num = appender.append(data)
@@ -377,6 +377,23 @@ class TestAutoFitTableAppender(unittest.TestCase):
         re = self.s.run(script)
         assert_array_equal(re, [True, True])
 
+    def test_AutoFitTableAppender_paramete(self):
+        self.s.run('''
+        dbPath = "dfs://AutoFitTableAppender_test"
+        if(existsDatabase(dbPath))
+            dropDatabase(dbPath)
+        t = table(datehour(2020.01.01T01:01:01) as time, 1 as qty)
+        db=database(dbPath,RANGE,0 100000 200000 300000 400000 600001)
+        pt = db.createPartitionedTable(t, `pt, `qty)
+        ''')
+        with self.assertRaises(TypeError):
+            ddb.tableAppender(dbPath_ERROR="dfs://AutoFitTableAppender_test",tableName="pt", ddbSession= self.s,action="fitColumnType")
+        with self.assertRaises(TypeError):
+            ddb.tableAppender(dbPath="dfs://AutoFitTableAppender_test",tableName_ERROR="pt", ddbSession= self.s,action="fitColumnType")
+        with self.assertRaises(TypeError):
+            ddb.tableAppender(dbPath="dfs://AutoFitTableAppender_test",tableName="pt", ddbSession_ERROR= self.s,action="fitColumnType")
+        with self.assertRaises(TypeError):
+            ddb.tableAppender(dbPath="dfs://AutoFitTableAppender_test",tableName="pt", ddbSession= self.s,action_ERROR="fitColumnType")
 
 
 if __name__ == '__main__':

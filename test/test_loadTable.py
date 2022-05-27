@@ -1024,5 +1024,19 @@ class LoadTableTest(unittest.TestCase):
         expected=self.s.run("select * from loadTable('{dbName}', 'pt') where sym='AAA' or sym='BBB'".format(dbName=myDBName))
         assert_frame_equal(res, expected)
 
+    def test_loadTable_paramete(self):
+        dbPath = DBInfo.dfsDBName
+        tbName1 = DBInfo.table1
+        create_dfs_compo_range_value_db()
+        with self.assertRaises(TypeError):
+            self.s.loadTable(tableName_ERROR=tbName1, dbPath=dbPath,partitions=None, memoryMode=False)     
+        with self.assertRaises(TypeError): 
+            self.s.loadTable(tableName=tbName1, dbPath_ERROR=dbPath,partitions=None, memoryMode=False)
+        with self.assertRaises(TypeError): 
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath,partitions_ERROR=None, memoryMode=False)
+        with self.assertRaises(TypeError): 
+            self.s.loadTable(tableName=tbName1, dbPath=dbPath,partitions=None, memoryMode_ERROR=False)
+        self.s.loadTable(tableName=tbName1, dbPath=dbPath,partitions=None, memoryMode=False)
+        
 if __name__ == '__main__':
     unittest.main()

@@ -471,6 +471,19 @@ class LoadTextExTest(unittest.TestCase):
                         .format(db=DBInfo.diskDBName, tb=DBInfo.table2, data=self.data1))
         assert_frame_equal(tmp.toDF(), rs)
 
+    def test_loadTextEx_paramete(self):
+        create_disk_compo_range_list_db()
+        with self.assertRaises(TypeError): 
+            self.s.loadTextEx(dbPath_ERROR=DBInfo.diskDBName, tableName=DBInfo.table1, partitionColumns="`date`sym", remoteFilePath=self.data1, delimiter=",")
+        with self.assertRaises(TypeError): 
+            self.s.loadTextEx(dbPath=DBInfo.diskDBName, tableName_ERROR=DBInfo.table1, partitionColumns="`date`sym", remoteFilePath=self.data1, delimiter=",")
+        with self.assertRaises(TypeError): 
+            self.s.loadTextEx(dbPath=DBInfo.diskDBName, tableName=DBInfo.table1, partitionColumns_ERROR="`date`sym", remoteFilePath=self.data1, delimiter=",")
+        with self.assertRaises(TypeError): 
+            self.s.loadTextEx(dbPath=DBInfo.diskDBName, tableName=DBInfo.table1, partitionColumns="`date`sym", remoteFilePath_ERROR=self.data1, delimiter=",")
+        with self.assertRaises(TypeError): 
+            self.s.loadTextEx(dbPath=DBInfo.diskDBName, tableName=DBInfo.table1, partitionColumns="`date`sym", remoteFilePath=self.data1, delimiter_ERROR=",")
+        self.s.loadTextEx(dbPath=DBInfo.diskDBName, tableName=DBInfo.table1, partitionColumns="`date`sym", remoteFilePath=self.data1, delimiter=",")
 
 if __name__ == '__main__':
     unittest.main()

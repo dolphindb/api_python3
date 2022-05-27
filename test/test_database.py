@@ -1,11 +1,13 @@
+from difflib import diff_bytes
 import unittest
 import dolphindb as ddb
 import dolphindb.settings as keys
 import numpy as np
 from numpy.testing import *
+from pandas.testing import assert_frame_equal
 from setup import HOST, PORT, WORK_DIR
 import pandas as pd
-
+from setup.settings import WORK_DIR
 
 class DBInfo:
     dfsDBName = 'dfs://testDatabase'
@@ -29,6 +31,9 @@ class DatabaseTest(unittest.TestCase):
     def setUp(cls):
         cls.s = ddb.session()
         cls.s.connect(HOST, PORT, "admin", "123456")
+        cls.s_compress = ddb.session(compress=True)
+        cls.s_compress.connect(HOST, PORT, "admin", "123456")
+        cls.pool = ddb.DBConnectionPool(HOST, PORT, 10, "admin", "123456", compress=True)
         dbPaths = [DBInfo.dfsDBName, DBInfo.diskDBName]
         for dbPath in dbPaths:
             script = """
@@ -60,9 +65,9 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(existsDB(DBInfo.dfsDBName), True)
 
         dct = {'databaseDir': DBInfo.dfsDBName,
-               'partitionSchema': np.array([1, 11, 21], dtype=np.int32),
+               'partitionSchema': np.array([1, 11, 21]),
                'partitionSites': None,
-               'partitionTypeName':'RANGE',
+               'partitionTypeName': 'RANGE',
                'partitionType': 2}
         re = self.s.run("schema(db)")
         self.assertEqual(re['databaseDir'], dct['databaseDir'])
@@ -88,7 +93,7 @@ class DatabaseTest(unittest.TestCase):
         dct = {'databaseDir': DBInfo.dfsDBName,
                'partitionSchema': 2,
                'partitionSites': None,
-               'partitionTypeName':'HASH',
+               'partitionTypeName': 'HASH',
                'partitionType': 5}
         re = self.s.run("schema(db)")
         self.assertEqual(re['databaseDir'], dct['databaseDir'])
@@ -114,9 +119,9 @@ class DatabaseTest(unittest.TestCase):
         self.assertEqual(existsDB(DBInfo.dfsDBName), True)
 
         dct = {'databaseDir': DBInfo.dfsDBName,
-               'partitionSchema': np.array([3, 1, 2], dtype=np.int32),
+               'partitionSchema': np.array([3, 1, 2]),
                'partitionSites': None,
-               'partitionTypeName':'VALUE',
+               'partitionTypeName': 'VALUE',
                'partitionType': 1}
         re = self.s.run("schema(db)")
         self.assertEqual(re['databaseDir'], dct['databaseDir'])
@@ -145,7 +150,7 @@ class DatabaseTest(unittest.TestCase):
         dct = {'databaseDir': DBInfo.dfsDBName,
                'partitionSchema': np.array([np.array(['IBM', 'ORCL', 'MSFT']), np.array(['GOOG', 'FB'])]),
                'partitionSites': None,
-               'partitionTypeName':'LIST',
+               'partitionTypeName': 'LIST',
                'partitionType': 3}
         re = self.s.run("schema(db)")
         self.assertEqual(re['databaseDir'], dct['databaseDir'])
@@ -203,7 +208,6 @@ class DatabaseTest(unittest.TestCase):
         if existsDB(DBInfo.dfsDBName):
             dropDB(DBInfo.dfsDBName)
         months=np.array(pd.date_range(start='2012-01', end='2012-10', freq="M"), dtype="datetime64[M]")
-        print(months)
         db = self.s.database('db', partitionType=keys.VALUE, partitions=months,
                        dbPath=DBInfo.dfsDBName)
         self.assertEqual(existsDB(DBInfo.dfsDBName), True)
@@ -443,6 +447,7 @@ class DatabaseTest(unittest.TestCase):
         re = self.s.loadTable(tableName='pt1',dbPath=DBInfo.dfsDBName).toDF()
         assert_array_equal(re['sym'],np.array(['A','B','C']))
 
+    
     def test_database_dfs_table_value_datehour_as_partitionSchema(self):
         if existsDB(DBInfo.dfsDBName):
             dropDB(DBInfo.dfsDBName)
@@ -495,8 +500,412 @@ class DatabaseTest(unittest.TestCase):
         assert_array_equal(re['datehour'], df['datehour'])
         assert_array_equal(re['val'], df['val'])
 
+    def test_database_paramete(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        datehour = np.array(["2021-01-01T01","2021-01-01T04","2021-01-01T08","2021-01-01T10","2021-01-01T13"],dtype="datetime64")
+        with self.assertRaises(TypeError):
+            db = self.s.database(dbName_ERROR='db', partitionType=keys.RANGE, partitions=datehour, dbPath=DBInfo.dfsDBName)
+        with self.assertRaises(TypeError):
+            db = self.s.database(dbName='db', partitionType_ERROR=keys.RANGE, partitions=datehour, dbPath=DBInfo.dfsDBName)
+        with self.assertRaises(TypeError):
+            db = self.s.database(dbName='db', partitionType=keys.RANGE, partitions_ERROR=datehour, dbPath=DBInfo.dfsDBName)
+        with self.assertRaises(TypeError):
+            db = self.s.database(dbName='db', partitionType=keys.RANGE, partitions=datehour, dbPath_ERROR=DBInfo.dfsDBName)
+        db = self.s.database(dbName='db', partitionType=keys.RANGE, partitions=datehour, dbPath=DBInfo.dfsDBName)
 
+    def test_createTable_and_createPartitionedTable_paramete(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName)
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
 
-#unittest.main()作为主函数入口
+        dct = {'databaseDir': DBInfo.dfsDBName,
+                'partitionSchema': np.array([1, 11, 21], dtype=np.int32),
+                'partitionSites': None,
+                'partitionTypeName':'RANGE',
+                'partitionType': 2}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        df = pd.DataFrame({'编号': np.arange(1, 21), '值': np.repeat(1, 20)})
+        t = self.s.table(data=df, tableAliasName='t')
+        
+        with self.assertRaises(TypeError):
+            db.createPartitionedTable(table_ERROR=t, tableName='pt', partitionColumns='编号')
+        with self.assertRaises(TypeError):
+            db.createPartitionedTable(table=t, tableName_ERROR='pt', partitionColumns='编号')
+        with self.assertRaises(TypeError):
+            db.createPartitionedTable(table=t, tableName='pt', partitionColumns_ERROR='编号')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='编号')
+        with self.assertRaises(TypeError):
+            db.createTable(table_ERROR=t, tableName='dt')
+        with self.assertRaises(TypeError):
+            db.createTable(table=t, tableName_ERROR='dt')
+        db.createTable(table=t, tableName='dt')
+        
+    def test_create_database_engine_olap(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, engine="OLAP")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+               'partitionSchema': np.array([1, 11, 21]),
+               'partitionSites': None,
+               'partitionTypeName': 'RANGE',
+               'partitionType': 2,
+               'engineType':'OLAP'}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['engineType'], dct['engineType'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.repeat(1, 20)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id').append(t)
+        re = self.s.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+        db.createTable(table=t, tableName='dt').append(t)
+        re = self.s.loadTable(tableName='dt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+
+    def test_create_database_engine_tsdb(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, engine="TSDB")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+               'partitionSchema': np.array([1, 11, 21]),
+               'partitionSites': None,
+               'partitionTypeName': 'RANGE',
+               'partitionType': 2,
+               'engineType':'TSDB'}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['engineType'], dct['engineType'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.repeat(1, 20)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id', sortColumns="val").append(t)
+        re = self.s.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+        df = pd.DataFrame({'id': np.arange(20, 0, -1), 'val': np.repeat(1, 20)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createTable(table=t, tableName='dt', sortColumns="id").append(t)
+        re = self.s.loadTable(tableName='dt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+
+    def test_create_database_atomic_TRANS(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, atomic="TRANS")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+               'partitionSchema': np.array([1, 11, 21]),
+               'partitionSites': None,
+               'partitionTypeName': 'RANGE',
+               'partitionType': 2,
+               'atomic':'TRANS'}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['atomic'], dct['atomic'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.repeat(1, 20)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id').append(t)
+        re = self.s.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+        db.createTable(table=t, tableName='dt').append(t)
+        re = self.s.loadTable(tableName='dt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+
+    def test_create_database_atomic_CHUNK(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, atomic="CHUNK")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+               'partitionSchema': np.array([1, 11, 21]),
+               'partitionSites': None,
+               'partitionTypeName': 'RANGE',
+               'partitionType': 2,
+               'atomic':'CHUNK'}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['atomic'], dct['atomic'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.repeat(1, 20)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id').append(t)
+        re = self.s.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+        db.createTable(table=t, tableName='dt').append(t)
+        re = self.s.loadTable(tableName='dt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+
+    #enableChunkGranularityConfig=true
+    def test_create_database_chunkGranularity_TABLE(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, chunkGranularity="TABLE")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+               'partitionSchema': np.array([1, 11, 21]),
+               'partitionSites': None,
+               'partitionTypeName': 'RANGE',
+               'partitionType': 2,
+               'chunkGranularity':'TABLE'}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['chunkGranularity'], dct['chunkGranularity'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.repeat(1, 20)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id').append(t)
+        re = self.s.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+        db.createTable(table=t, tableName='dt').append(t)
+        re = self.s.loadTable(tableName='dt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+
+    #enableChunkGranularityConfig=true
+    def test_create_database_chunkGranularity_DATABASE(self):
+        s_chunkGranularity = ddb.session(enableChunkGranularityConfig=True)
+        s_chunkGranularity.connect(HOST, PORT, "admin", "123456")
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = s_chunkGranularity.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, chunkGranularity="DATABASE")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+               'partitionSchema': np.array([1, 11, 21]),
+               'partitionSites': None,
+               'partitionTypeName': 'RANGE',
+               'partitionType': 2,
+               'chunkGranularity':'DATABASE'}
+        re = s_chunkGranularity.run("schema(db)")
+        print("+++++++++++++++++++++++++++++")
+        print(re['chunkGranularity'])
+        print(dct['chunkGranularity'])
+        
+        self.assertEqual(re['chunkGranularity'], dct['chunkGranularity'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.repeat(1, 20)})
+        t = s_chunkGranularity.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id').append(t)
+        re = s_chunkGranularity.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+        db.createTable(table=t, tableName='dt').append(t)
+        re = s_chunkGranularity.loadTable(tableName='dt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+        s_chunkGranularity.close()
+
+    #enableChunkGranularityConfig=true
+    def test_create_database_engine_atomic_chunkGranularity(self):
+        s_chunkGranularity = ddb.session(enableChunkGranularityConfig=True)
+        s_chunkGranularity.connect(HOST, PORT, "admin", "123456")
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = s_chunkGranularity.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, engine="TSDB", atomic="CHUNK", chunkGranularity="DATABASE")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+               'partitionSchema': np.array([1, 11, 21]),
+               'partitionSites': None,
+               'partitionTypeName': 'RANGE',
+               'partitionType': 2,
+               'engineType':'TSDB',
+               'atomic':'CHUNK',
+               'chunkGranularity':'DATABASE'}
+        re = s_chunkGranularity.run("schema(db)")
+        self.assertEqual(re['engineType'], dct['engineType'])
+        self.assertEqual(re['atomic'], dct['atomic'])
+        self.assertEqual(re['chunkGranularity'], dct['chunkGranularity'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.repeat(1, 20)})
+        t = s_chunkGranularity.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id', sortColumns="val").append(t)
+        
+        re = s_chunkGranularity.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.repeat(1, 20))
+
+    def test_createPartitionedTable_compress_delta(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, engine="TSDB")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+               'partitionSchema': np.array([1, 11, 21]),
+               'partitionSites': None,
+               'partitionTypeName': 'RANGE',
+               'partitionType': 2,
+               'engineType':'TSDB'}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['engineType'], dct['engineType'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.arange(1, 21, dtype=np.short)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id', compressMethods={"id":"lz4", "val":"delta"}, sortColumns="val").append(t)
+        re = self.s.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.arange(1, 21, dtype=np.short))
+    
+    def test_createPartitionedTable_KeepDuplicates_ALL(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, engine="TSDB")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+                'partitionSchema': np.array([1, 11, 21]),
+                'partitionSites': None,
+                'partitionTypeName': 'RANGE',
+                'partitionType': 2,
+                'engineType':'TSDB'}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['engineType'], dct['engineType'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.arange(1, 21), 'val': np.array([1]*20, dtype=np.short)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id', sortColumns="val", keepDuplicates="ALL").append(t)
+        re = self.s.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(re['id'], np.arange(1, 21))
+        assert_array_equal(re['val'], np.array([1]*20, dtype=np.short))
+
+    def test_createPartitionedTable_KeepDuplicates_LAST(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, engine="TSDB")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+                'partitionSchema': np.array([1, 11, 21]),
+                'partitionSites': None,
+                'partitionTypeName': 'RANGE',
+                'partitionType': 2,
+                'engineType':'TSDB'}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['engineType'], dct['engineType'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.array(list(range(20))), 
+                           'x': np.array([1]*20),
+                           'y': np.array([2]*20)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id', sortColumns=["x", "y"], keepDuplicates="LAST").append(t)
+        re = self.s.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        ex = pd.DataFrame({'id': np.array([10, 19]), 
+                           'x': np.array([1]*2),
+                           'y': np.array([2]*2)})
+        assert_frame_equal(re, ex)
+
+    def test_createPartitionedTable_KeepDuplicates_FIRST(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s.database('db', partitionType=keys.RANGE, partitions=[1, 11, 21], dbPath=DBInfo.dfsDBName, engine="TSDB")
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+                'partitionSchema': np.array([1, 11, 21]),
+                'partitionSites': None,
+                'partitionTypeName': 'RANGE',
+                'partitionType': 2,
+                'engineType':'TSDB'}
+        re = self.s.run("schema(db)")
+        self.assertEqual(re['engineType'], dct['engineType'])
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id': np.array(list(range(20))), 
+                           'x': np.array([1]*20),
+                           'y': np.array([2]*20)})
+        t = self.s.table(data=df, tableAliasName='t')
+        db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id', sortColumns=["x", "y"], keepDuplicates="FIRST").append(t)
+        re = self.s.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        ex = pd.DataFrame({'id': np.array([1, 11]), 
+                           'x': np.array([1]*2),
+                           'y': np.array([2]*2)})
+        assert_frame_equal(re, ex)
+
+    def test_DBConnectionPool_compress(self):
+        self.s.run('''
+            dbPath = "dfs://PTA_test"
+            if(existsDatabase(dbPath))
+                dropDatabase(dbPath)
+            t = table(100:100,`sym`id`qty`price,[SYMBOL,INT,INT,DOUBLE])
+            db=database(dbPath,RANGE,[1,10001,20001,30001,40001,50001,60001])
+            pt = db.createPartitionedTable(t, `pt, `id)
+        ''')
+        appender = ddb.PartitionedTableAppender("dfs://PTA_test", "pt", "id", self.pool)
+        sym = list(map(str, np.arange(10001, 60001)))
+        id = np.random.randint(1, 60001, 50000)
+        qty = np.random.randint(0, 101, 50000)
+        price = np.random.randint(0, 60001, 50000)*0.1
+        data = pd.DataFrame({'sym': sym, 'id': id, 'qty': qty, 'price': price})
+        num = appender.append(data)
+        self.assertEqual(num, 50000)
+        re = self.s.run("select * from loadTable('dfs://PTA_test', 'pt') order by id, sym, qty, price")
+        expected = data.sort_values(by=['id', 'sym', 'qty', 'price'], ascending=[True, True, True, True])
+        expected.set_index(np.arange(0, 50000), inplace=True)
+        assert_frame_equal(re, expected, check_dtype=False)
+    
+    def test_session_compress(self):
+        if existsDB(DBInfo.dfsDBName):
+            dropDB(DBInfo.dfsDBName)
+        db = self.s_compress.database('db', partitionType=keys.VALUE, partitions=[1, 2, 3], dbPath=DBInfo.dfsDBName)
+        self.assertEqual(existsDB(DBInfo.dfsDBName), True)
+
+        dct = {'databaseDir': DBInfo.dfsDBName,
+               'partitionSchema': np.array([3, 1, 2]),
+               'partitionSites': None,
+               'partitionTypeName': 'VALUE',
+               'partitionType': 1}
+        re = self.s_compress.run("schema(db)")
+        self.assertEqual(re['databaseDir'], dct['databaseDir'])
+        assert_array_equal(re['partitionSchema'], dct['partitionSchema'])
+        self.assertEqual(re['partitionSites'], dct['partitionSites'])
+        df = pd.DataFrame({'id':[1, 2, 3, 1, 2, 3], 'val':[11, 12, 13, 14, 15, 16]})
+        t = self.s_compress.table(data=df)
+        pt = db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id').append(t)
+        re = self.s_compress.loadTable(tableName='pt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(np.sort(df['id']), np.sort(re['id']))
+        assert_array_equal(np.sort(df['val']), np.sort(re['val']))
+        dt = db.createTable(table=t, tableName='dt').append(t)
+        re = self.s_compress.loadTable(tableName='dt', dbPath=DBInfo.dfsDBName).toDF()
+        assert_array_equal(np.sort(df['id']), np.sort(re['id']))
+        assert_array_equal(np.sort(df['val']), np.sort(re['val']))
+
+#unittest.main()
 if __name__ == '__main__':
     unittest.main()

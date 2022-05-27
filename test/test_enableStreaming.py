@@ -34,6 +34,10 @@ class TestEanbleStreaming(unittest.TestCase):
 
     def test_enableStream_port_zero(self):
         self.assertRaises(RuntimeError, self.s.enableStreaming, 0)
+    
+    def test_enableStream_port_zero(self):
+        self.assertRaises(RuntimeError, self.s.enableStreaming, 0)
+
 
 if __name__ == '__main__':
     unittest.main()

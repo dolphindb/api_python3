@@ -191,6 +191,7 @@ class TestToDF(unittest.TestCase):
         assert_array_equal(res["sym"], ["SH600041", "SH600011", "SH600021", "SH600017", "SH600009", "SH600008", "SH600023", "SH600001", "SH600036", "SH600016", "SH600001", "", "SH600021", "SH600007", ""])
         assert_array_equal(res["val"], np.arange(16, 31))
     
+    def test_dropTable_paramete(self):    
 
 if __name__ == '__main__':
     unittest.main()
