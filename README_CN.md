@@ -1,6 +1,12 @@
 # Python API for DolphinDB
 
-windows 版本的 DolphinDB Python API 支持 Python 3.6-3.8 版本，但仅支持 conda 环境下的 python 3.8；linux 版本的 DolphinDB Python API 支持 Python 3.6-3.9 版本。
+不同操作系统对应 API 支持的 Python 版本号：
+| 操作系统      | Python 版本号                        |
+| :------------ | :--------------------------------------- |
+| Windows       | Python 3.6-3.8，仅支持 Conda 环境下的 python 3.8|
+| Linux         | Python 3.6-3.9                           |
+| Mac(x86-64)   | Conda 环境下的 Python 3.6-3.9            |
+| Mac(arm64)    | Conda 环境下的 Python 3.8-3.9            |
 
 注意：DolphinDB Python API 暂不支持 pandas 1.3.0 版本。
 
