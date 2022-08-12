@@ -1,6 +1,13 @@
 # Python API for DolphinDB
 
-DolphinDB Python API supports Python 3.6 - 3.8 on Windows (only 3.8 in conda environment), and Python 3.6 - 3.9 on Linux.
+DolphinDB Python API runs on the following operating systems:
+
+| Operating System | Supported Python Versions                      |
+| :--------------- | :--------------------------------------------- |
+| Windows          | Python 3.6-3.8 (3.8 in conda environment only) |
+| Linux            | Python 3.6-3.9                                 |
+| Mac(x86-64)      | Python 3.6-3.9 in conda environment            |
+| Mac(arm64)       | Python 3.8-3.9 in conda environment            |
 
 Note: DolphinDB Python API does not support pandas 1.3.0 as it will cause deserialization errors.
 
@@ -118,6 +125,8 @@ connect(host,port,[username,password, startup, highAvailability, highAvailabilit
 * **highAvailability / highAvailabilitySites**: High-availability parameters. To enable high availability for DolphinDB Python API, set *highAvailability* = true and specify `ip:port` of all available nodes for *highAvailabilitySites*.  
 * **keepAliveTime**: the duration between two keepalive transmissions to detect the TCP connection status. The default value is 30 (seconds). Set the parameter to release half-open TCP connections timely when the network is unstable.
 
+In high-availability mode, when a single thread is used to create multiple sessions, load balancing is implemented across all available nodes. However, when the sessions are created by multiple threads, load balancing is not guaranteed.
+
 Use the following script to connect to DolphinDB server with your username and password. The default is 'admin' and '123456'. 
 
 ```python
@@ -129,6 +138,16 @@ or
 ```python
 s.connect("localhost", 8848)
 s.login("admin","123456")
+```
+
+To enable high availability for DolphinDB Python API, specify the IP addresses of all data nodes in the high availbility group. For example:
+
+```python
+import dolphindb as ddb
+
+s = ddb.session()
+sites=["192.168.1.2:24120", "192.168.1.3:24120", "192.168.1.4:24120"]
+s.connect(host="192.168.1.2", port=24120, userid="admin", password="123456", highAvailability=True, highAvailabilitySites=sites)
 ```
 
 For sessions that are expired or initialized without username and password, use the method `login` to log in DolphinDB server. By default, the username and password are encrypted during connection.
@@ -759,7 +778,7 @@ Partitions are based on hash values of ID:
 dbPath="dfs://db_hash_int"
 if s.existsDatabase(dbPath):
     s.dropDatabase(dbPath)
-db = s.database(dbName='mydb', partitionType=keys.HASH, partitions=[keys.INT, 2], dbPath=dbPath)
+db = s.database(dbName='mydb', partitionType=keys.HASH, partitions=[keys.DT_INT, 2], dbPath=dbPath)
 df = pd.DataFrame({'id':[1,2,3,4,5], 'val':[10, 20, 30, 40, 50]})
 t = s.table(data=df)
 pt = db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id')
