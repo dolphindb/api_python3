@@ -56,17 +56,17 @@ $ pip install dolphindb
       - [5.4.2 数据类型的转换](#542-数据类型的转换)
       - [5.4.3 缺失值处理](#543-缺失值处理)
   - [6 追加数据到 DolphinDB 数据表](#6-追加数据到-dolphindb-数据表)
-    - [6.1 追加数据到内存表](#61-追加数据到内存表)
-      - [6.1.1 使用 `tableInsert` 函数追加多个 List 到内存表](#611-使用-tableinsert-函数追加多个-list-到内存表)
-      - [6.1.2 使用 `tableInsert` 函数追加 DataFrame 到内存表](#612-使用-tableinsert-函数追加-dataframe-到内存表)
-      - [6.1.3 使用 `insert into` 语句追加数据](#613-使用-insert-into-语句追加数据)
-      - [6.1.4 使用 `tableAppender` 对象追加数据时自动转换时间类型](#614-使用-tableappender-对象追加数据时自动转换时间类型)
-    - [6.2 追加数据到分布式表](#62-追加数据到分布式表)
-    - [6.3 异步追加数据](#63-异步追加数据)
-    - [6.4 批量异步追加数据](#64-批量异步追加数据)
-      - [6.4.1 BatchTableWriter](#641-batchtablewriter)
-      - [6.4.2 MultithreadedTableWriter](#642-multithreadedtablewriter)
-    - [6.5 从 Python 上传数据到 DolphinDB 时的数据转换](#65-从-python-上传数据到-dolphindb-时的数据转换)
+    - [6.1 使用 `tableInsert` 函数追加多个 List 到内存表](#61-使用-tableinsert-函数追加多个-list-到内存表)
+    - [6.2 使用 `tableInsert` 函数追加 DataFrame 到内存表](#62-使用-tableinsert-函数追加-dataframe-到内存表)
+    - [6.3 使用 `insert into` 语句追加数据到内存表](#63-使用-insert-into-语句追加数据到内存表)
+    - [6.4 使用 `tableAppender` 对象追加数据时自动转换时间类型](#64-使用-tableappender-对象追加数据时自动转换时间类型)
+    - [6.5 使用 tableUpsert 对象追加数据](#65-使用-tableupsert-对象追加数据)
+    - [6.6 追加数据到分布式表](#66-追加数据到分布式表)
+    - [6.7 异步追加数据](#67-异步追加数据)
+    - [6.8 批量异步追加数据](#68-批量异步追加数据)
+      - [6.8.1 BatchTableWriter](#681-batchtablewriter)
+      - [6.8.2 MultithreadedTableWriter](#682-multithreadedtablewriter)
+    - [6.9 从 Python 上传数据到 DolphinDB 时的数据转换](#69-从-python-上传数据到-dolphindb-时的数据转换)
   - [7 多线程调用线程池对象](#7-多线程调用线程池对象)
   - [8 数据库和表操作](#8-数据库和表操作)
     - [8.1 数据库和表的操作方法说明](#81-数据库和表的操作方法说明)
@@ -106,14 +106,18 @@ $ pip install dolphindb
       - [10.2.2 获取订阅主题](#1022-获取订阅主题)
       - [10.2.3 取消订阅](#1023-取消订阅)
   - [10.2.4 流数据订阅实例](#1024-流数据订阅实例)
-    - [10.3 流数据应用](#103-流数据应用)
-      - [10.3.1 使用 Python 接收实时数据，并写入 DolphinDB 流数据表](#1031-使用-python-接收实时数据并写入-dolphindb-流数据表)
-      - [10.3.2 实时计算 K 线](#1032-实时计算-k-线)
-      - [10.3.3 在 Python 中展示 K 线数据](#1033-在-python-中展示-k-线数据)
+    - [10.3 订阅异构流表](#103-订阅异构流表)
+      - [10.3.1 异构流表反序列化器](#1031-异构流表反序列化器)
+      - [10.3.2 订阅异构流表](#1032-订阅异构流表)
+    - [10.4 流数据应用](#104-流数据应用)
+      - [10.4.1 使用 Python 接收实时数据，并写入 DolphinDB 流数据表](#1041-使用-python-接收实时数据并写入-dolphindb-流数据表)
+      - [10.4.2 实时计算 K 线](#1042-实时计算-k-线)
+      - [10.4.3 在 Python 中展示 K 线数据](#1043-在-python-中展示-k-线数据)
   - [11 更多实例](#11-更多实例)
     - [11.1 动量交易策略](#111-动量交易策略)
     - [11.2 时间序列计算](#112-时间序列计算)
   - [12 常见问题](#12-常见问题)
+  - [13 DolphinDB 空值处理规则](#13-dolphindb-空值处理规则)
 
 ## 1 运行 DolphinDB 脚本及调用函数
 
@@ -122,14 +126,14 @@ $ pip install dolphindb
 Python 应用通过会话（Session）在 DolphinDB 服务器上执行脚本和函数，以及在两者之间双向传递数据。其接口如下：
 
 ```
-session(host, port, userid, password, enableSSL, enableASYN, keepAliveTime, enableChunkGranularityConfig, compress)
+session(host, port, userid, password, enableSSL, enableASYNC, keepAliveTime, enableChunkGranularityConfig, compress, enablePickle, python)
 ```
 
 常用的 Session 类的函数如下：
 
 | 方法名                                      | 详情                                       |
 | :--------------------------------------- | :--------------------------------------- |
-| connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime]) | 将会话连接到 DolphinDB 服务器                     |
+| connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect]) | 将会话连接到 DolphinDB 服务器                     |
 | login(username,password,[enableEncryption]) | 登录服务器                                    |
 | run(DolphinDBScript)                     | 将脚本在 DolphinDB 服务器运行                     |
 | run(DolphinDBFunctionName,args)          | 调用 DolphinDB 服务器上的函数                     |
@@ -152,7 +156,7 @@ True
 ### connect
 
 ```
-connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime])
+connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect])
 ```
 
 * **host / port**：所连接的服务器的地址和端口。
@@ -172,6 +176,15 @@ s.connect("localhost", 8848, "admin", "123456")
 ```python
 s.connect("localhost", 8848)
 s.login("admin","123456")
+```
+若需要开启 API 高可用，则需要指定高可用组内所有数据节点的 IP 地址，示例如下：
+
+```python
+import dolphindb as ddb
+
+s = ddb.session()
+sites=["192.168.1.2:24120", "192.168.1.3:24120", "192.168.1.4:24120"]
+s.connect(host="192.168.1.2", port=24120, userid="admin", password="123456", highAvailability=True, highAvailabilitySites=sites)
 ```
 
 若会话过期，或者初始化会话时没有指定登录信息（用户名与密码），可使用 `login` 函数来登录服务器。默认在连接时对用户名与密码进行加密传输
@@ -197,12 +210,12 @@ s=ddb.session(enableSSL=True)
 
 #### 异步模式
 
-server 1.10.17, 1.20.6 版本之后开始支持异步通讯参数 *enableASYN*，默认值为 False。
+server 1.10.17, 1.20.6 版本之后开始支持异步通讯参数 *enableASYNC*，默认值为 False。
 
 可使用以下脚本启动异步通讯。异步通讯的情况下，与 server 端的通讯只能通过 `session.run` 方法，并且无返回值。这种模式非常适用于异步写入数据，节省了 API 端检测返回值的时间。
 
 ```
-s=ddb.session(enableASYN=True)
+s=ddb.session(enableASYNC=True)
 ```
 
 #### 压缩模式
@@ -499,7 +512,7 @@ s.upload({'a':a})
 a_new = s.run("a")
 print(a_new)
 # output
-[1. 2. 3.]
+[1, 2, 3.0]
 
 a_type = s.run("typestr(a)")
 print(a_type)
@@ -539,6 +552,7 @@ print(s.run("t1.x.avg()"))
 # output
 3.0
 ```
+请注意，通过 upload 上传 DataFrame 到 DolphinDB 时，每列数据需要具有相同的的数据类型。
 
 ### 2.2 使用 `table` 方法上传
 
@@ -1403,8 +1417,6 @@ DolphinDB 数据表按存储方式大致可分为以下两种:
 - 内存表：数据仅保存在内存中，存取速度最快。
 - 分布式表：数据分布在不同的节点的磁盘，通过 DolphinDB 的分布式文件系统统一管理。
 
-### 6.1 追加数据到内存表
-
 DolphinDB 提供以下方式来追加数据到内存表：
 
 - 通过 `tableInsert` 函数追加数据或一个表
@@ -1427,7 +1439,7 @@ s.run(script)
 
 上面的例子在 DolphinDB server 端创建内存表时，指定了初始内存分配和初始长度、列名和数据类型。由于普通内存表是会话隔离的，所以只有当前会话可见。若需要多个客户端可以同时访问内存表，可使用 `share` 在会话间共享内存表。
 
-#### 6.1.1 使用 `tableInsert` 函数追加多个 List 到内存表
+### 6.1 使用 `tableInsert` 函数追加多个 List 到内存表
 
 若 Python 程序获取的数据可以组织成 List 方式，且保证数据类型正确的情况下，可以直接使用 `tableInsert` 函数来批量保存多条数据。这个函数可以接受多个数组作为参数，将数组追加到数据表中。这样做的好处是，可以在一次访问服务器请求中将上传数据对象和追加数据这两个步骤一次性完成，相比 `insert into` 做法减少了一次访问 DolphinDB 服务器的请求。
 
@@ -1454,7 +1466,7 @@ s.run("tglobal")
 2   3 2019-03-05   AAPL  297.5
 ```
 
-#### 6.1.2 使用 `tableInsert` 函数追加 DataFrame 到内存表
+### 6.2 使用 `tableInsert` 函数追加 DataFrame 到内存表
 
 可通过 `tableInsert` 函数直接向内存表追加一个表。
 
@@ -1526,7 +1538,7 @@ print(s.run("tglobal"))
 3	3	2019-02-13	A	26.0
 ```
 
-#### 6.1.3 使用 `insert into` 语句追加数据
+### 6.3 使用 `insert into` 语句追加数据到内存表
 
 可以采用如下方式保存单条数据：
 
@@ -1572,9 +1584,9 @@ s.run(script)
 
 **请注意**，从性能方面考虑，不建议使用 `insert into` 来插入数据，因为服务器端要对 insert 语句进行解析会造成额外开销。
 
-#### 6.1.4 使用 `tableAppender` 对象追加数据时自动转换时间类型
+### 6.4 使用 `tableAppender` 对象追加数据时自动转换时间类型
 
-由于 Python pandas 中所有 [有关时间的数据类型均为 datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)，上传一个 DataFrame 到 DolphinDB 以后，所有时间类型的列均为 nanotimestamp，每次使用 `tableInsert` 函数或者 `insert into` 语句往内存表或分布式表追加一个带有时间类型列的 DataFrame 时，都需要对时间列进行类型转换，非常麻烦。因此 Python API 提供了 tableAppender 对象，通过 `append` 方法往内存表或者分布式表添加本地的 DataFrame 数据时，能够自动对时间类型进行转换，不需要用户手动转换。
+由于 Python pandas 中所有 [有关时间的数据类型均为 datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)，上传一个 DataFrame 到 DolphinDB 以后，所有时间类型的列均为 nanotimestamp，每次使用 `tableInsert` 函数往内存表或分布式表追加一个带有时间类型列的 DataFrame 时，都需要对时间列进行类型转换，非常麻烦。因此 Python API 提供了 tableAppender 对象，通过 `append` 方法往内存表或者分布式表添加本地的 DataFrame 数据时，能够自动对时间类型进行转换，不需要用户手动转换。
 
 接口：
 
@@ -1609,7 +1621,58 @@ t = s.run("t")
 print(t)
 ```
 
-### 6.2 追加数据到分布式表
+### 6.5 使用 tableUpsert 对象追加数据
+
+Python API 提供 `tableUpsert` 对象，可以向索引内存表、键值内存表以及分布式表中追加数据。同 `tableAppender` 对象类似，`tableUpsert` 对象向表中添加本地的 DataFrame 数据时，能够自动对时间类型进行转换，不需要用户手动转换。
+
+接口：
+```
+tableUpsert(dbPath, tableName, ddbSession, ignoreNull, keyColNames, sortColumns)
+```
+- dbPath: 分布式数据库地址，内存表不用填
+- tableName: 分布式或索引内存表、键值内存表表名
+- ddbSession: 已经连接 dolphindb server 的 session 对象。
+- ignoreNull：布尔值。若追加的新数据中某元素为 NULL 值，是否对目标表中的相应数据进行更新。默认值为 False。
+- keyColNames：字符串。由于 DFS 表没有键值列，对 DFS 表进行更新时，将该参数指定的列视为键值列。
+- sortColumns：字符串。设置该参数，更新的分区内的所有数据会根据指定的列进行排序。排序在每个分区内部进行，不会跨分区排序。
+
+下面的例子创建了一个共享键值内存表 ttable，通过 `tableUpsert` 往这个共享表添加数据：
+
+```python
+import dolphindb as ddb
+import numpy as np
+import pandas as pd
+import time
+import random
+import dolphindb.settings as keys
+
+import threading
+
+HOST = "192.168.1.193"
+PORT = 8848
+
+s = ddb.session()
+s.connect(HOST, PORT, "admin", "123456")
+script_DFS_HASH = """
+    testtable=keyedTable(`id,1000:0,`date`text`id,[DATETIME,STRING,LONG])
+    share testtable as ttable
+    """
+s.run(script_DFS_HASH)
+
+upsert=ddb.tableUpsert("","ttable",s)
+dates=[]
+texts=[]
+ids=[]
+print(np.datetime64('now'))
+for i in range(1000):
+    dates.append(np.datetime64('2012-06-13 13:30:10.008'))
+    texts.append(str(time.time()))
+    ids.append(i%20)
+df = pd.DataFrame({'date': dates,'text': texts,'id': np.array(ids,np.int64)})
+upsert.upsert(df)
+print(s.run("ttable"))
+```
+### 6.6 追加数据到分布式表
 
 分布式表是 DolphinDB 推荐在生产环境下使用的数据存储方式，它支持快照级别的事务隔离，保证数据一致性。分布式表支持多副本机制，既提供了数据容错能力，又能作为数据访问的负载均衡。下面的例子通过 Python API 把数据保存至分布式表。
 
@@ -1638,7 +1701,7 @@ t.append!(t1)""".format(db=dbPath,tb=tableName)
 s.run(script)
 ```
 
-DolphinDB 提供 `loadTable` 方法来加载分布式表，通过 `tableInsert` 方式追加数据，具体的脚本示例如下。通过自定义的函数 `createDemoDataFrame()` 创建一个 DataFrame，再追加数据到 DolphinDB 数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时间类型自动转换的功能，因此无需显式进行类型转换。
+DolphinDB 提供 `loadTable` 方法来加载分布式表，通过 `tableInsert` 方式追加数据，具体的脚本示例如下。通过自定义的函数 `createDemoDataFrame()` 创建一个 DataFrame，再追加数据到 DolphinDB 数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时tglobal间类型自动转换的功能，因此无需显式进行类型转换。
 
 ```python
 tb = createDemoDataFrame()
@@ -1683,7 +1746,7 @@ print(num)
 print(s.run("select * from pt"))
 ```
 
-### 6.3 异步追加数据
+### 6.7 异步追加数据
 
 在高吞吐率的场景下，尤其是典型的高速小数据写入时，使用 API 的异步调用可以有效提高客户端的任务吞吐量。异步方式提交有如下几个特点：
 
@@ -1692,10 +1755,10 @@ print(s.run("select * from pt"))
 - API 客户端的异步任务提交时间取决于提交参数的序列化及其网络传输时间。
 
 **但请注意**：异步方式不适用前后任务之间有依赖的场景。比如两个任务，一个任务向分布式数据库写入数据，后一个任务将新写入的数据结合历史数据做分析。这样后一个任务对前一任务有依赖的场景，不能使用异步的方式。
-Python API 打开 ASYN（异步）模式可以参照 1.1 节建立 DolphinDB 连接的部分，即设置 session 的 `enableASYN` 参数为 `True`。
+Python API 打开 ASYNC（异步）模式可以参照 1.1 节建立 DolphinDB 连接的部分，即设置 session 的 `enableASYNC` 参数为 `True`。
 
 ```python
-s=ddb.session(enableASYN=True)
+s=ddb.session(enableASYNC=True)
 ```
 
 通过这种方式异步写入数据可以节省 API 端检测返回值的时间，在 DolphinDB 中可以参考如下脚本使用异步方式追加数据（以追加数据到分布式表为例）。
@@ -1706,7 +1769,7 @@ import numpy as np
 import dolphindb.settings as keys
 import pandas as pd
 
-s = ddb.session(enableASYN=True) # 打开异步模式
+s = ddb.session(enableASYNC=True) # 打开异步模式
 s.connect("localhost", 8848, "admin", "123456")
 dbPath = "dfs://testDB"
 tableName = "tb1"
@@ -1744,7 +1807,7 @@ import pandas as pd
 import random
 import datetime
 
-s = ddb.session(enableASYN=True)
+s = ddb.session(enableASYNC=True)
 s.connect("localhost", 8848, "admin", "123456")
 
 n = 100
@@ -1791,7 +1854,7 @@ import pandas as pd
 import random
 import datetime
 
-s = ddb.session(enableASYN=True)
+s = ddb.session(enableASYNC=True)
 s.connect("localhost", 8848, "admin", "123456")
 
 n = 100
@@ -1813,7 +1876,7 @@ s.upload({'tb': tb})
 s.run("appendStreamingData(tb)")
 ```
 
-### 6.4 批量异步追加数据
+### 6.8 批量异步追加数据
 
 针对单条数据批量写入的场景，DolphinDB Python API 提供 `BatchTableWrite`, `MultithreadedTableWriter` 类对象用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络 I/O 时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，`BatchTableWrite` 支持批量写入数据到内存表、分区表；而 `MultithreadedTableWriter` 支持批量写入数据到内存表、分区表和维度表。
 
@@ -1822,7 +1885,7 @@ s.run("appendStreamingData(tb)")
 * API 客户端提交任务到缓冲队列，缓冲队列接到任务后，客户端即认为任务已完成。
 * 提供 `getStatus` 等接口查看状态。
 
-#### 6.4.1 BatchTableWriter
+#### 6.8.1 BatchTableWriter
 
 `BatchTableWriter` 对象及主要方法介绍如下：
 
@@ -1930,14 +1993,14 @@ print("rows:", s.run("tglobal.rows()"))
 print(s.run("select * from tglobal"))
 ```
 
-#### 6.4.2 MultithreadedTableWriter
+#### 6.8.2 MultithreadedTableWriter
 
 `MultithreadedTableWriter` 是对 `BatchTableWriter` 的升级，它的默认功能和 `BatchTableWriter` 一致，但 `MultithreadedTableWriter` 支持多线程的并发写入。
 
 `MultithreadedTableWriter` 对象及主要方法介绍如下：
 
 ```Python
-MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL, enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount, partitionCol, compressMethods)
+MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL, enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount, partitionCol, compressMethods, mode, modeOption)
 ```
 
 参数说明：
@@ -1945,8 +2008,8 @@ MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL
 * **host** 字符串，表示所连接的服务器的地址
 * **port** 整数，表示服务器端口。 
 * **userId** / **password**: 字符串，登录时的用户名和密码。
-* **dbPath** 字符串，表示分布式数据库地址或内存表的表名。
-* **tableName** 字符串，表示分布式表名。内存表无需指定该参数。
+* **dbPath** 字符串，表示分布式数据库地址。内存表时该参数为空。请注意，1.30.17及以下版本 API，向内存表写入数据时，该参数需填写内存表表名。
+* **tableName** 字符串，表示分布式表或内存表的表名。请注意，1.30.17及以下版本 API，向内存表写入数据时，该参数需为空。
 * **useSSL** 布尔值，默认值为 False。表示是否启用加密通讯。
 * **enableHighAvailability** 布尔值，默认为 False。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 True。
 * **highAvailabilitySites** 列表类型，表示所有可用节点的 ip:port 构成的 list。
@@ -1957,6 +2020,8 @@ MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL
 * **compressMethods** 列表类型，用于指定每一列采用的压缩传输方式，为空表示不压缩。每一列可选的压缩方式（大小写不敏感）包括：
   * "LZ4": LZ4 压缩
   * "DELTA": DELTAOFDELTA 压缩
+* **mode** 字符串，表示数据写入的方式，可选值为："upsert" 或 "append"。"upsert" 表示以 [upsert!](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/u/upsert!.html) 方式更新表数据；"append" 表示以 [append!](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/a/append!.html) 方式更新表数据。
+* **modeOption** 字符串，表示 [upsert!](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/u/upsert!.html) 可选参数组成的 list，仅当 *mode* 指定为 "upsert" 时有效。
 
 以下是 `MultithreadedTableWriter` 对象包含的函数方法介绍：
 
@@ -1989,7 +2054,7 @@ script = """t=table(1000:0, `date`ticker`price, [DATE,SYMBOL,LONG])
 share t as tglobal"""
 s.run(script)
 
-writer = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","tglobal","",False,False,[],10,1,5,"date")
+writer = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","","tglobal",False,False,[],10,1,5,"date")
 for i in range(10):
   res = writer.insert(np.datetime64('2022-03-23'),"AAAAAAAB", random.randint(1,10000))
 writer.waitForThreadCompletion()
@@ -2339,7 +2404,57 @@ writeStatus:
 """
 ```
 
-### 6.5 从 Python 上传数据到 DolphinDB 时的数据转换
+下例说明 python API 通过 `MultithreadedTableWriter` 的 *mode* 参数以 upsert 的方式更新表数据。
+```python
+import dolphindb as ddb
+import numpy as np
+import pandas as pd
+import time
+import random
+import dolphindb.settings as keys
+
+import threading
+
+
+HOST = "192.168.1.193"
+PORT = 8848
+
+s = ddb.session()
+s.connect(HOST, PORT, "admin", "123456")
+script_DFS_HASH = """
+    testtable=keyedTable(`id,1000:0,`text`id,[STRING,LONG])
+    share testtable as ttable
+    """
+s.run(script_DFS_HASH)
+
+def insert_mtw(writer, id):
+    try:
+        print("thread",id,"start.")
+        for i in range(1000):
+            text=str(time.time())
+            id=random.randint(1, 10)
+            print(text,id)
+            res=writer.insert(text, id)
+        print("thread",id,"exit.")
+    except Exception as e:
+        print(e)
+
+print("test start.")
+writer = ddb.MultithreadedTableWriter(HOST, PORT,"admin","123456","","ttable",False,False,[], 1, 0.1, 1,"id",mode="UPSERT",
+                                      modeOption=["ignoreNull=false","keyColNames=`id"])
+threads=[]
+for i in range(2):
+    threads.append(threading.Thread(target=insert_mtw, args=(writer,i,)))
+for t in threads:
+    t.setDaemon(True)
+    t.start()
+for t in threads:
+    t.join()
+writer.waitForThreadCompletion()
+status=writer.getStatus()
+print("test exit",status)
+```
+### 6.9 从 Python 上传数据到 DolphinDB 时的数据转换
 
 上传数据时，建议使用 `MultithreadedTableWriter` 以支持更广泛的数据类型和数据形式。
 
@@ -2376,6 +2491,8 @@ writeStatus:
 | 27   | NANOTIME, NANOTIMESTAMP, TIMESTAMP, DATE, MONTH, TIME, SECOND, MINUTE, DATETIME, DATEHOUR, LONG, INT, SHORT, CHAR | Numpy.int64          |
 | 28   | FLOAT, DOUBLE                                          | Numpy.float32        |
 | 29   | FLOAT, DOUBLE                                          | Numpy.float64        |
+
+请注意，上传具有 INT128, UUID, IP 类型的 array vector 时，必须通过 `MultithreadedTableWriter` 进行写入，且 session 必须关闭 pickle，即：```session(enablePickle=False)```。
 
 ## 7 多线程调用线程池对象
 
@@ -2548,7 +2665,9 @@ pool.shutDown()
 | toDF()               | 把 DolphinDB 表对象转换成 pandas 的 DataFrame 对象           |
 | toList()             | 把 DolphinDB 表对象转换成 由 numpy.ndarray 组成的 list 对象，list中对象的顺序和列的顺序保持一致。 |
 
-注意：可以通过 toList() 方法将表中的 [array vector](https://www.dolphindb.cn/cn/help/200/DataTypesandStructures/DataForms/Vector/arrayVector.html) 转为二维的 numpy.ndarray，使用户在客户端更高效的使用 array vector 数据。另外该方法仅对每一个元素等长的 array vector 起效，若 array vector 内元素长度不一致，将会报错。
+注意：  
+1. 可以通过 toList() 方法将表中的 [array vector](https://www.dolphindb.cn/cn/help/DataTypesandStructures/DataForms/Vector/arrayVector.html) 转为二维的 numpy.ndarray，使用户在客户端更高效的使用 array vector 数据。另外该方法仅对每一个元素等长的 array vector 起效，若 array vector 内元素长度不一致，将会报错。
+2. 通过 toList() 方法读取具有 INT128, UUID, IP 类型的 array vector 时，session 必须关闭 pickle，即：```session(enablePickle=False)```。
 
 以上只是列出其中最为常用的方法。关于 Session 类和 Table 类提供的所有方法请参见 session.py 和 table.py 文件。
 <!---
@@ -3592,7 +3711,7 @@ s.enableStreaming(8000)
 使用 `subscribe` 函数来订阅 DolphinDB 中的流数据表，语法如下：
 
 ```python
-s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=False, filter=None, msgAsTable=False, [batchSize=0], [throttle=1])
+s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=False, filter=None, msgAsTable=False, [batchSize=0], [throttle=1], [userName=""],[password=""], [streamDeserializer=None])
 ```
 
 - **host** 是发布端节点的 IP 地址。
@@ -3606,6 +3725,9 @@ s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=Fals
 - **msgAsTable** 是布尔值。只有设置了 *batchSize* 参数，才会生效。设置为 True，订阅的数据会转换为 dataframe 格式。设置为 False，订阅的数据会转换成 list，list 里单条记录为 nparray 格式。
 - **batchSize** 是一个整数，表示批处理的消息的数量。如果它是正数，直到消息的数量达到 *batchSize* 时，*handler* 才会处理进来的消息。如果它没有指定或者是非正数，消息到达之后，*handler* 就会马上处理消息。
 - **throttle** 是一个整数，表示 *handler* 处理到达的消息之前等待的时间，以秒为单位。默认值为 1。如果没有指定 *batchSize*，*throttle* 将不会起作用。
+- **userName** 是一个字符串，表示 API 所连接服务器的登录用户名。
+- **password** 是一个字符串，表示 API 所连接服务器的登录密码。
+- **streamDeserializer** 是订阅的异构流表对应的反序列化器。
 
 请注意，发布节点需要配置 *maxPubConnections* 参数，具体请参照 [DolphinDB 流数据教程](https://github.com/dolphindb/Tutorials_CN/blob/master/streaming_tutorial.md)。
 
@@ -3695,11 +3817,91 @@ DolphinDB database 中计算实时 K 线的流程如下图所示：
 | ------------------- | ------ | ----- | ----- | ----- | ----- | ------ | ---- |
 | 2018.09.03T09:30:07 | 000001 | 10.13 | 10.13 | 10.12 | 10.12 | 468060 |      |
 
-### 10.3 流数据应用
+### 10.3 订阅异构流表
+
+DolphinDB server 自 1.30.17 及 2.00.5 版本开始，支持通过 [replay](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/r/replay.html) 函数将多个结构不同的流数据表，回放（序列化）到一个流表里，这个流表被称为异构流表。Python API 自 1.30.19 版本开始，新增 `streamDeserializer` 类，用于构造异构流表反序列化器，以实现对异构流表的订阅和反序列化操作。
+
+#### 10.3.1 异构流表反序列化器
+
+Python API 通过 `streamDeserializer` 类来构造异构流表反序列化器，语法如下：
+
+```python
+sd = streamDeserializer(sym2table, session=None)
+```
+
+* **sym2table** 一个字典对象，其结构与 replay 回放到异构流表的输入表结构保持一致。`streamDeserializer` 将根据 *sym2table* 指定的结构对注入的数据进行反序列化。
+* **session** 已经连接 DolphinDB server 的 session 对象，默认为 None。
+
+异构流表的构造脚本，具体请参照[异构回放示例](https://gitee.com/dolphindb/Tutorials_CN/blob/master/stock_market_replay.md#22-%E5%BC%82%E6%9E%84%E5%9B%9E%E6%94%BE)。
+
+#### 10.3.2 订阅异构流表
+
+订阅示例：
+
+(1) 构造一个异构流表
+
+```python
+try{dropStreamTable(`outTables)}catch(ex){}
+// 构造输出流表
+share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as outTables
+n = 10;
+dbName = 'dfs://test_StreamDeserializer_pair'
+if(existsDatabase(dbName)){
+    dropDB(dbName)}
+// 构造数据库和原始数据表
+db = database(dbName,RANGE,2012.01.01 2013.01.01 2014.01.01 2015.01.01 2016.01.01 2017.01.01 2018.01.01 2019.01.01)
+table1 = table(100:0, `datetimev`timestampv`sym`price1`price2, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE, DOUBLE])
+table2 = table(100:0, `datetimev`timestampv`sym`price1, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE])
+table3 = table(100:0, `datetimev`timestampv`sym`price1, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE])
+tableInsert(table1, 2012.01.01T01:21:23 + 1..n, 2018.12.01T01:21:23.000 + 1..n, take(`a`b`c,n), rand(100,n)+rand(1.0, n), rand(100,n)+rand(1.0, n))
+tableInsert(table2, 2012.01.01T01:21:23 + 1..n, 2018.12.01T01:21:23.000 + 1..n, take(`a`b`c,n), rand(100,n)+rand(1.0, n))
+tableInsert(table3, 2012.01.01T01:21:23 + 1..n, 2018.12.01T01:21:23.000 + 1..n, take(`a`b`c,n), rand(100,n)+rand(1.0, n))
+// 三种方式（分区表、流表、内存表）获得表结构定义
+pt1 = db.createPartitionedTable(table1,'pt1',`datetimev).append!(table1)
+share streamTable(100:0, `datetimev`timestampv`sym`price1, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE]).append!(table2) as pt2
+share table3 as pt3
+// 构造异构流表
+d = dict(['msg1', 'msg2', 'msg3'], [table1, table2, table3])
+replay(inputTables=d, outputTables=`outTables, dateColumn=`timestampv, timeColumn=`timestampv)
+```
+
+(2) 在 Python 中订阅异构流表
+
+```python
+from threading import Event
+
+def streamDeserializer_handler(lst):				# 异构流表反序列化器返回的数据末尾为异构流表反序列化器中 sym2table 指定的 key
+    if lst[-1]=="msg1":
+        print("Msg1: ", lst)
+    elif lst[-1]=='msg2':
+        print("Msg2: ", lst)
+    else:
+        print("Msg3: ", lst)
+
+s = ddb.session("192.168.1.103", 8921, "admin", "123456")
+s.enableStreaming(10020)
+
+# 构造异构流表反序列化器
+sd = ddb.streamDeserializer({
+    'msg1': ["dfs://test_StreamDeserializer_pair", "pt1"],	# 填入分区表数据库路径和表名的 list，以获取对应表结构
+    'msg2': "pt2",						# 填入流表表名
+    'msg3': "pt3",						# 填入内存表表名
+}, session=s)						     	# 如未指定，则在订阅时获取当前 session
+s.subscribe(host="192.168.1.103", port=8921, handler=streamDeserializer_handler, tableName="outTables", actionName="action", offset=0, resub=False,
+            msgAsTable=False, streamDeserializer=sd, userName="admin", password="123456")
+Event().wait()
+```
+
+**注意**：
+1. server 端构造异构流表时，若字典中 key 对应的表为内存表或 replayDS 定义的数据源，请参考 [replay](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/r/replay.html)。
+
+2. API 端构造异构流表反序列化器时，sym2table 的值对应的表结构（可以为分区表、流表或者内存表）需要和 server 端构造异构流表使用的表结构一致。
+
+### 10.4 流数据应用
 
 本节介绍实时 K 线计算的三个步骤。
 
-#### 10.3.1 使用 Python 接收实时数据，并写入 DolphinDB 流数据表
+#### 10.4.1 使用 Python 接收实时数据，并写入 DolphinDB 流数据表
 
 * DolphinDB 中建立流数据表
 
@@ -3735,7 +3937,7 @@ s.run("tableInsert{Trade}", csv_df)
 
 ```
 
-#### 10.3.2 实时计算 K 线
+#### 10.4.2 实时计算 K 线
 
 本例中使用时序聚合引擎实时计算 K 线数据，并将计算结果输出到流数据表 OHLC 中。
 
@@ -3762,7 +3964,7 @@ tsAggrKline = createTimeSeriesAggregator(name="aggr_kline", windowSize=300, step
 subscribeTable(tableName="Trade", actionName="act_tsaggr", offset=0, handler=append!{tsAggrKline}, msgAsTable=true)
 ```
 
-#### 10.3.3 在 Python 中展示 K 线数据
+#### 10.4.3 在 Python 中展示 K 线数据
 
 在本例中，聚合引擎的输出表也定义为流数据表，客户端可以通过 Python API 订阅输出表，并将计算结果展现到 Python 终端。
 
@@ -3925,3 +4127,16 @@ s.close()
 <Server Exception> in run: Error when Unpickle socket data!
 ```
 解决方案：该问题已于 dolphindb 1.30.3 版本修复。请更新到 1.30.3 及以上版本。
+
+## 13 DolphinDB 空值处理规则
+
+Python 中的空值包括 None， pd.NaT 和 np.nan。DolphinDB Python API 上传包含空值组合、空值与非空值组合的数组到 server 端时，旧版本 API 首先根据 numpy.dtype 确定表字段类型。但当 dtype 为 object 时，可能会出现表字段类型确定规则不统一的情况。因此，从 1.30.19.1 版本开始，Python API 在上传包含空值组合、空值与非空值组合的数组（包括 List, numpy.array）时，对数组类型的判断统一了处理规范，判断规则见下表：
+
+|空值组合情况                       |Python 类型|DolphinDB 列字段类型|
+|-----------------------------------|-----------|-------------------|
+|全部为 None                        |object     |STRING             |
+|np.NaN 与 None 组合                |float64    |DOUBLE             |
+|pd.NaT 与 None 组合                |datetime64 |NANOTIMESTAMP      |
+|np.NaN 与 pd.NaT 组合              |datetime64 |NANOTIMESTAMP      |
+|None, np.NaN 与 pd.NaT 组合        |datetime64 |NANOTIMESTAMP      |
+|None, pd.NaT 或 np.nan 与非空值组合|未知       |非空值类型          |
