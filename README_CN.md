@@ -111,7 +111,7 @@ $ pip install dolphindb
       - [10.2.1 使用订阅函数](#1021-使用订阅函数)
       - [10.2.2 获取订阅主题](#1022-获取订阅主题)
       - [10.2.3 取消订阅](#1023-取消订阅)
-  - [10.2.4 流数据订阅实例](#1024-流数据订阅实例)
+      - [10.2.4 流数据订阅实例](#1024-流数据订阅实例)
     - [10.3 订阅异构流表](#103-订阅异构流表)
       - [10.3.1 异构流表反序列化器](#1031-异构流表反序列化器)
       - [10.3.2 订阅异构流表](#1032-订阅异构流表)
@@ -170,6 +170,8 @@ connect(host,port,[username,password, startup, highAvailability, highAvailabilit
 * **startup**：启动脚本，可以用于执行一些预加载任务。它可以包含加载插件、加载分布式表、定义并加载流数据表等脚本。
 * **highAvailability / highAvailabilitySites**：API 高可用相关配置参数。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 true，*highAvailabilitySites* 里指定所有可用节点的 `ip:port`。
 * **keepAliveTime**：通过配置 *keepAliveTime* 参数可以设置 TCP 的存活检测机制的检测时长，从而能够在网络不稳定条件下，及时释放半打开的 TCP 连接。
+
+高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，因为服务器响应存在时间差，不能保证连接的负载均衡。
 
 如果需要使用用户名和密码连接，可使用以下脚本。其中 "admin" 为 DolphinDB 默认的管理员用户名，"123456" 为密码。
 
@@ -876,7 +878,7 @@ re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 dbPath="dfs://db_hash_int"
 if s.existsDatabase(dbPath):
     s.dropDatabase(dbPath)
-db = s.database(dbName='mydb', partitionType=keys.HASH, partitions=[keys.INT, 2], dbPath=dbPath)
+db = s.database(dbName='mydb', partitionType=keys.HASH, partitions=[keys.DT_INT, 2], dbPath=dbPath)
 df = pd.DataFrame({'id':[1,2,3,4,5], 'val':[10, 20, 30, 40, 50]})
 t = s.table(data=df)
 pt = db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id')
@@ -3801,7 +3803,7 @@ s.unsubscribe(host,port,tableName,actionName="")
 s.unsubscribe("192.168.1.103", 8921,"trades","action")
 ```
 
-## 10.2.4 流数据订阅实例
+#### 10.2.4 流数据订阅实例
 
 下面的例子通过流数据订阅的方式计算实时 K 线。
 
