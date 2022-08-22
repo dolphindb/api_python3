@@ -1,6 +1,7 @@
 # Python API for DolphinDB
 
 不同操作系统对应 API 支持的 Python 版本号：
+
 | 操作系统      | Python 版本号                        |
 | :------------ | :--------------------------------------- |
 | Windows       | Python 3.6-3.8，仅支持 Conda 环境下的 python 3.8|
@@ -170,7 +171,7 @@ connect(host,port,[username,password, startup, highAvailability, highAvailabilit
 * **startup**：启动脚本，可以用于执行一些预加载任务。它可以包含加载插件、加载分布式表、定义并加载流数据表等脚本。
 * **highAvailability / highAvailabilitySites**：API 高可用相关配置参数。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 True，*highAvailabilitySites* 里指定所有可用节点的 `ip:port`。
 * **keepAliveTime**：通过配置 *keepAliveTime* 参数可以设置 TCP 的存活检测机制的检测时长，从而能够在网络不稳定条件下，及时释放半打开的 TCP 连接。
-* **reconnect**：该参数仅在指定 *highAvailability* = False 时有效，若设置为 True，则 API 在检测到连接异常时，会尝试进行重连。
+* **reconnect**：该参数仅在指定 *highAvailability* = False 时有效。若设置 *reconnect* = True，则 API 在检测到连接异常时，会尝试进行重连。
 
 高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，不能保证连接的负载均衡。
 
