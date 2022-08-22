@@ -168,10 +168,11 @@ connect(host,port,[username,password, startup, highAvailability, highAvailabilit
 * **host / port**：所连接的服务器的地址和端口。
 * **username / password**：登录时的用户名密码。
 * **startup**：启动脚本，可以用于执行一些预加载任务。它可以包含加载插件、加载分布式表、定义并加载流数据表等脚本。
-* **highAvailability / highAvailabilitySites**：API 高可用相关配置参数。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 true，*highAvailabilitySites* 里指定所有可用节点的 `ip:port`。
+* **highAvailability / highAvailabilitySites**：API 高可用相关配置参数。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 True，*highAvailabilitySites* 里指定所有可用节点的 `ip:port`。
 * **keepAliveTime**：通过配置 *keepAliveTime* 参数可以设置 TCP 的存活检测机制的检测时长，从而能够在网络不稳定条件下，及时释放半打开的 TCP 连接。
+* **reconnect**：该参数仅在指定 *highAvailability* = False 时有效，若设置为 True，则 API 在检测到连接异常时，会尝试进行重连。
 
-高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，因为服务器响应存在时间差，不能保证连接的负载均衡。
+高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，不能保证连接的负载均衡。
 
 如果需要使用用户名和密码连接，可使用以下脚本。其中 "admin" 为 DolphinDB 默认的管理员用户名，"123456" 为密码。
 
@@ -1709,7 +1710,7 @@ t.append!(t1)""".format(db=dbPath,tb=tableName)
 s.run(script)
 ```
 
-DolphinDB 提供 `loadTable` 方法来加载分布式表，通过 `tableInsert` 方式追加数据，具体的脚本示例如下。通过自定义的函数 `createDemoDataFrame()` 创建一个 DataFrame，再追加数据到 DolphinDB 数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时tglobal间类型自动转换的功能，因此无需显式进行类型转换。
+DolphinDB 提供 `loadTable` 方法来加载分布式表，通过 `tableInsert` 方式追加数据，具体的脚本示例如下。通过自定义的函数 `createDemoDataFrame()` 创建一个 DataFrame，再追加数据到 DolphinDB 数据表中。与内存表和磁盘表不同的是，分布式表在追加表的时候提供时间类型自动转换的功能，因此无需显式进行类型转换。
 
 ```python
 tb = createDemoDataFrame()
