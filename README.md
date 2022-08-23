@@ -41,11 +41,15 @@ $ pip install dolphindb
     - [5.3 Load Tables in Blocks](#53-load-tables-in-blocks)
     - [5.4 Data Conversion](#54-data-conversion)
   - [6 Append to DolphinDB Tables](#6-append-to-dolphindb-tables)
-    - [6.1 Append to In-Memory Tables](#61-append-to-in-memory-tables)
-    - [6.2 Append to DFS Tables](#62-append-to-dfs-tables)
-    - [6.3 Append Data Asynchronously](#63-append-data-asynchronously)
-    - [6.4 `MultithreadedTableWriter`](#64-multithreadedtablewriter)
-    - [6.5 Data Conversion](#65-data-conversion)
+    - [6.1 Append Lists to In-memory Tables with the `tableInsert` Function](#61-append-lists-to-in-memory-tables-with-the-tableinsert-function)
+    - [6.2 Append DataFrame to In-memory Tables with the `tableInsert` Function](#62-append-dataframe-to-in-memory-tables-with-the-tableinsert-function)
+    - [6.3 Append Data with the `insert into` Statement](#63-append-data-with-the-insert-into-statement)
+    - [6.4 Automatic Temporal Data Type Conversion with the `tableAppender` Object](#64-automatic-temporal-data-type-conversion-with-the-tableappender-object)
+    - [6.5 Append Data with the `tableUpsert` Object](#65-append-data-with-the-tableupsert-object)
+    - [6.6 Append to DFS Tables](#66-append-to-dfs-tables)
+    - [6.7 Append Data Asynchronously](#67-append-data-asynchronously)
+    - [6.8 Append Data in Batch Asynchronously with the `MultithreadedTableWriter` Object](#68-append-data-in-batch-asynchronously-with-the-multithreadedtablewriter-object)
+    - [6.9 Data Conversion](#69-data-conversion)
   - [7 Connection Pooling in Multi-Threaded Applications](#7-connection-pooling-in-multi-threaded-applications)
   - [8 Database and Table Operations](#8-database-and-table-operations)
     - [8.1 Summary](#81-summary)
@@ -65,11 +69,13 @@ $ pip install dolphindb
   - [10 Python Streaming API](#10-python-streaming-api)
     - [10.1 `enableStreaming`](#101-enablestreaming)
     - [10.2 Subscribe and Unsubscribe](#102-subscribe-and-unsubscribe)
-    - [10.3 Streaming Applications](#103-streaming-applications)
+    - [10.3   Subscribe to Heterogeneous Stream Table](#103---subscribe-to-heterogeneous-stream-table)
+    - [10.4 Streaming Applications](#104-streaming-applications)
   - [11 More Examples](#11-more-examples)
     - [11.1 Stock Momentum Strategy](#111-stock-momentum-strategy)
     - [11.2 Time-Series Operations](#112-time-series-operations)
   - [12 FAQ](#12-faq)
+  - [13 Null Values Handling](#13-null-values-handling)
 
 
 
@@ -83,14 +89,14 @@ DolphinDB Python API in essence encapsulates a subset of DolphinDB's scripting l
 Python interacts with DolphinDB through a `session` object:
 
 ```
-session(host, port, userid, password, enableSSL, enableASYN, keepAliveTime, enableChunkGranularityConfig, compress)
+session(host, port, userid, password, enableSSL, enableASYNC, keepAliveTime, enableChunkGranularityConfig, compress, enablePickle, python)
 ```
 
 The most commonly used `Session` class methods are as follows:
 
 | Method                                                       | Explanation                                                  |
 | :----------------------------------------------------------- | :----------------------------------------------------------- |
-| connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime]) | Connect a session to DolphinDB server                        |
+| connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect]) | Connect a session to DolphinDB server                        |
 | login(username,password,[enableEncryption])                  | Log in DolphinDB server                                      |
 | run(DolphinDBScript)                                         | Execute scripts on DolphinDB server                          |
 | run(DolphinDBFunctionName,args)                              | Call functions on DolphinDB server                           |
@@ -100,8 +106,6 @@ The most commonly used `Session` class methods are as follows:
 | undefAll()                                                   | Undefine all objects in DolphinDB to release memory          |
 | getSessionId()                                               | Get the current session ID                                   |
 | close()                                                      | Close the session                                            |
-
-
 
 The following script first imports Python API, then creates a session in Python to connect to a DolphinDB server with the specified domain name/IP address and port number. Please start a DolphinDB server before running the following Python script.
 
@@ -116,7 +120,7 @@ True
 #### connect
 
 ```
-connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime])
+connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect])
 ```
 
 * **host/port**: IP address and port number of the host
@@ -173,12 +177,12 @@ s=ddb.session(enableSSL=True)
 
 - **Asynchronous Communication**
 
-Since server version 1.10.17 and 1.20.6, you can specify the parameter *enableASYN* to enable asynchronous communication when creating a session. The default value is False. 
+Since server version 1.10.17 and 1.20.6, you can specify the parameter *enableASYNC* to enable asynchronous communication when creating a session. The default value is False. 
 
 The asynchronous mode only supports the `session.run` method to connect to the server and no values are returned. This mode is ideal for writing data asynchronously as it saves time on the API to detect the return values.
 
 ```
-s=ddb.session(enableASYN=True)
+s=ddb.session(enableASYNC=True)
 ```
 
 - **Compressed Communication** 
@@ -512,6 +516,8 @@ print(s.run("t1.x.avg()"))
 # output
 3.0
 ```
+
+Note: When uploading DataFrame to DolphinDB, the elements in each column must have the same data type.
 
 ### 2.2 Upload with `table`
 
@@ -1266,7 +1272,7 @@ DolphinDB Python API saves data downloaded from DolphinDB server as native Pytho
 |DolphinDB|Python|DolphinDB data|Python data|
 |-------------|----------|-------------|-----------|
 |scalar|Numbers, Strings, NumPy.datetime64|see section 6.3.2|see section 6.3.2
-|vector|NumPy.array|1..3|[1 2 3]
+|vector|c.array|1..3|[1 2 3]
 |array vector|Numpy.Ndarray|[[1, 2, 3], [4, 5], [6]]|[np.array([1, 2, 3]), np.array([4, 5]), np.array([6])]|
 |pair|Lists|1:5|[1, 5]
 |matrix|Lists|1..6$2:3|[array([[1, 3, 5],[2, 4, 6]], dtype=int32), None, None]
@@ -1324,8 +1330,6 @@ There are 2 types of DolphinDB tables based on the storage method:
 
 ---->
 
-### 6.1 Append to In-Memory Tables
-
 Use the following 2 methods to append data to DolphinDB in-memory tables:
 
 - Use function `tableInsert` to append data or a table 
@@ -1346,13 +1350,9 @@ s.run(script)
 
 The example above specifies the initial size, column names, and data types when creating an in-memory table on the DolphinDB server. For a standard in-memory table, data in a session is isolated and only visible to the current session. For an in-memory table to be accessed from multiple servers at the the same time, `share` it across sessions.
 
-As [the only temporal data type in Python pandas is datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803), all temporal columns of a DataFrame are converted into nanotimestamp type after uploaded to DolphinDB. Each time we use `tableInsert` or `insert into` to append a DataFrame with a temporal column to an in-memory table or DFS table, we need to conduct a data type conversion for the time column. 
+### 6.1 Append Lists to In-memory Tables with the `tableInsert` Function
 
-#### 6.1.1 `tableInsert` 
-
-(1) Append lists to in-memory tables
-
-If the data retrieved by a Python program can be organized as lists, you can pass multiple arrays to the function `tableInsert` to insert them into the table. This way, you can upload data objects and append the data in just one request to the DolphinDB server (which is 1 step less than using `insert into`).
+You can organize your data in Python into a list and append it to a table with the function `tableInsert`. This way, you can upload data objects and append the data in just one request to the DolphinDB server (which is 1 step less than using `insert into`).
 
 ```python
 import dolphindb as ddb
@@ -1364,6 +1364,7 @@ ids = [1,2,3]
 dates = np.array(['2019-03-03','2019-03-04','2019-03-05'], dtype="datetime64[D]")
 tickers=['AAPL','GOOG','AAPL']
 prices = [302.5, 295.6, 297.5]
+// Insert the "args" list to the "tglobal" table with tableInsert
 args = [ids, dates, tickers, prices]
 s.run("tableInsert{tglobal}", args)
 #output
@@ -1377,7 +1378,7 @@ s.run("tglobal")
 2   3 2019-03-05   AAPL  297.5
 ```
 
-(2) Append DataFrame to in-memory tables
+### 6.2 Append DataFrame to In-memory Tables with the `tableInsert` Function
 
 - If there is no time column in the table:
 
@@ -1413,6 +1414,8 @@ s.run("tglobal")
 
 - If there is a time column in the table:
 
+As [the only temporal data type in Python pandas is datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803), all temporal columns of a DataFrame are converted into nanotimestamp type after uploaded to DolphinDB. Each time we use `tableInsert` or `insert into` to append a DataFrame with a temporal column to an in-memory table or DFS table, we need to conduct a data type conversion for the time column.
+
 ```python
 import dolphindb as ddb
 
@@ -1445,7 +1448,7 @@ print(s.run("tglobal"))
 ```
 
 
-#### 6.1.2 `insert into`
+### 6.3 Append Data with the `insert into` Statement
 
 To insert a single row of data:
 
@@ -1496,11 +1499,11 @@ script = "insert into tglobal values(ids,date(dates),tickers,prices);"
 s.run(script)
 ```
 
-**Please note that**, for performance reasons, it is not recommended to use `insert into` to insert data as parsing the insert statement causes extra overhead.
+**Please note**: For performance reasons, it is not recommended to use `insert into` to insert data as parsing the insert statement causes extra overhead.
 
-#### 6.1.3 `tableAppender` 
+### 6.4 Automatic Temporal Data Type Conversion with the `tableAppender` Object
 
-For automatic data type conversion, Python API offers `tableAppender` object. 
+As [the only temporal data type in Python pandas is datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803), all temporal columns of a DataFrame are converted into nanotimestamp type after uploaded to DolphinDB. Each time we use `tableInsert` or `insert into` to append a DataFrame with a temporal column to an in-memory table or DFS table, we need to conduct a data type conversion for the time column.  With the `tableAppender` object, you will no longer have to do the conversion manually when you `append` local DataFrames to an in-memory table or a DFS table.
 
 ```
 tableAppender(dbPath="", tableName="", ddbSession=None, action="fitColumnType")
@@ -1532,9 +1535,62 @@ t = s.run("t")
 print(t)
 ```
 
-### 6.2 Append to DFS Tables
+### 6.5 Append Data with the `tableUpsert` Object
 
-DFS tables are the recommended data storage method in the production environment, which supports snapshot isolation and ensures data consistency. DFS tables support multiple replicas, which improves fault tolerance and load balancing. The following example appends data to a DFS table via the Python API.
+Use the `tableUpsert` object to update data in indexed in-memory tables, keyed in-memory tables and DFS tables. Like the `tableAppender` object, `tableUpsert` automatically converts the temporal data when writing local DataFrames to the target table.
+
+```
+tableUpsert(dbPath, tableName, ddbSession, ignoreNull, keyColNames, sortColumns)
+```
+
+- **dbPath**: the path of a DFS database. Leave it unspecified for in-memory tables.
+- **tableName**: a STRING indicating the name of a DFS table, indexed in-memory table or keyed in-memory table.
+- **ddbSession**: a session connected to DolphinDB server.
+- **ignoreNull**: a Boolean value. If set to true, for the NULL values (if any) in the data to be written, the corresponding elements in the table are not updated. The default value is false.
+- **keyColNames**: a STRING scalar/vector. When updating a DFS table, *keyColNames* are considered as the key columns.
+- **sortColumns**: a STRING scalar or vector. When updating a DFS table, the updated partitions will be sorted on sortColumns (only within each partition, not across partitions).
+
+The following example creates and shares the keyed in-memory table `ttable` and use `tableUpsert` to insert data into the table:
+
+
+```python
+import dolphindb as ddb
+import numpy as np
+import pandas as pd
+import time
+import random
+import dolphindb.settings as keys
+
+import threading
+
+HOST = "192.168.1.193"
+PORT = 8848
+
+s = ddb.session()
+s.connect(HOST, PORT, "admin", "123456")
+script_DFS_HASH = """
+    testtable=keyedTable(`id,1000:0,`date`text`id,[DATETIME,STRING,LONG])
+    share testtable as ttable
+    """
+s.run(script_DFS_HASH)
+
+upsert=ddb.tableUpsert("","ttable",s)
+dates=[]
+texts=[]
+ids=[]
+print(np.datetime64('now'))
+for i in range(1000):
+    dates.append(np.datetime64('2012-06-13 13:30:10.008'))
+    texts.append(str(time.time()))
+    ids.append(i%20)
+df = pd.DataFrame({'date': dates,'text': texts,'id': np.array(ids,np.int64)})
+upsert.upsert(df)
+print(s.run("ttable"))
+```
+
+### 6.6 Append to DFS Tables
+
+DFS table is recommended by DolphinDB in production environment. It supports snapshot isolation and ensures data consistency. With data replication, DFS tables offers fault tolerance and load balancing. The following example appends data to a DFS table via the Python API.
 
 Please note that the DFS tables can only be used in clustered environments with the configuration parameter *enableDFS* = 1.
 
@@ -1608,7 +1664,7 @@ print(num)
 print(s.run("select * from pt"))
 ```
 
-### 6.3 Append Data Asynchronously
+### 6.7 Append Data Asynchronously
 
 For high throughput data processing, especially data writes in high frequency, you can enable the asynchronous mode to effectively increase the data throughput of tasks on the client. It has the following characteristics:
 
@@ -1616,12 +1672,12 @@ For high throughput data processing, especially data writes in high frequency, y
 - The client cannot obtain the status or result of the task executed on the server.
 - The total time it takes to submit asynchronous tasks depends on the serialization time of the submitted parameters and the network transmission.
 
-**Note**: The asynchronous mode is not suitable for dependent tasks. For example, there are 2 tasks. Task 1 writes data to a DFS database, and the latter one, task 2 analyzes the written data and historical data. In this case, the asynchronous mode is not suitable. 
+**Note**: The asynchronous mode is not suitable if there's dependency between 2 consecutive tasks. For example, a task writes data to a DFS database and the next task analyzes the written data and historical data. In this case, the asynchronous mode is not suitable. 
 
-To enable the asynchronous mode for DolphinDB Python API, set *enableASYN* = True in the session. See [Section 1.1](#11-establish-connection) for more information.
+To enable the asynchronous mode for DolphinDB Python API, set *enableASYNC* = True in the session. See [Section 1.1](#11-establish-connection) for more information.
 
 ```python
-s=ddb.session(enableASYN=True)
+s=ddb.session(enableASYNC=True)
 ```
 
 By writing data asynchronously, you can save the time of detecting the returned value. Refer to the following script in DolphinDB to append data asynchronously to a DFS table.
@@ -1632,7 +1688,7 @@ import numpy as np
 import dolphindb.settings as keys
 import pandas as pd
 
-s = ddb.session(enableASYN=True) # enable asynchronous mode
+s = ddb.session(enableASYNC=True) # enable asynchronous mode
 s.connect("localhost", 8848, "admin", "123456")
 dbPath = "dfs://testDB"
 tableName = "tb1"
@@ -1661,7 +1717,7 @@ s.run("append!{{loadTable('{db}', `{tb})}}".format(db=dbPath, tb=tableName), tb)
 
 **Note**: In asynchronous mode, only the method `session.run()` is supported to communicate with the server and no value is returned.
 
-The asynchronous mode shows better performance with higher data throughput. The following example writes to a stream table. For details on Python Streaming API, see [Chap 10]().
+The asynchronous mode shows better performance with higher data throughput. The following example writes to a stream table. For details on Python Streaming API, see [Chap 10](#10-python-streaming-api).
 
 
 ```python
@@ -1671,7 +1727,7 @@ import pandas as pd
 import random
 import datetime
 
-s = ddb.session(enableASYN=True)
+s = ddb.session(enableASYNC=True)
 s.connect("localhost", 8848, "admin", "123456")
 
 n = 100
@@ -1697,7 +1753,7 @@ s.run("append!{trades}", tb)
 
 For data of temporal types that need to be converted, please do not submit the two tasks of `uploading` data to the server and converting data types with SQL script in asynchronous mode. It may lead to the problem that the SQL script is already executed though data loading is not finished. To solve this problem, you can first define a view function on the server, then the client just needs to upload the data.
 
-First, define a view function `appendStreamingData` on the server:
+First, define a function view `appendStreamingData` on the server:
 
 
 ```txt
@@ -1719,7 +1775,7 @@ import pandas as pd
 import random
 import datetime
 
-s = ddb.session(enableASYN=True)
+s = ddb.session(enableASYNC=True)
 s.connect("localhost", 8848, "admin", "123456")
 
 n = 100
@@ -1741,14 +1797,14 @@ s.upload({'tb': tb})
 s.run("appendStreamingData(tb)")
 ```
 
-### 6.4 `MultithreadedTableWriter`
+### 6.8 Append Data in Batch Asynchronously with the `MultithreadedTableWriter` Object
 
 To insert single record frequently, you can use methods of `MultithreadedTableWriter` class for asynchronous writes via DolphinDB Python API. The class maintains a buffer queue in Python. Even when the server is fully occupied with network I/O operations, the writing threads of the API client will not be blocked. You can use the method `getStatus` to check the status of the `MultithreadedTableWriter` object.
 
 **`MultithreadedTableWriter`**
 
 ```Python
-MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL, enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount, partitionCol, compressMethods)
+MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL, enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount, partitionCol, compressMethods, mode, modeOption)
 ```
 
 **Parameters:**
@@ -1756,8 +1812,11 @@ MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL
 * **host**: host name
 * **port**: port number
 * **userId** / **password**: username and password
-* **dbPath**: a STRING indicating the DFS database path or in-memory table name 
-* **tableName**: a STRING indicating the DFS table name. Leave it unspecified for an in-memory table
+* **dbPath**:  a STRING indicating the DFS database path. Leave it unspecified for an in-memory table.
+* **tableName**: a STRING indicating the in-memory or DFS table name.
+
+**For API 1.30.17 or lower versions, when writing to an in-memory table,  please specify the in-memory table name for *dbPath* and leave *tableName* empty.**
+
 * **useSSL**: a Boolean value indicating whether to enable SSL. The default value is False.
 * **enableHighAvailability**: a Boolean value indicating whether to enable high availability. The default value is False.
 * **highAvailabilitySites**: a list of ip:port of all available nodes
@@ -1768,8 +1827,8 @@ MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL
 * **compressMethods** a list of the compression methods used for each column. If unspecified, the columns are not compressed. The compression methods include:
     * "LZ4": LZ4 algorithm
     * "DELTA": Delta-of-delta encoding
-
-
+* - **mode**: a STRING indicating the write mode. It can be: "upsert" (to [upsert!](https://dolphindb.com/help/FunctionsandCommands/FunctionReferences/u/upsert!.html) the data) or "append" (to [append!](https://dolphindb.com/help/FunctionsandCommands/FunctionReferences/a/append!.html) the data).
+- **modeOption**: a list of strings indicating the optional parameters of [upsert!](https://dolphindb.com/help/FunctionsandCommands/FunctionReferences/u/upsert!.html). This parameter only takes effect when *mode* = "upsert". 
 
 The following part introduces methods of `MultithreadedTableWriter` class.
 
@@ -1804,7 +1863,7 @@ script = """t=table(1000:0, `date`ticker`price, [DATE,SYMBOL,LONG])
 share t as tglobal"""
 s.run(script)
 
-writer = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","tglobal","",False,False,[],10,1,5,"date")
+writer = ddb.MultithreadedTableWriter("localhost", 8848, "admin", "123456","","tglobal",False,False,[],10,1,5,"date")
 for i in range(10):
   res = writer.insert(np.datetime64('2022-03-23'),"AAAAAAAB", random.randint(1,10000))
 writer.waitForThreadCompletion()
@@ -2167,9 +2226,53 @@ writeStatus:
 0    310
 ```
 
+- Set the *mode* parameter of `MultithreadedTableWriter` to "UPSERT" to update table.
 
+```python
+import dolphindb as ddb
+import numpy as np
+import pandas as pd
+import time
+import random
+import dolphindb.settings as keys
+import threading
+HOST = "192.168.1.193"
+PORT = 8848
+s = ddb.session()
+s.connect(HOST, PORT, "admin", "123456")
+script_DFS_HASH = """
+    testtable=keyedTable(`id,1000:0,`text`id,[STRING,LONG])
+    share testtable as ttable
+    """
+s.run(script_DFS_HASH)
+def insert_mtw(writer, id):
+    try:
+        print("thread",id,"start.")
+        for i in range(1000):
+            text=str(time.time())
+            id=random.randint(1, 10)
+            print(text,id)
+            res=writer.insert(text, id)
+        print("thread",id,"exit.")
+    except Exception as e:
+        print(e)
+print("test start.")
+writer = ddb.MultithreadedTableWriter(HOST, PORT,"admin","123456","","ttable",False,False,[], 1, 0.1, 1,"id",mode="UPSERT",
+                                      modeOption=["ignoreNull=false","keyColNames=`id"])
+threads=[]
+for i in range(2):
+    threads.append(threading.Thread(target=insert_mtw, args=(writer,i,)))
+for t in threads:
+    t.setDaemon(True)
+    t.start()
+for t in threads:
+    t.join()
+writer.waitForThreadCompletion()
+status=writer.getStatus()
+print("test exit",status)
+```
 
-### 6.5 Data Conversion
+### 6.9 Data Conversion
 
 It is recommended to use `MultithreadedTableWriter`  to upload data from Python to DolphinDB as it supports conversion of more data types and forms.
 
@@ -2204,6 +2307,8 @@ It is recommended to use `MultithreadedTableWriter`  to upload data from Python 
 | 27   | NANOTIME, NANOTIMESTAMP, TIMESTAMP, DATE, MONTH, TIME, SECOND, MINUTE, DATETIME, DATEHOUR, LONG, INT, SHORT, CHAR | Numpy.int64          |
 | 28   | FLOAT, DOUBLE                                                | Numpy.float32        |
 | 29   | FLOAT, DOUBLE                                                | Numpy.float64        |
+
+Note: When uploading an array vector with the data type INT128, UUID or IP, it must be written using `MultithreadedTableWriter` and the session must not use pickle (```session(enablePickle=False)```)
 
 ## 7 Connection Pooling in Multi-Threaded Applications 
 
@@ -2377,7 +2482,10 @@ After obtaining a table object in Python, you can call the following methods for
 | toDF()               | Convert DolphinDB table object into pandas DataFrame |
 | toList()             | Convert DolphinDB table object into list of numpy.ndarrary. The order of the objects in the list is consistent with the order of the table columns. |
 
-Note: You can use the method `toList()` to convert a DolphinDB array vector to a 2d numpy.ndarray for optimal performance. This method only applies to an array vector with arrays of the same length, otherwise, an error will be raised.
+Note: 
+
+1. You can use the method `toList()` to convert a DolphinDB array vector to a 2d numpy.ndarray for optimal performance. This method only applies to an [array vector](https://dolphindb.com/help200/DataTypesandStructures/DataForms/Vector/arrayVector.html) with arrays of the same length, otherwise, an error will be raised.
+2. When using `toList` to read array vectors with data type INT128, UUID or IP, do not use pickle in your session (```session(enablePickle=False)```).
 
 The tables above only lists most commonly used methods. Please refer to files [session.py](sample.py) and [table.py]() on all the methods provided by the class `session` and `table`.
 
@@ -3297,7 +3405,7 @@ Use function `subscribe` to subscribe to a DolphinDB stream table.
 **Syntax**
 
 ```python
-s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=False, filter=None, msgAsTable=False, [batchSize=0], [throttle=1])
+s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=False, filter=None, msgAsTable=False, [batchSize=0], [throttle=1], [userName=""],[password=""], [streamDeserializer=None])
 ```
 
 **Parameters:**
@@ -3313,6 +3421,9 @@ s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=Fals
 - **msgAsTable:** a Boolean value. If *msgAsTable* = true, the subscribed data is ingested into *handler* as a DataFrame. The default value is false, which means the subscribed data is ingested into *handler* as a List of nparrays. This optional parameter has no effect if *batchSize* is not specified.
 - **batchSize:** an integer indicating the number of unprocessed messages to trigger the *handler*. If it is positive, the *handler* does not process messages until the number of unprocessed messages reaches *batchSize*. If it is unspecified or non-positive, the *handler* processes incoming messages as soon as they come in.
 - **throttle:** an integer indicating the maximum waiting time (in seconds) before the *handler* processes the incoming messages. The default value is 1. This optional parameter has no effect if *batchSize* is not specified.
+- **userName:** a string indicating the username used to connect to the server
+- **password:** a string indicating the password used to connect to the server
+- **streamDeserializer:** the deserializer for the subscribed heterogeneous stream table
 
 Please specify the configuration parameter *maxPubConnections* for the publisher node first. See [Streaming Tutorial](https://github.com/dolphindb/Tutorials_EN/blob/master/streaming_tutorial.md#2-core-functionalities)
 
@@ -3408,12 +3519,88 @@ The output table for calculation results contains the following 7 columns:
 | ------------------- | ------ | ----- | ----- | ----- | ----- | ------ | ---- |
 | 2018.09.03T09:30:07 | 000001 | 10.13 | 10.13 | 10.12 | 10.12 | 468060 |      |
 
+### 10.3   Subscribe to Heterogeneous Stream Table
 
-### 10.3 Streaming Applications
+Since DolphinDB server version 1.30.17/2.00.5, the [replay](https://dolphindb.com/help/FunctionsandCommands/FunctionReferences/r/replay.html) function supports replaying (serializing) multiple stream tables with different schemata into a single stream table (known as “heterogeneous stream table“). Starting from DolphinDB Python API version 1.30.19, a new class `streamDeserializer` has been introduced for the subscription and deserialization of heterogeneous stream table.
+
+#### 10.3.1 Construct Deserializer for Heterogeneous Stream Table
+
+  Construct a deserializer for heterogeneous table with `streamDeserializer` .
+
+```
+1sd = streamDeserializer(sym2table, session=None)
+```
+
+- **sym2table**: a dictionary object. Each key indicates the name of an input table of `replay`, and the corresponding value indicates the same schema as this input table. `streamDeserializer` will deserialize the ingested data based on the schemata specified in *sym2table*.
+- **session**: session object connected to the DolphinDB server. The default value is None, indicating the current session.
+
+The deserialized data is returned in the form of a list. 
+
+<!--For more information about how to construct heterogeneous stream table, see .-->
+
+#### 10.3.2 Subscribe to a Heterogeneous Table
+
+Here’s an example:
+
+(1) Create a heterogeneous stream table
+
+```
+try{dropStreamTable(`outTables)}catch(ex){}
+// Create a heterogeneous table
+share streamTable(100:0, `timestampv`sym`blob`price1,[TIMESTAMP,SYMBOL,BLOB,DOUBLE]) as outTables
+n = 10;
+dbName = 'dfs://test_StreamDeserializer_pair'
+if(existsDatabase(dbName)){
+    dropDB(dbName)}
+// Create database and tables
+db = database(dbName,RANGE,2012.01.01 2013.01.01 2014.01.01 2015.01.01 2016.01.01 2017.01.01 2018.01.01 2019.01.01)
+table1 = table(100:0, `datetimev`timestampv`sym`price1`price2, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE, DOUBLE])
+table2 = table(100:0, `datetimev`timestampv`sym`price1, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE])
+table3 = table(100:0, `datetimev`timestampv`sym`price1, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE])
+tableInsert(table1, 2012.01.01T01:21:23 + 1..n, 2018.12.01T01:21:23.000 + 1..n, take(`a`b`c,n), rand(100,n)+rand(1.0, n), rand(100,n)+rand(1.0, n))
+tableInsert(table2, 2012.01.01T01:21:23 + 1..n, 2018.12.01T01:21:23.000 + 1..n, take(`a`b`c,n), rand(100,n)+rand(1.0, n))
+tableInsert(table3, 2012.01.01T01:21:23 + 1..n, 2018.12.01T01:21:23.000 + 1..n, take(`a`b`c,n), rand(100,n)+rand(1.0, n))
+// Create three types of tables (partitioned table, stream table and in-memory table) 
+pt1 = db.createPartitionedTable(table1,'pt1',`datetimev).append!(table1)
+share streamTable(100:0, `datetimev`timestampv`sym`price1, [DATETIME, TIMESTAMP, SYMBOL, DOUBLE]).append!(table2) as pt2
+share table3 as pt3
+// Create the heterogeneous stream table
+d = dict(['msg1', 'msg2', 'msg3'], [table1, table2, table3])
+replay(inputTables=d, outputTables=`outTables, dateColumn=`timestampv, timeColumn=`timestampv)
+```
+
+(2) Subscribe to the heterogeneous stream table in Python.
+
+```
+from threading import Event
+
+def streamDeserializer_handler(lst): # the last element of the list returned by the deserializer is a key specified in sym2table
+    if lst[-1]=="msg1":
+        print("Msg1: ", lst)
+    elif lst[-1]=='msg2':
+        print("Msg2: ", lst)
+    else:
+        print("Msg3: ", lst)
+
+s = ddb.session("192.168.1.103", 8921, "admin", "123456")
+s.enableStreaming(10020)
+
+# Construct the deserializer
+sd = ddb.streamDeserializer({
+    'msg1': ["dfs://test_StreamDeserializer_pair", "pt1"],	# specify a list of the DFS database path and table name
+    'msg2': "pt2",		 # Specify the stream table name
+    'msg3': "pt3",		 # Specify the in-memory table name
+}, session=s)			 # If session is not specified, get the current session during subscription
+s.subscribe(host="192.168.1.103", port=8921, handler=streamDeserializer_handler, tableName="outTables", actionName="action", offset=0, resub=False,
+            msgAsTable=False, streamDeserializer=sd, userName="admin", password="123456")
+Event().wait()
+```
+
+### 10.4 Streaming Applications
 
 This section describes the 3 steps to conduct real-time OHLC calculations.
 
-#### 10.3.1 Receive Real-Time Data and Write to DolphinDB Stream Table
+#### 10.4.1 Receive Real-Time Data and Write to DolphinDB Stream Table
 
 * Create a DolphinDB stream table
 
@@ -3450,7 +3637,7 @@ csv_df=csv_df['Symbol', 'Datetime', 'Price', 'Volume']
 s.run("tableInsert{Trade}", csv_df)
 ```
 
-#### 10.3.2 Calculate OHLC Bars in Real-Time
+#### 10.4.2 Calculate OHLC Bars in Real-Time
 
 The following case uses DolphinDB time-series engine to calculate OHLC bars in real-time. The result is output to the stream table OHLC.
 
@@ -3484,7 +3671,7 @@ Last, subscribe to the table. If data has already been written to the stream tab
 subscribeTable(tableName="Trade", actionName="act_tsaggr", offset=0, handler=append!{tsAggrKline}, msgAsTable=true)
 ```
 
-#### 10.3.3 Display OHLC Bars in Python
+#### 10.4.3 Display OHLC Bars in Python
 
 In this example, the output table of the time-series engine is also defined as a stream table. The client can subscribe to the output table through Python API and display the calculation results to Python.
 
@@ -3650,3 +3837,15 @@ For DolphinDB server version before 1.30.3, the following errors may be raised:
 
 Solution: Please upgrade your server version to 1.30.3 and above.
 
+## 13 Null Values Handling
+
+*None*, *pd.NaT* and *np.nan* can all represent null values in Python. When a list or a NumPy.array containing null values is uploaded to the DolphinDB server, versions prior to 1.30.19.1 of the Python API determine the column type with numpy.dtype, which may cause errors when dtype is “object“. Therefore, since the 1.30.19.1 version, when uploading a list or a NumPy.array containing null values, Python API determines the column type with the following rules:
+
+| **Types of Null Values in the Array / List**     | **Python Data Type** | **DolphinDB Column Type**            |
+| ------------------------------------------------ | -------------------- | ------------------------------------ |
+| *None*                                           | object               | STRING                               |
+| *np.NaN* and *None*                              | float64              | DOUBLE                               |
+| *pd.NaT* and *None*                              | datetime64           | NANOTIMESTAMP                        |
+| *np.NaN* and *pd.NaT*                            | datetime64           | NANOTIMESTAMP                        |
+| *None*, *np.NaN* and *pd.NaT*                    | datetime64           | NANOTIMESTAMP                        |
+| *None* / *pd.NaT* / *np.nan* and non-null values | -                    | the data type of the non-null values |
