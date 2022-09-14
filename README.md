@@ -4,8 +4,9 @@ DolphinDB Python API runs on the following operating systems:
 
 | Operating System | Supported Python Versions                      |
 | :--------------- | :--------------------------------------------- |
-| Windows          | Python 3.6-3.8 (3.8 in conda environment only) |
+| Windows          | Python 3.6-3.9                                 |
 | Linux            | Python 3.6-3.9                                 |
+| Linux(aarch64)   | Python 3.6-3.9 in conda environment            |
 | Mac(x86-64)      | Python 3.6-3.9 in conda environment            |
 | Mac(arm64)       | Python 3.8-3.9 in conda environment            |
 
@@ -76,6 +77,8 @@ $ pip install dolphindb
     - [11.2 Time-Series Operations](#112-time-series-operations)
   - [12 FAQ](#12-faq)
   - [13 Null Values Handling](#13-null-values-handling)
+  - [14 Other Features](#14-other-features)
+    - [14.1 Forced Termination of Processes](#14-forced-termination-of-processes)
 
 
 
@@ -191,8 +194,10 @@ Since server version 1.30.6, you can specify the compression parameter *compress
 
 This mode is ideal for large writes or queries as it saves network bandwidth. However, it increases the computational complexity on the server and API client.
 
+Note: Please disable pickle when you enable compressed communication.
+
 ```
-s=ddb.session(compress=True)
+s=ddb.session(compress=True, enablePickle=False)
 ```
 
 ### 1.2 Execute DolphinDB Scripts
@@ -2418,7 +2423,7 @@ if __name__=="__main__":
     print(end - start)
 ```
 
-The method `runTaskAsyn` of `DBConnectionPool` calls asynchronous tasks concurrently.  You can add a task with `runTaskAsyn` and it returns an object of concurrent.futures.Future. The result can be obtained by calling `result(timeout=None)` (*timeout* is in seconds) on the object. Specify a period of time for the parameter *timeout* in method `result()` to wait for the task to complete. If the task completes within the period, the method returns the result, otherwise a timeoutErr is thrown.
+You can execute DolphinDB scripts with method `run` or `runTaskAsync` of class `DBConnectionPool`. The method `run` runs tasks synchronously (See [1.3 Execute DolphinDB Functions](#13-execute-dolphindb-functions)). The method `runTaskAsync` calls asynchronous tasks concurrently. You can add a task with `runTaskAsync` and it returns an object of concurrent.futures.Future. The result can be obtained by calling `result(timeout=None)` (*timeout* is in seconds) on the object. Specify a period of time for the parameter *timeout* in method `result()` to wait for the task to complete. If the task completes within the period, the method returns the result, otherwise a timeoutErr is thrown.
 
 ```python
 import dolphindb as ddb
@@ -2426,10 +2431,10 @@ import time
 pool = ddb.DBConnectionPool("localhost", 8848, 10)
 
 t1 = time.time()
-task1 = pool.runTaskAsyn("sleep(1000); 1+0");
-task2 = pool.runTaskAsyn("sleep(2000); 1+1");
-task3 = pool.runTaskAsyn("sleep(4000); 1+2");
-task4 = pool.runTaskAsyn("sleep(1000); 1+3");
+task1 = pool.runTaskAsync("sleep(1000); 1+0");
+task2 = pool.runTaskAsync("sleep(2000); 1+1");
+task3 = pool.runTaskAsync("sleep(4000); 1+2");
+task4 = pool.runTaskAsync("sleep(1000); 1+3");
 t2 = time.time()
 print(task1.result())
 t3 = time.time()
@@ -2446,6 +2451,8 @@ print(t5-t1)
 print(t6-t1)
 pool.shutDown()
 ```
+You can also pass parameters synchrounously to method `runTaskAsync`, see [Parameter Passing](#131-parameter-passing).
+
 
 ## 8 Database and Table Operations
 
@@ -3849,3 +3856,15 @@ Solution: Please upgrade your server version to 1.30.3 and above.
 | *np.NaN* and *pd.NaT*                            | datetime64           | NANOTIMESTAMP                        |
 | *None*, *np.NaN* and *pd.NaT*                    | datetime64           | NANOTIMESTAMP                        |
 | *None* / *pd.NaT* / *np.nan* and non-null values | -                    | the data type of the non-null values |
+
+
+## 14 Other Features
+### 14.1 Forced Termination of Processes
+
+The `session` object provides a static method `enableJobCancellation()` to enable forced termination of processes. It is disabled by default. When the feature is enabled, all running jobs submitted by the session in the API process can be terminated with "Ctrl+C". Currently, this feature is only available on Linux.
+
+For example:
+
+```
+ddb.session.enableJobCancellation()
+```
