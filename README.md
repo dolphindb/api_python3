@@ -2451,7 +2451,7 @@ print(t5-t1)
 print(t6-t1)
 pool.shutDown()
 ```
-You can also pass parameters synchrounously to method `runTaskAsync`, see [Parameter Passing](#131-parameter-passing).
+You can also pass parameters synchronously to method `runTaskAsync`, see [Parameter Passing](#131-parameter-passing).
 
 
 ## 8 Database and Table Operations
