@@ -4,9 +4,10 @@
 
 | 操作系统      | Python 版本号                        |
 | :------------ | :--------------------------------------- |
-| Windows       | Python 3.6-3.8，仅支持 Conda 环境下的 python 3.8|
-| Linux         | Python 3.6-3.9                           |
-| Mac(x86-64)   | Conda 环境下的 Python 3.6-3.9            |
+| Windows(amd64)| Python 3.6-3.9                           |
+| Linux(x86_64) | Python 3.6-3.9                           |
+| Linux(aarch64)| Conda 环境下的 Python 3.6-3.9            |
+| Mac(x86_64)   | Conda 环境下的 Python 3.6-3.9            |
 | Mac(arm64)    | Conda 环境下的 Python 3.8-3.9            |
 
 注意：DolphinDB Python API 暂不支持 pandas 1.3.0 版本。
@@ -71,8 +72,8 @@ $ pip install dolphindb
     - [6.6 追加数据到分布式表](#66-追加数据到分布式表)
     - [6.7 异步追加数据](#67-异步追加数据)
     - [6.8 批量异步追加数据](#68-批量异步追加数据)
-      - [6.8.1 BatchTableWriter](#681-batchtablewriter)
-      - [6.8.2 MultithreadedTableWriter](#682-multithreadedtablewriter)
+      - [6.8.1 MultithreadedTableWriter](#681-multithreadedtablewriter)
+      - [6.8.2 BatchTableWriter (不推荐使用)](#682-batchtablewriter-不推荐使用)
     - [6.9 从 Python 上传数据到 DolphinDB 时的数据转换](#69-从-python-上传数据到-dolphindb-时的数据转换)
   - [7 多线程调用线程池对象](#7-多线程调用线程池对象)
   - [8 数据库和表操作](#8-数据库和表操作)
@@ -125,6 +126,8 @@ $ pip install dolphindb
     - [11.2 时间序列计算](#112-时间序列计算)
   - [12 常见问题](#12-常见问题)
   - [13 DolphinDB 空值处理规则](#13-dolphindb-空值处理规则)
+  - [14 其它功能](#14-其它功能)
+    - [14.1 强制终止进程](#141-强制终止进程)
 
 ## 1 运行 DolphinDB 脚本及调用函数
 
@@ -174,6 +177,8 @@ connect(host,port,[username,password, startup, highAvailability, highAvailabilit
 * **reconnect**：该参数仅在指定 *highAvailability* = False 时有效。若设置 *reconnect* = True，则 API 在检测到连接异常时，会尝试进行重连。
 
 高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，不能保证连接的负载均衡。
+
+高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，因为服务器响应存在时间差，不能保证连接的负载均衡。
 
 如果需要使用用户名和密码连接，可使用以下脚本。其中 "admin" 为 DolphinDB 默认的管理员用户名，"123456" 为密码。
 
@@ -232,10 +237,10 @@ s=ddb.session(enableASYNC=True)
 
 server 1.30.6 版本之后开始支持压缩参数 *compress*，默认值为 False。
 
-可使用以下脚本启用压缩通讯。这种模式非常适用于大数据量的写入或查询。将数据压缩后传输，可以节省网络带宽，但会增加服务器和 API 端的计算量。
+可使用以下脚本启用压缩通讯。这种模式非常适用于大数据量的写入或查询。将数据压缩后传输，可以节省网络带宽，但会增加服务器和 API 端的计算量。注意，开启压缩时需要关闭 pickle 功能。
 
 ```
-s=ddb.session(compress=True)
+s=ddb.session(compress=True, enablePickle=False)
 ```
 
 ### 1.2 运行 DolphinDB 脚本
@@ -1888,129 +1893,21 @@ s.run("appendStreamingData(tb)")
 
 ### 6.8 批量异步追加数据
 
-针对单条数据批量写入的场景，DolphinDB Python API 提供 `BatchTableWrite`, `MultithreadedTableWriter` 类对象用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络 I/O 时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，`BatchTableWrite` 支持批量写入数据到内存表、分区表；而 `MultithreadedTableWriter` 支持批量写入数据到内存表、分区表和维度表。
+针对单条数据批量写入的场景，DolphinDB Python API 提供 `MultithreadedTableWriter`（**推荐**）, `BatchTableWrite` （**不推荐**） 类对象用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络 I/O 时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，`BatchTableWrite` 支持批量写入数据到内存表、分区表；而 `MultithreadedTableWriter` 支持批量写入数据到内存表、分区表和维度表。
 
 注意对于异步写入：
 
 * API 客户端提交任务到缓冲队列，缓冲队列接到任务后，客户端即认为任务已完成。
 * 提供 `getStatus` 等接口查看状态。
 
-#### 6.8.1 BatchTableWriter
-
-`BatchTableWriter` 对象及主要方法介绍如下：
-
-```Python
-BatchTableWriter(host, port, userid, password, acquireLock=True)
-```
-参数说明：
-
-* **host** 连接服务器的 IP 地址。
-* **port** 连接服务器的端口号。
-* **userid** 是字符串，表示连接服务器的用户名。
-* **password** 是字符串，表示连接服务器的密码。
-* **acquireLock** 是布尔值，表示在使用过程中，API 内部是否需要加锁。默认为 true, 表示需要加锁。在并发调用 API 的场景下，建议加锁。
-
-以下是 `BatchTableWriter` 对象包含的函数方法介绍：
-
-```Python
-addTable(dbPath="", tableName="", partitioned=True)
-```
-
-函数说明：添加一个写入的表。
-参数说明：
-
-* **dbName**: 当为磁盘表时，需填写数据库名；若为空，则表示内存表。
-* **tableName**: 数据表的表名。
-* **partitioned**: 表示添加的表是否为分区表。设置为 true 表示是分区表。如果添加的表是磁盘未分区表，必需设置 *partitioned* 为 false.
-
-注意:
-
-* 如果添加的是内存表，需要 share 该表。
-* 表名不可重复添加，需要先移除之前添加的表，否则会抛出异常。
-
-```Python
-insert(dbPath="", tableName="", *args)
-```
-
-函数说明：插入单行数据。
-参数说明：
-
-* **args**：是变长参数，代表插入的一行数据。
-
-注意：
-
-* 调用 `insert` 前需先调用 `addTable` 添加表，否则会抛出异常。
-* 变长参数个数和数据类型需要与 `insert` 表的列数及类型匹配。
-* 如果插入过程出现异常导致后台线程退出，再次调用 `insert` 会抛出异常，可以调用 `getUnwrittenData` 来获取之前所有写入缓冲队列但是没有成功写入服务器的数据（不包括本次 `insert` 的数据），然后再 `removeTable`。如果需要再次插入数据，需要重新调用 `addTable`。
-* 在移除该表的过程中调用本函数，仍然能够插入成功，但这些插入的数据并不会发送到服务器。移除该表的时候调用 `insert` 算是未定义行为，不建议这样写程序。
-
-```Python
-removeTable(dbPath="", tableName="")
-```
-
-函数说明：释放由 `addTable` 添加的表所占用的资源。第一次调用该函数，该函数返回即表示后台线程已退出。
-
-```Python
-getUnwrittenData(dbPath="", tableName="")
-```
-
-函数说明：获取还未写入的数据。写入出现错误时，用于获取剩下未写入的数据。这些未写入的数据不会尝试重写，若需要重新写入，则调用 insert 函数。
-
-```Python
-getStatus(dbPath="", tableName="")
-```
-
-函数说明：返回值是由一个整型和两个布尔型组合的元组，分别表示当前写入队列的深度、当前表是否被移除（true: 表示正在被移除），以及后台写入线程是否因为出错而退出（true: 表示后台线程因出错而退出）。
-
-```Python
-getAllStatus()
-```
-
-函数说明：获取所有当前存在的表的信息，不包含被移除的表。
-该函数的返回的值可以参考下表：
-
-| DatabaseName | TableName | WriteQueueDepth | sendedRows | Removing | Finished |
-| ------------ | --------- | --------------- | ---------- | -------- | -------- |
-| 0            | tglobal   | 0               | 5          | False    | False    |
-
-具体调用 `BatchTableWriter` 插入数据的方法，可以参考以下示例：
-
-```python
-import numpy as np
-import pandas as pd
-import dolphindb as ddb
-import time
-s = ddb.session()
-s.connect("localhost", 8848, "admin", "123456")
-
-script = """t = table(1000:0,`id`date`ticker`price, [INT,DATE,SYMBOL,DOUBLE])
-share t as tglobal"""
-s.run(script)
-
-writer = ddb.BatchTableWriter("localhost", 8848)
-writer.addTable(tableName="tglobal")
-writer.insert("","tglobal", 1, np.datetime64("2019-01-01"),'AAPL', 5.6)
-writer.insert("","tglobal", 2, np.datetime64("2019-01-01"),'GOOG', 8.3)
-writer.insert("","tglobal", 3, np.datetime64("2019-01-02"),'GOOG', 4.2)
-writer.insert("","tglobal", 4, np.datetime64("2019-01-03"),'AMZN', 1.4)
-writer.insert("","tglobal", 5, np.datetime64("2019-01-05"),'AAPL', 6.9)
-
-print(writer.getUnwrittenData(dbPath="", tableName="tglobal"))
-print(writer.getStatus(tableName="tglobal"))
-print(writer.getAllStatus())
-
-print("rows:", s.run("tglobal.rows()"))
-print(s.run("select * from tglobal"))
-```
-
-#### 6.8.2 MultithreadedTableWriter
+#### 6.8.1 MultithreadedTableWriter
 
 `MultithreadedTableWriter` 是对 `BatchTableWriter` 的升级，它的默认功能和 `BatchTableWriter` 一致，但 `MultithreadedTableWriter` 支持多线程的并发写入。
 
 `MultithreadedTableWriter` 对象及主要方法介绍如下：
 
 ```Python
-MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL, enableHighAvailability, highAvailabilitySites, batchSize, throttle, threadCount, partitionCol, compressMethods, mode, modeOption)
+MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL=False, enableHighAvailability=False, highAvailabilitySites=[], batchSize=1, throttle=1, threadCount=1, partitionCol="", compressMethods=[], mode="", modeOption=[])
 ```
 
 参数说明：
@@ -2464,6 +2361,113 @@ writer.waitForThreadCompletion()
 status=writer.getStatus()
 print("test exit",status)
 ```
+#### 6.8.2 BatchTableWriter (不推荐使用)
+
+`BatchTableWriter` 对象及主要方法介绍如下：
+
+```Python
+BatchTableWriter(host, port, userid, password, acquireLock=True)
+```
+参数说明：
+
+* **host** 连接服务器的 IP 地址。
+* **port** 连接服务器的端口号。
+* **userid** 是字符串，表示连接服务器的用户名。
+* **password** 是字符串，表示连接服务器的密码。
+* **acquireLock** 是布尔值，表示在使用过程中，API 内部是否需要加锁。默认为 true, 表示需要加锁。在并发调用 API 的场景下，建议加锁。
+
+以下是 `BatchTableWriter` 对象包含的函数方法介绍：
+
+```Python
+addTable(dbPath="", tableName="", partitioned=True)
+```
+
+函数说明：添加一个写入的表。
+参数说明：
+
+* **dbName**: 当为磁盘表时，需填写数据库名；若为空，则表示内存表。
+* **tableName**: 数据表的表名。
+* **partitioned**: 表示添加的表是否为分区表。设置为 true 表示是分区表。如果添加的表是磁盘未分区表，必需设置 *partitioned* 为 false.
+
+注意:
+
+* 如果添加的是内存表，需要 share 该表。
+* 表名不可重复添加，需要先移除之前添加的表，否则会抛出异常。
+
+```Python
+insert(dbPath="", tableName="", *args)
+```
+
+函数说明：插入单行数据。
+参数说明：
+
+* **args**：是变长参数，代表插入的一行数据。
+
+注意：
+
+* 调用 `insert` 前需先调用 `addTable` 添加表，否则会抛出异常。
+* 变长参数个数和数据类型需要与 `insert` 表的列数及类型匹配。
+* 如果插入过程出现异常导致后台线程退出，再次调用 `insert` 会抛出异常，可以调用 `getUnwrittenData` 来获取之前所有写入缓冲队列但是没有成功写入服务器的数据（不包括本次 `insert` 的数据），然后再 `removeTable`。如果需要再次插入数据，需要重新调用 `addTable`。
+* 在移除该表的过程中调用本函数，仍然能够插入成功，但这些插入的数据并不会发送到服务器。移除该表的时候调用 `insert` 算是未定义行为，不建议这样写程序。
+
+```Python
+removeTable(dbPath="", tableName="")
+```
+
+函数说明：释放由 `addTable` 添加的表所占用的资源。第一次调用该函数，该函数返回即表示后台线程已退出。
+
+```Python
+getUnwrittenData(dbPath="", tableName="")
+```
+
+函数说明：获取还未写入的数据。写入出现错误时，用于获取剩下未写入的数据。这些未写入的数据不会尝试重写，若需要重新写入，则调用 insert 函数。
+
+```Python
+getStatus(dbPath="", tableName="")
+```
+
+函数说明：返回值是由一个整型和两个布尔型组合的元组，分别表示当前写入队列的深度、当前表是否被移除（true: 表示正在被移除），以及后台写入线程是否因为出错而退出（true: 表示后台线程因出错而退出）。
+
+```Python
+getAllStatus()
+```
+
+函数说明：获取所有当前存在的表的信息，不包含被移除的表。
+该函数的返回的值可以参考下表：
+
+| DatabaseName | TableName | WriteQueueDepth | sendedRows | Removing | Finished |
+| ------------ | --------- | --------------- | ---------- | -------- | -------- |
+| 0            | tglobal   | 0               | 5          | False    | False    |
+
+具体调用 `BatchTableWriter` 插入数据的方法，可以参考以下示例：
+
+```python
+import numpy as np
+import pandas as pd
+import dolphindb as ddb
+import time
+s = ddb.session()
+s.connect("localhost", 8848, "admin", "123456")
+
+script = """t = table(1000:0,`id`date`ticker`price, [INT,DATE,SYMBOL,DOUBLE])
+share t as tglobal"""
+s.run(script)
+
+writer = ddb.BatchTableWriter("localhost", 8848)
+writer.addTable(tableName="tglobal")
+writer.insert("","tglobal", 1, np.datetime64("2019-01-01"),'AAPL', 5.6)
+writer.insert("","tglobal", 2, np.datetime64("2019-01-01"),'GOOG', 8.3)
+writer.insert("","tglobal", 3, np.datetime64("2019-01-02"),'GOOG', 4.2)
+writer.insert("","tglobal", 4, np.datetime64("2019-01-03"),'AMZN', 1.4)
+writer.insert("","tglobal", 5, np.datetime64("2019-01-05"),'AAPL', 6.9)
+
+print(writer.getUnwrittenData(dbPath="", tableName="tglobal"))
+print(writer.getStatus(tableName="tglobal"))
+print(writer.getAllStatus())
+
+print("rows:", s.run("tglobal.rows()"))
+print(s.run("select * from tglobal"))
+```
 ### 6.9 从 Python 上传数据到 DolphinDB 时的数据转换
 
 上传数据时，建议使用 `MultithreadedTableWriter` 以支持更广泛的数据类型和数据形式。
@@ -2611,7 +2615,9 @@ if __name__=="__main__":
     print(end - start)
 ```
 
-`DBConnectionPool` 的 `runTaskAsyn` 方法，可以实现异步任务的并行调用。通过调用 `runTaskAsyn` 添加任务，返回一个 concurrent.futures.Future 对象。可以调用这个对象的 result(timeout=None) 方法获得结果（timeout 单位为秒）。在 result() 方法中设置了 timeout 参数，如果任务还未完成，则继续等待 timeout 时间；在 timeout 时间任务完成，则将结果返回，否则抛出 timeoutError。
+`DBConnectionPool` 提供 `run` 和 `runTaskAsync` 两种方法运行脚本。`run` 以同步方式运行脚本，更多介绍，参见[运行 DolphinDB 函数](#13-运行-dolphindb-函数)。而 `runTaskAsync` 可以以异步方式执行脚本，以实现并行运行脚本。本节重点介绍 `runTaskAsync` 方法。通过调用 `runTaskAsync` 添加任务，返回一个 concurrent.futures.Future 对象。可以调用这个对象的 result(timeout=None) 方法获得结果（timeout 单位为秒）。在 result() 方法中设置了 timeout 参数，如果任务还未完成，则继续等待 timeout 时间；在 timeout 时间任务完成，则将结果返回，否则抛出 timeoutError。
+
+下例演示使用协程将任务并行运行。
 
 ```python
 import dolphindb as ddb
@@ -2619,10 +2625,10 @@ import time
 pool = ddb.DBConnectionPool("localhost", 8848, 10)
 
 t1 = time.time()
-task1 = pool.runTaskAsyn("sleep(1000); 1+0");
-task2 = pool.runTaskAsyn("sleep(2000); 1+1");
-task3 = pool.runTaskAsyn("sleep(4000); 1+2");
-task4 = pool.runTaskAsyn("sleep(1000); 1+3");
+task1 = pool.runTaskAsync("sleep(1000); 1+0");
+task2 = pool.runTaskAsync("sleep(2000); 1+1");
+task3 = pool.runTaskAsync("sleep(4000); 1+2");
+task4 = pool.runTaskAsync("sleep(1000); 1+3");
 t2 = time.time()
 print(task1.result())
 t3 = time.time()
@@ -2639,6 +2645,8 @@ print(t5-t1)
 print(t6-t1)
 pool.shutDown()
 ```
+
+也可以参见 [run 传参示例](#131-传参)，以同步方式为 `runTaskAsync` 传参。
 
 ## 8 数据库和表操作
 
@@ -4150,3 +4158,15 @@ Python 中的空值包括 None， pd.NaT 和 np.nan。DolphinDB Python API 上�
 |np.NaN 与 pd.NaT 组合              |datetime64 |NANOTIMESTAMP      |
 |None, np.NaN 与 pd.NaT 组合        |datetime64 |NANOTIMESTAMP      |
 |None, pd.NaT 或 np.nan 与非空值组合|未知       |非空值类型          |
+
+## 14 其它功能
+
+### 14.1 强制终止进程
+
+session 对象中提供静态 `enableJobCancellation()` 方法，用于开启强制终止进程的功能。此功能默认关闭。开启后，可通过 “Ctrl+C” 按键终止 API 进程中所有 session 提交的正在运行的作业。目前，该功能仅在 Linux 系统生效。
+
+示例：
+
+```
+ddb.session.enableJobCancellation()
+```
