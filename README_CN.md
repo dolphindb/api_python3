@@ -6,7 +6,7 @@
 | :------------ | :--------------------------------------- |
 | Windows(amd64)| Python 3.6-3.9                           |
 | Linux(x86_64) | Python 3.6-3.9                           |
-| Linux(aarch64)| Conda 环境下的 Python 3.6-3.9            |
+| Linux(aarch64)| Conda 环境下的 Python 3.7-3.9            |
 | Mac(x86_64)   | Conda 环境下的 Python 3.6-3.9            |
 | Mac(arm64)    | Conda 环境下的 Python 3.8-3.9            |
 
