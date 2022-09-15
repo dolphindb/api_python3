@@ -3545,7 +3545,7 @@ The deserialized data is returned in the form of a list.
 
 <!--For more information about how to construct heterogeneous stream table, see .-->
 
-#### 10.3.2 Subscribe to a Heterogeneous Table
+#### 10.3.2 Subscribe to a Heterogeneous Stream Table
 
 Here’s an example:
 
