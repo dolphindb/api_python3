@@ -10,13 +10,33 @@ DolphinDB Python API runs on the following operating systems:
 | Mac(x86-64)      | Python 3.6-3.9 in conda environment            |
 | Mac(arm64)       | Python 3.8-3.9 in conda environment            |
 
-Note: DolphinDB Python API does not support pandas 1.3.0 as it will cause deserialization errors.
+DolphinDB Python API has these library dependencies: 
 
-Please install DolphinDB Python API with the following command:
+- future 
+- NumPy 1.18 - 1.22.3 
+- pandas 0.25.1 or higher (version 1.3.0 is not supported)
+
+Install DolphinDB Python API with the following command:
 ```Console
 $ pip install dolphindb
 ```
 
+If the installation of *dolphindb* fails or it cannot be imported after installation, try the following steps:
+
+1. Search for the *dolphindb* wheel that runs on your current operating system (e.g., Linux ARM, Mac M1, etc.) on [PyPI](https://pypi.org/project/dolphindb/#files). Download the wheel (*.whl* file) to your local system.
+2. Enter the following command in the terminal:
+
+```
+pip debug --verbose
+```
+
+The `Compatible tags` section indicates which distributions are compatible with your system.
+
+3. Rename the downloaded *dolphindb* wheel according to the compatibility tags. For example, the file name for Mac(x86_64) is “dolphindb-1.30.19.2-cp37-cp37m-macosx_10_16_x86_64.whl“. If the compatibility tags show that the system version supported by pip is 10.13, then replace the “10_16“ in the original filename with “10_13“.
+
+4. Install the renamed wheel.
+
+If the installation or import still fails, please post your question on [StackOverflow ](https://stackoverflow.com/questions/tagged/dolphindb)with the “dolphindb“ tag. We will get back to you soon.
 
 - [Python API for DolphinDB](#python-api-for-dolphindb)
   - [1 Execute DolphinDB Scripts and Functions](#1-execute-dolphindb-scripts-and-functions)
@@ -707,7 +727,17 @@ If a Python variable is used only once at DolphinDB server, it is recommended to
 
 ## 3 Create DolphinDB Databases and Tables
 
-You can use DolphinDB Python API methods or `run` method to create DolphinDB databases and tables in Python. 
+There are two ways to create DolphinDB databases and tables through Python API: 
+
+- Using the native API method `s.database`, which returns a Database object
+- Using the `run` method
+
+To create a DFS table in the database, use the following methods of the Database class:
+
+| **Method**                                                   | **Description**                                              |
+| :----------------------------------------------------------- | :----------------------------------------------------------- |
+| createTable(table, tableName, sortColumns=None)              | Create a dimension (non-partitioned) table in a distributed database. Return a table object. A dimension table is used to store small datasets with infrequent updates. |
+| createPartitionedTable(table, tableName, partitionColumns,                               compressMethods={}, sortColumns=None, keepDuplicates=None, sortKeyMappingFunction=None) | Create a partitioned table in a distributed database. Return a table object. |
 
 ### 3.1 DolphinDB Python API Methods
 
@@ -3867,4 +3897,16 @@ For example:
 
 ```
 ddb.session.enableJobCancellation()
+```
+
+### 14.2 Setting TCP Timeout
+
+Use the static method `setTimeOut` to specify the maximum amount of time (in seconds) that transmitted data packets may remain unacknowledged (equivalent to the TCP_USER_TIMEOUT option) before TCP forcibly closes the connection. The default value is 30. If the value is specified as 0, TCP will use the system default. 
+
+This method is only available on Linux.
+
+Example
+
+```
+ddb.session.setTimeout(60)
 ```
