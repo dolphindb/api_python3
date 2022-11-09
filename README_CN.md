@@ -10,28 +10,32 @@
 | Mac(x86_64)   | Conda 环境下的 Python 3.6-3.9            |
 | Mac(arm64)    | Conda 环境下的 Python 3.8-3.9            |
 
-注意：DolphinDB Python API 暂不支持 pandas 1.3.0 版本。
+注意：DolphinDB Python API 需要以下依赖库：future, numpy 和 pandas。其中 numpy 版本号范围为1.18~1.22.3，pandas 版本号须不小 0.25.1（1.3.0 不支持）。
 
-通过执行如下指令进行安装：
+通过如下指令进行安装：
 
 ```Console
 $ pip install dolphindb
 ```
+若安装失败，或安装成功后无法导入 dolphindb 包，可尝试通过以下方法解决：
+
+1. 通过 [PyPI](https://pypi.org/) 确认是否存在支持当前操作系统（例如Linux arm架构、Mac M1等）的 DolphinDB API 安装包。若存在，则将该 whl 包下载至本地。
+2. 通过如下命令查看适合当前系统环境支持的 whl 包后缀。
+   ```
+   pip debug --verbose
+   ```
+3. 根据 Compatible tags 的显示信息，将 DolphinDB 的 whl 包名修改为适合系统架构的名称。以 Mac(x86_64) 系统为例：安装包名为”dolphindb-1.30.19.2-cp37-cp37m-macosx_10_16_x86_64.whl“。但查询到 pip 支持的当前系统版本为10.13，则使用”10_13“替换 whl 包名中的”10_16“。
+4. 尝试安装更名后的 whl 包。
+
+若执行完上述操作后，仍无法安装或导入，可在 [DolphinDB 社区](https://ask.dolphindb.net)中进行反馈。
 
 本教程目录如下：
 
 - [Python API for DolphinDB](#python-api-for-dolphindb)
   - [1 运行 DolphinDB 脚本及调用函数](#1-运行-dolphindb-脚本及调用函数)
     - [1.1 建立 DolphinDB 连接](#11-建立-dolphindb-连接)
-    - [connect](#connect)
-      - [SSL（加密）模式](#ssl加密模式)
-      - [异步模式](#异步模式)
-      - [压缩模式](#压缩模式)
     - [1.2 运行 DolphinDB 脚本](#12-运行-dolphindb-脚本)
     - [1.3 运行 DolphinDB 函数](#13-运行-dolphindb-函数)
-      - [1.3.1 传参](#131-传参)
-      - [1.3.2 参数支持的数据类型与数据结构](#132-参数支持的数据类型与数据结构)
-    - [1.4 Session 方法 `undef` 与内存释放的关系](#14-session-方法-undef-与内存释放的关系)
     - [1.5 查询完毕后自动清除变量](#15-查询完毕后自动清除变量)
   - [2 上传本地对象到 DolphinDB 服务器](#2-上传本地对象到-dolphindb-服务器)
     - [2.1 使用 Session 的 upload 方法上传](#21-使用-session-的-upload-方法上传)
@@ -39,30 +43,16 @@ $ pip install dolphindb
     - [2.3 上传的数据表的生命周期](#23-上传的数据表的生命周期)
   - [3 创建 DolphinDB 数据库以及分区表](#3-创建-dolphindb-数据库以及分区表)
     - [3.1 使用 DolphinDB Python API 的原生方法](#31-使用-dolphindb-python-api-的原生方法)
-      - [3.1.1 创建基于 VALUE 分区的数据库及数据表](#311-创建基于-value-分区的数据库及数据表)
-      - [3.1.2 创建基于 RANGE 分区的数据库及数据表](#312-创建基于-range-分区的数据库及数据表)
-      - [3.1.3 创建基于 LIST 分区的数据库及数据表](#313-创建基于-list-分区的数据库及数据表)
-      - [3.1.4 创建基于 HASH 分区的数据库及数据表](#314-创建基于-hash-分区的数据库及数据表)
-      - [3.1.5 创建基于 COMPO 分区的数据库及数据表](#315-创建基于-compo-分区的数据库及数据表)
-      - [3.1.6 创建 TSDB 引擎下的数据库](#316-创建-tsdb-引擎下的数据库)
     - [3.2 使用 `run` 方法创建](#32-使用-run-方法创建)
   - [4 导入数据到 DolphinDB 数据库](#4-导入数据到-dolphindb-数据库)
     - [4.1 导入内存表](#41-导入内存表)
     - [4.2 导入 DFS 分区表](#42-导入-dfs-分区表)
-      - [4.2.1 创建分区数据库](#421-创建分区数据库)
-      - [4.2.2 创建分区表，并导入数据到表中](#422-创建分区表并导入数据到表中)
     - [4.3 导入内存分区表](#43-导入内存分区表)
-      - [4.3.1 使用 `loadTextEx`](#431-使用-loadtextex)
-      - [4.3.2 使用 `ploadText`](#432-使用-ploadtext)
-      - [4.3.3 分布式表的并发写入](#433-分布式表的并发写入)
   - [5 从 DolphinDB 数据库中加载数据](#5-从-dolphindb-数据库中加载数据)
     - [5.1 使用 `loadTable` 函数](#51-使用-loadtable-函数)
     - [5.2 使用 `loadTableBySQL` 函数](#52-使用-loadtablebysql-函数)
     - [5.3 支持分段读取数据库表](#53-支持分段读取数据库表)
     - [5.4 从 DolphinDB 下载数据到 Python 时的数据转换](#54-从-dolphindb-下载数据到-python-时的数据转换)
-      - [5.4.1 数据形式的转换](#541-数据形式的转换)
-      - [5.4.2 数据类型的转换](#542-数据类型的转换)
-      - [5.4.3 缺失值处理](#543-缺失值处理)
   - [6 追加数据到 DolphinDB 数据表](#6-追加数据到-dolphindb-数据表)
     - [6.1 使用 `tableInsert` 函数追加多个 List 到内存表](#61-使用-tableinsert-函数追加多个-list-到内存表)
     - [6.2 使用 `tableInsert` 函数追加 DataFrame 到内存表](#62-使用-tableinsert-函数追加-dataframe-到内存表)
@@ -72,55 +62,31 @@ $ pip install dolphindb
     - [6.6 追加数据到分布式表](#66-追加数据到分布式表)
     - [6.7 异步追加数据](#67-异步追加数据)
     - [6.8 批量异步追加数据](#68-批量异步追加数据)
-      - [6.8.1 MultithreadedTableWriter](#681-multithreadedtablewriter)
-      - [6.8.2 BatchTableWriter (不推荐使用)](#682-batchtablewriter-不推荐使用)
     - [6.9 从 Python 上传数据到 DolphinDB 时的数据转换](#69-从-python-上传数据到-dolphindb-时的数据转换)
   - [7 多线程调用线程池对象](#7-多线程调用线程池对象)
   - [8 数据库和表操作](#8-数据库和表操作)
     - [8.1 数据库和表的操作方法说明](#81-数据库和表的操作方法说明)
     - [8.2 数据库操作](#82-数据库操作)
-      - [8.2.1 创建数据库](#821-创建数据库)
-      - [8.2.2 删除数据库](#822-删除数据库)
-      - [8.2.3 删除 DFS 数据库的分区](#823-删除-dfs-数据库的分区)
     - [8.3 表操作](#83-表操作)
-      - [8.3.1 加载数据库中的表](#831-加载数据库中的表)
-      - [8.3.2 添加数据到数据表](#832-添加数据到数据表)
     - [8.3.3 更新表](#833-更新表)
-      - [8.3.4 删除表中的记录](#834-删除表中的记录)
-      - [8.3.5 删除表中的列](#835-删除表中的列)
-      - [8.3.6 删除表](#836-删除表)
   - [9 SQL 查询](#9-sql-查询)
     - [9.1 `select`](#91-select)
-      - [9.1.1 使用一系列的列名作为输入内容](#911-使用一系列的列名作为输入内容)
-      - [9.1.2 使用字符串作为输入内容](#912-使用字符串作为输入内容)
     - [9.2 `exec`](#92-exec)
     - [9.3 `top` & `limit`](#93-top--limit)
     - [9.4 `where`](#94-where)
-      - [9.4.1 多个条件过滤](#941-多个条件过滤)
-      - [9.4.2 使用字符串作为输入内容](#942-使用字符串作为输入内容)
     - [9.5 `groupby`](#95-groupby)
     - [9.6 `contextby`](#96-contextby)
     - [9.7 pivotby](#97-pivotby)
     - [9.8 表连接](#98-表连接)
-      - [9.8.1 `merge`](#981-merge)
-      - [9.8.2 `merge_asof`](#982-merge_asof)
-      - [9.8.3 `merge_window`](#983-merge_window)
     - [9.9 `executeAs`](#99-executeas)
     - [9.10 回归运算](#910-回归运算)
   - [10 Python Streaming API](#10-python-streaming-api)
     - [10.1 指定订阅端口号](#101-指定订阅端口号)
     - [10.2 订阅与反订阅](#102-订阅与反订阅)
-      - [10.2.1 使用订阅函数](#1021-使用订阅函数)
       - [10.2.2 获取订阅主题](#1022-获取订阅主题)
       - [10.2.3 取消订阅](#1023-取消订阅)
-      - [10.2.4 流数据订阅实例](#1024-流数据订阅实例)
     - [10.3 订阅异构流表](#103-订阅异构流表)
-      - [10.3.1 异构流表反序列化器](#1031-异构流表反序列化器)
-      - [10.3.2 订阅异构流表](#1032-订阅异构流表)
     - [10.4 流数据应用](#104-流数据应用)
-      - [10.4.1 使用 Python 接收实时数据，并写入 DolphinDB 流数据表](#1041-使用-python-接收实时数据并写入-dolphindb-流数据表)
-      - [10.4.2 实时计算 K 线](#1042-实时计算-k-线)
-      - [10.4.3 在 Python 中展示 K 线数据](#1043-在-python-中展示-k-线数据)
   - [11 更多实例](#11-更多实例)
     - [11.1 动量交易策略](#111-动量交易策略)
     - [11.2 时间序列计算](#112-时间序列计算)
@@ -128,6 +94,7 @@ $ pip install dolphindb
   - [13 DolphinDB 空值处理规则](#13-dolphindb-空值处理规则)
   - [14 其它功能](#14-其它功能)
     - [14.1 强制终止进程](#141-强制终止进程)
+    - [14.2 设置 TCP 连接超时时间](#142-设置-tcp-连接超时时间)
 
 ## 1 运行 DolphinDB 脚本及调用函数
 
@@ -163,7 +130,7 @@ s.connect("localhost", 8848)
 True
 ```
 
-### connect
+#### connect <!-- omit in toc -->
 
 ```
 connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect])
@@ -177,6 +144,8 @@ connect(host,port,[username,password, startup, highAvailability, highAvailabilit
 * **reconnect**：该参数仅在指定 *highAvailability* = False 时有效。若设置 *reconnect* = True，则 API 在检测到连接异常时，会尝试进行重连。
 
 高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，不能保证连接的负载均衡。
+
+高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，因为服务器响应存在时间差，不能保证连接的负载均衡。
 
 如果需要使用用户名和密码连接，可使用以下脚本。其中 "admin" 为 DolphinDB 默认的管理员用户名，"123456" 为密码。
 
@@ -211,7 +180,7 @@ s.connect("localhost", 8848)
 print(s.getSessionId())
 ```
 
-#### SSL（加密）模式
+#### SSL（加密）模式 <!-- omit in toc -->
 
 server 1.10.17 与 1.20.6 版本之后创建会话时，支持加密通讯参数 *enableSSL*，默认值为 False。
 
@@ -221,7 +190,7 @@ server 1.10.17 与 1.20.6 版本之后创建会话时，支持加密通讯参数
 s=ddb.session(enableSSL=True)
 ```
 
-#### 异步模式
+#### 异步模式 <!-- omit in toc -->
 
 server 1.10.17, 1.20.6 版本之后开始支持异步通讯参数 *enableASYNC*，默认值为 False。
 
@@ -231,7 +200,7 @@ server 1.10.17, 1.20.6 版本之后开始支持异步通讯参数 *enableASYNC*�
 s=ddb.session(enableASYNC=True)
 ```
 
-#### 压缩模式
+#### 压缩模式 <!-- omit in toc -->
 
 server 1.30.6 版本之后开始支持压缩参数 *compress*，默认值为 False。
 
@@ -280,7 +249,7 @@ s.run("getTypeStr", 1)
 
 除了运行脚本之外，`run` 命令可以直接在远程 DolphinDB 服务器上执行 DolphinDB 内置或用户自定义函数。对这种用法，`run` 方法的第一个参数是 DolphinDB 中的函数名，之后的参数是该函数的参数。
 
-#### 1.3.1 传参
+#### 1.3.1 传参 <!-- omit in toc -->
 
 下面的示例展示 Python 程序通过 `run` 调用 DolphinDB 内置的 `add` 函数。`add` 函数有 x 和 y 两个参数。根据参数是否已在 DolphinDB server 端被赋值，有以下三种调用方式：
 
@@ -343,7 +312,7 @@ result.dtype
 dtype('float64')
 ```
 
-#### 1.3.2 参数支持的数据类型与数据结构
+#### 1.3.2 参数支持的数据类型与数据结构 <!-- omit in toc -->
 
 通过 `run` 调用 DolphinDB 的内置函数时，客户端上传参数的数据结构可以是标量 (scalar)，列表 (list)，字典 (dict)，NumPy 的对象，pandas 的 DataFrame 和 Series 等等。
 
@@ -482,7 +451,7 @@ dtype('float64')
     4  3  2019-02-07  0.1
     ```
 
-### 1.4 Session 方法 `undef` 与内存释放的关系
+### 1.4 Session 方法 `undef` 与内存释放的关系 <!-- omit in toc -->
 
 `undef` 方法释放 session 中的指定对象；`undefAll` 方法释放 session 中的全部对象。`undef` 支持的对象类型包括："VAR"(变量)、"SHARED"(共享变量) 与 "DEF"(函数定义)。默认类型为变量 "VAR"。"SHARED" 指内存中跨 session 的共享变量，例如流数据表。
 
@@ -803,7 +772,14 @@ print(pt1.tableName())
 
 ## 3 创建 DolphinDB 数据库以及分区表
 
-在 Python API 中创建 DolphinDB 数据库可以使用 DolphinDB Python API 的原生方法或 `run` 方法。
+Python API 中，通过 s.database 在 DolphinDB 中创建数据库，返回一个 Database 类的实例化对象。使用 Database 类的如下两种方法，便可通过 Python 脚本在 DolphinDB 中创建分区表：
+
+| 方法名                                                   |详情                                                                    |
+|----------------------------------------------------------|------------------------------------------------------------------------|
+|createTable(table, tableName, sortColumns=None)           |在分布式数据库中创建一个维度表（未分区）。返回一个 Table 表对象。<br>维度表适用于存储不频繁更新的小数据集。|
+|createPartitionedTable(table, tableName, partitionColumns, compressMethods={}, sortColumns=None,                               keepDuplicates=None, sortKeyMappingFunction=None)|在分布式数据库中创建一个分区表。返回一个 Table 表对象。 |
+
+可以使用 DolphinDB Python API 的原生方法或 `run` 方法，创建 DolphinDB 数据库。本章将分别介绍两种建库及各种建表方法。
 
 ### 3.1 使用 DolphinDB Python API 的原生方法
 
@@ -815,7 +791,7 @@ import pandas as pd
 import dolphindb.settings as keys
 ```
 
-#### 3.1.1 创建基于 VALUE 分区的数据库及数据表
+#### 3.1.1 创建基于 VALUE 分区的数据库及数据表 <!-- omit in toc -->
 
 按 date 分区：
 
@@ -845,7 +821,7 @@ db.createPartitionedTable(table=t, tableName='pt', partitionColumns='date').appe
 re=s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-#### 3.1.2 创建基于 RANGE 分区的数据库及数据表
+#### 3.1.2 创建基于 RANGE 分区的数据库及数据表 <!-- omit in toc -->
 
 按 INT 类型 id 分区：
 
@@ -860,7 +836,7 @@ db.createPartitionedTable(table=t, tableName='pt', partitionColumns='id').append
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-#### 3.1.3 创建基于 LIST 分区的数据库及数据表
+#### 3.1.3 创建基于 LIST 分区的数据库及数据表 <!-- omit in toc -->
 
 按 SYMBOL 类型的股票代码分区：
 
@@ -875,7 +851,7 @@ db.createPartitionedTable(table=t, tableName='pt', partitionColumns='sym').appen
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-#### 3.1.4 创建基于 HASH 分区的数据库及数据表
+#### 3.1.4 创建基于 HASH 分区的数据库及数据表 <!-- omit in toc -->
 
 按 INT 类型 id 分区：
 
@@ -891,7 +867,7 @@ pt.append(t)
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-#### 3.1.5 创建基于 COMPO 分区的数据库及数据表
+#### 3.1.5 创建基于 COMPO 分区的数据库及数据表 <!-- omit in toc -->
 
 以下脚本创建基于 COMPO 分区的数据库及数据表：第一层是基于 VALUE 的 date 类型分区，第二层是基于 RANGE 的 int 类型分区。
 
@@ -910,7 +886,7 @@ db.createPartitionedTable(table=t, tableName='pt', partitionColumns=['date', 'va
 re = s.loadTable(tableName='pt', dbPath=dbPath).toDF()
 ```
 
-#### 3.1.6 创建 TSDB 引擎下的数据库
+#### 3.1.6 创建 TSDB 引擎下的数据库 <!-- omit in toc -->
 
 TSDB 引擎数据库的创建方法和 OLAP 几乎一致，只需要在 database 函数中指定 engine = "TSDB"，并在调用建表函数 createTable，createPartitionedTable 时指定 sortColumns。 函数参数介绍请参见用户手册 [database](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/d/database.html), [createPartitionedTable](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/c/createPartitionedTable.html) 和 [createTable](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/c/createTable.html)。
 
@@ -1071,7 +1047,7 @@ t1=s.loadText(WORK_DIR+"/t1.tsv", '\t')
 
 如果需要持久保存导入数据，或者需要导入的文件超过可用内存，可将数据导入 DFS 分区数据库。
 
-#### 4.2.1 创建分区数据库
+#### 4.2.1 创建分区数据库 <!-- omit in toc -->
 
 本节例子中会使用数据库 valuedb。首先检查该数据库是否存在，如果存在，将其删除：
 
@@ -1093,7 +1069,7 @@ s.database(dbName='mydb', partitionType=keys.VALUE, partitions=['AMZN','NFLX', '
 
 创建了分区数据库后，不可更改分区类型，一般亦不可更改分区方案，但是值分区或范围分区（或者复合分区中的值分区或范围分区）创建后，DolphinDB 中可以分别使用 `addValuePartitions` 与 `addRangePartitions` 函数添加分区。
 
-#### 4.2.2 创建分区表，并导入数据到表中
+#### 4.2.2 创建分区表，并导入数据到表中 <!-- omit in toc -->
 
 创建 DFS 数据库后，可使用函数 `loadTextEx` 把文本文件导入到分区数据库的分区表中。如果分区表不存在，函数会自动生成该分区表并把数据追加到表中。如果分区表已经存在，则直接把数据追加到分区表中。
 
@@ -1163,7 +1139,7 @@ trade = s.table(dbPath="dfs://valuedb", data="trade")
 
 ### 4.3 导入内存分区表
 
-#### 4.3.1 使用 `loadTextEx`
+#### 4.3.1 使用 `loadTextEx` <!-- omit in toc -->
 
 `database` 函数中，若将 dbPath 参数设为空字符串，可创建内存分区数据库。由于内存分区表可进行并行计算，因此对它进行操作比对内存未分区表进行操作要快。
 
@@ -1178,7 +1154,7 @@ trade=s.loadTextEx(dbPath="mydb", partitionColumns=["TICKER"], tableName='trade'
 trade.toDF()
 ```
 
-#### 4.3.2 使用 `ploadText`
+#### 4.3.2 使用 `ploadText` <!-- omit in toc -->
 
 `ploadText` 函数可以并行加载文本文件到内存分区表中。它的加载速度要比 `loadText` 函数快。
 
@@ -1190,7 +1166,7 @@ print(trade.rows)
 13136
 ```
 
-#### 4.3.3 分布式表的并发写入
+#### 4.3.3 分布式表的并发写入 <!-- omit in toc -->
 
 DolphinDB 的分布式表支持并发写入。下面介绍如何在 python 客户端中将数据并发写入 DolphinDB 的分布式表。
 
@@ -1370,7 +1346,7 @@ s.run("1 + 1") // 若没有调用 skipAll，执行此代码会抛出异常。
 
 ### 5.4 从 DolphinDB 下载数据到 Python 时的数据转换
 
-#### 5.4.1 数据形式的转换
+#### 5.4.1 数据形式的转换 <!-- omit in toc -->
 
 DolphinDB Python API 使用 Python 原生的各种形式的数据对象来存放 DolphinDB 服务端返回的数据。下面给出从 DolphinDB 的数据对象到 Python 的数据对象的映射关系。
 
@@ -1385,7 +1361,7 @@ DolphinDB Python API 使用 Python 原生的各种形式的数据对象来存放
 |dictionary|Dictionaries|dict(['IBM','MS','ORCL'], 170.5 56.2 49.5)|{'MS': 56.2, 'IBM': 170.5, 'ORCL': 49.5}|
 |table|pandas.DataFame | 见 [第 6.1 小节](#61-使用-loadtable-函数)| 见 [第 6.1 小节](#61-使用-loadtable-函数)|
 
-#### 5.4.2 数据类型的转换
+#### 5.4.2 数据类型的转换 <!-- omit in toc -->
 
 下表展示了从 DolphinDB 数据库中通过 `toDF()` 函数下载数据到 Python 时数据类型的转换。需要指出的是：
 
@@ -1417,7 +1393,7 @@ DolphinDB Python API 使用 Python 原生的各种形式的数据对象来存放
 | IPADDR        | object     | 192.168.1.13                             | "192.168.1.13"                         |
 | INT128        | object     | e1671797c52e15f763380b45e841ec32         | "e1671797c52e15f763380b45e841ec32"     |
 
-#### 5.4.3 缺失值处理
+#### 5.4.3 缺失值处理 <!-- omit in toc -->
 
 从 DolphinDB 下载数据到 Python，并使用 `toDF()` 方法把 DolphinDB 数据转换为 Python 的 DataFrame 时，DolphinDB 中的逻辑型、数值型和时序类型的 NULL 值默认情况下转换为 NaN 或 NaT，字符串的 NULL 值转换为空字符串。
 
@@ -1898,7 +1874,7 @@ s.run("appendStreamingData(tb)")
 * API 客户端提交任务到缓冲队列，缓冲队列接到任务后，客户端即认为任务已完成。
 * 提供 `getStatus` 等接口查看状态。
 
-#### 6.8.1 MultithreadedTableWriter
+#### 6.8.1 MultithreadedTableWriter <!-- omit in toc -->
 
 `MultithreadedTableWriter` 是对 `BatchTableWriter` 的升级，它的默认功能和 `BatchTableWriter` 一致，但 `MultithreadedTableWriter` 支持多线程的并发写入。
 
@@ -2359,7 +2335,7 @@ writer.waitForThreadCompletion()
 status=writer.getStatus()
 print("test exit",status)
 ```
-#### 6.8.2 BatchTableWriter (不推荐使用)
+#### 6.8.2 BatchTableWriter (不推荐使用) <!-- omit in toc -->
 
 `BatchTableWriter` 对象及主要方法介绍如下：
 
@@ -2810,7 +2786,7 @@ s.run(db_script)
 
 ### 8.2 数据库操作
 
-#### 8.2.1 创建数据库
+#### 8.2.1 创建数据库 <!-- omit in toc -->
 
 使用 `database` 创建分区数据库：
 
@@ -2819,7 +2795,7 @@ import dolphindb.settings as keys
 s.database(dbName='mydb', partitionType=keys.VALUE, partitions=["AMZN","NFLX", "NVDA"], dbPath="dfs://valuedb")
 ```
 
-#### 8.2.2 删除数据库
+#### 8.2.2 删除数据库 <!-- omit in toc -->
 
 使用 `dropDatabase` 删除数据库：
 
@@ -2828,7 +2804,7 @@ if s.existsDatabase("dfs://valuedb"):
     s.dropDatabase("dfs://valuedb")
 ```
 
-#### 8.2.3 删除 DFS 数据库的分区
+#### 8.2.3 删除 DFS 数据库的分区 <!-- omit in toc -->
 
 使用 `dropPartition` 删除 DFS 数据库的分区。需要注意的是，若要删除的分区名称在 DolphinDB 中需要通过字符串的形式表示，例如本例中按照 TICKER 进行值分区：partitions=["AMZN","NFLX"]，则在 Python API 中删除此类分区时，需要为分区名称再添加一层引号： partitionPaths=["'AMZN'","'NFLX'"]。类似情况还有有范围分区：partitionPaths=["'/0_50'","'/50_100'"]，列表分区：partitionPaths=["'/List0'","'/List1'"] 等等。
 
@@ -2857,11 +2833,11 @@ print(trade.select("distinct TICKER").toDF())
 
 ### 8.3 表操作
 
-#### 8.3.1 加载数据库中的表
+#### 8.3.1 加载数据库中的表 <!-- omit in toc -->
 
 请参考 [从 dolphindb 数据库中加载数据](#5-从-dolphindb-数据库中加载数据)。
 
-#### 8.3.2 添加数据到数据表
+#### 8.3.2 添加数据到数据表 <!-- omit in toc -->
 
 关于向内存表添加数据，请参考 [第 6.1 小节：追加数据到内存表](#6.1-追加数据到内存表)。
 
@@ -2922,7 +2898,7 @@ print(t1.toDF())
 9  NVDA   9      5
 ```
 
-#### 8.3.4 删除表中的记录
+#### 8.3.4 删除表中的记录 <!-- omit in toc -->
 
 `delete` 必须与 `execute` 一同使用来删除表中的记录。
 
@@ -2970,7 +2946,7 @@ print(t1.toDF())
 5  NVDA   9      2
 ```
 
-#### 8.3.5 删除表中的列
+#### 8.3.5 删除表中的列 <!-- omit in toc -->
 
 ```python
 trade=s.loadText(WORK_DIR+"/example.csv")
@@ -2986,7 +2962,7 @@ print(t1.top(5).toDF())
 4   AMZN  1997.05.21  1577414  17.125
 ```
 
-#### 8.3.6 删除表
+#### 8.3.6 删除表 <!-- omit in toc -->
 
 ```python
 if s.existsDatabase("dfs://valuedb"):
@@ -3012,7 +2988,7 @@ DolphinDB 提供了灵活的方法来生成 SQL 语句。
 
 ### 9.1 `select`
 
-#### 9.1.1 使用一系列的列名作为输入内容
+#### 9.1.1 使用一系列的列名作为输入内容 <!-- omit in toc -->
 
 ```python
 trade=s.loadText(WORK_DIR+"/example.csv")
@@ -3038,7 +3014,7 @@ print(trade.select(['ticker','date','bid','ask','prc','vol']).showSQL())
 select ticker,date,bid,ask,prc,vol from T64afd5a6
 ```
 
-#### 9.1.2 使用字符串作为输入内容
+#### 9.1.2 使用字符串作为输入内容 <!-- omit in toc -->
 
 ```python
 print(trade.select("ticker,date,bid,ask,prc,vol").where("date=2012.09.06").where("vol<10000000").toDF())
@@ -3141,7 +3117,7 @@ print(t1.toDF())
 
 `where` 用于过滤数据。
 
-#### 9.4.1 多个条件过滤
+#### 9.4.1 多个条件过滤 <!-- omit in toc -->
 
 ```python
 trade=s.loadText(WORK_DIR+"/example.csv")
@@ -3171,7 +3147,7 @@ print(trade.select(['date','bid','ask','prc','vol']).where('TICKER=`AMZN').where
 select date,bid,ask,prc,vol from Tff260d29 where TICKER=`AMZN and bid!=NULL and ask!=NULL and vol>10000000 order by vol desc
 ```
 
-#### 9.4.2 使用字符串作为输入内容
+#### 9.4.2 使用字符串作为输入内容 <!-- omit in toc -->
 
 `select` 的输入内容可以是包含多个列名的字符串，`where` 的输入内容可以是包含多个条件的字符串。
 
@@ -3431,7 +3407,7 @@ print(df.exec("VOL").pivotby("TICKER", "date").toDF())
 
 `merge` 用于内部连接 (ej)、左连接 (lj)、左半连接 (lsj) 和外部连接 (fj)，`merge_asof` 为 asof join，`merge_window` 为窗口连接。
 
-#### 9.8.1 `merge`
+#### 9.8.1 `merge` <!-- omit in toc -->
 
 如果连接列名称相同，使用 *on* 参数指定连接列，如果连接列名称不同，使用 *left_on* 和 *right_on* 参数指定连接列。可选参数 *how* 表示表连接的类型。默认的连接类型为内部连接。
 
@@ -3496,7 +3472,7 @@ print(t1.merge(t2, how="outer", on=["TICKER","date"]).toDF())
 3                                           NaN                        NFLX                                               2015.12.30               936.0
 ```
 
-#### 9.8.2 `merge_asof`
+#### 9.8.2 `merge_asof` <!-- omit in toc -->
 
 `merge_asof` 对应 DolphinDB 中的 [asof join (aj)](https://www.dolphindb.cn/cn/help/SQLStatements/TableJoiners/asofjoin.html)。asof join 为非同时连接，它与 left join 非常相似，主要有以下区别：
 
@@ -3566,7 +3542,7 @@ print(trades.merge_asof(quotes, on=["Symbol","Time"]).select("sum(Trade_Volume*a
 1     FB  35.751041
 ```
 
-#### 9.8.3 `merge_window`
+#### 9.8.3 `merge_window` <!-- omit in toc -->
 
 `merge_window` 对应 DolphinDB 中的 [window join(wj)](https://www.dolphindb.cn/cn/help/SQLStatements/TableJoiners/windowjoin.html)，它是 asof join 的扩展。*leftBound* 参数和 *rightBound* 参数用于指定窗口的边界 w1 和 w2，对左表中最后一个连接列对应的时间为 t 的记录，在右表中选择 (t+w1) 到 (t+w2) 的时间并且其他连接列匹配的记录，然后对这些记录使用指定的聚合函数。
 
@@ -3722,7 +3698,7 @@ s.enableStreaming(8000)
 
 ### 10.2 订阅与反订阅
 
-#### 10.2.1 使用订阅函数
+#### 10.2.1 使用订阅函数 <!-- omit in toc -->
 
 使用 `subscribe` 函数来订阅 DolphinDB 中的流数据表，语法如下：
 
@@ -3811,7 +3787,7 @@ s.unsubscribe(host,port,tableName,actionName="")
 s.unsubscribe("192.168.1.103", 8921,"trades","action")
 ```
 
-#### 10.2.4 流数据订阅实例
+#### 10.2.4 流数据订阅实例 <!-- omit in toc -->
 
 下面的例子通过流数据订阅的方式计算实时 K 线。
 
@@ -3837,7 +3813,7 @@ DolphinDB database 中计算实时 K 线的流程如下图所示：
 
 DolphinDB server 自 1.30.17 及 2.00.5 版本开始，支持通过 [replay](https://www.dolphindb.cn/cn/help/FunctionsandCommands/FunctionReferences/r/replay.html) 函数将多个结构不同的流数据表，回放（序列化）到一个流表里，这个流表被称为异构流表。Python API 自 1.30.19 版本开始，新增 `streamDeserializer` 类，用于构造异构流表反序列化器，以实现对异构流表的订阅和反序列化操作。
 
-#### 10.3.1 异构流表反序列化器
+#### 10.3.1 异构流表反序列化器 <!-- omit in toc -->
 
 Python API 通过 `streamDeserializer` 类来构造异构流表反序列化器，语法如下：
 
@@ -3850,7 +3826,7 @@ sd = streamDeserializer(sym2table, session=None)
 
 异构流表的构造脚本，具体请参照[异构回放示例](https://gitee.com/dolphindb/Tutorials_CN/blob/master/stock_market_replay.md#22-%E5%BC%82%E6%9E%84%E5%9B%9E%E6%94%BE)。
 
-#### 10.3.2 订阅异构流表
+#### 10.3.2 订阅异构流表 <!-- omit in toc -->
 
 订阅示例：
 
@@ -3917,7 +3893,7 @@ Event().wait()
 
 本节介绍实时 K 线计算的三个步骤。
 
-#### 10.4.1 使用 Python 接收实时数据，并写入 DolphinDB 流数据表
+#### 10.4.1 使用 Python 接收实时数据，并写入 DolphinDB 流数据表 <!-- omit in toc -->
 
 * DolphinDB 中建立流数据表
 
@@ -3953,7 +3929,7 @@ s.run("tableInsert{Trade}", csv_df)
 
 ```
 
-#### 10.4.2 实时计算 K 线
+#### 10.4.2 实时计算 K 线 <!-- omit in toc -->
 
 本例中使用时序聚合引擎实时计算 K 线数据，并将计算结果输出到流数据表 OHLC 中。
 
@@ -3980,7 +3956,7 @@ tsAggrKline = createTimeSeriesAggregator(name="aggr_kline", windowSize=300, step
 subscribeTable(tableName="Trade", actionName="act_tsaggr", offset=0, handler=append!{tsAggrKline}, msgAsTable=true)
 ```
 
-#### 10.4.3 在 Python 中展示 K 线数据
+#### 10.4.3 在 Python 中展示 K 线数据 <!-- omit in toc -->
 
 在本例中，聚合引擎的输出表也定义为流数据表，客户端可以通过 Python API 订阅输出表，并将计算结果展现到 Python 终端。
 
@@ -4161,10 +4137,20 @@ Python 中的空值包括 None， pd.NaT 和 np.nan。DolphinDB Python API 上�
 
 ### 14.1 强制终止进程
 
-session 对象中提供静态 `enableJobCancellation()` 方法，用于开启强制终止进程的功能。此功能默认关闭。开启后，可通过 “Ctrl+C” 按键终止 API 进程中所有 session 提交的正在运行的作业。目前，该功能仅在 Linux 系统生效。
+session 对象中提供静态方法 `enableJobCancellation()`，用于开启强制终止进程的功能。此功能默认关闭。开启后，可通过 “Ctrl+C” 按键终止 API 进程中所有 session 提交的正在运行的作业。目前，该功能仅在 Linux 系统生效。
 
 示例：
 
 ```
 ddb.session.enableJobCancellation()
+```
+
+### 14.2 设置 TCP 连接超时时间
+
+session 对象的静态方法 `setTimeOut`，用于设置数据包被发送后未接收到 ACK 确认时，TCP 连接的最大等待时长（TCP_USER_TIMEOUT 选项）。如果超过设置时长仍未收到确认信息，则会关闭 TCP 连接。单位为秒，默认值为30。当设置为0时，则采用默认值。该功能仅在 Linux 系统下生效。
+
+示例：
+
+```
+ddb.session.setTimeout(60)
 ```
