@@ -13,7 +13,7 @@ DolphinDB Python API runs on the following operating systems:
 DolphinDB Python API has these library dependencies: 
 
 - future 
-- NumPy 1.18 - 1.22.3 
+- NumPy 1.18 - 1.22.3 (1.22.3 is recommended)
 - pandas 0.25.1 or higher (version 1.3.0 is not supported)
 
 Install DolphinDB Python API with the following command:
@@ -21,7 +21,7 @@ Install DolphinDB Python API with the following command:
 $ pip install dolphindb
 ```
 
-If the installation of *dolphindb* fails or it cannot be imported after installation, try the following steps:
+If it cannot be installed or imported, try the following steps:
 
 1. Search for the *dolphindb* wheel that runs on your current operating system (e.g., Linux ARM, Mac M1, etc.) on [PyPI](https://pypi.org/project/dolphindb/#files). Download the wheel (*.whl* file) to your local system.
 2. Enter the following command in the terminal:
@@ -98,7 +98,8 @@ If the installation or import still fails, please post your question on [StackOv
   - [12 FAQ](#12-faq)
   - [13 Null Values Handling](#13-null-values-handling)
   - [14 Other Features](#14-other-features)
-    - [14.1 Forced Termination of Processes](#14-forced-termination-of-processes)
+    - [14.1 Forced Termination of Processes](#141-forced-termination-of-processes)
+    - [14.2 Setting TCP Timeout](#142-setting-tcp-timeout)
 
 
 
@@ -3901,7 +3902,7 @@ ddb.session.enableJobCancellation()
 
 ### 14.2 Setting TCP Timeout
 
-Use the static method `setTimeOut` to specify the maximum amount of time (in seconds) that transmitted data packets may remain unacknowledged (equivalent to the TCP_USER_TIMEOUT option) before TCP forcibly closes the connection. The default value is 30. If the value is specified as 0, TCP will use the system default. 
+The static method `setTimeout` specifies the TCP connection timeout period (in seconds) before the peer acknowledges receiving the data packets. After the timeout period expires, the TCP connection is closed. It is equivalent to the TCP_USER_TIMEOUT option. The default value is 30. (If the value is specified as 0, TCP will use the system default.)
 
 This method is only available on Linux.
 
