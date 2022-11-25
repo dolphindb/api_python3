@@ -121,26 +121,33 @@ session(host, port, userid, password, enableSSL, enableASYNC, keepAliveTime, ena
 | getSessionId()                           | 获取当前 session 对象的 session id              |
 | close()                                  | 关闭当前会话                                   |
 
-以下脚本中，通过 import 语句导入 API 以后，在 Python 中创建一个会话，然后使用指定的域名或 IP 地址和端口号把该会话连接到 DolphinDB 服务器。请注意，在执行以下 Python 脚本前，需要先启动 DolphinDB 服务器。
+以下脚本中，通过 import 语句导入 API 以后，在 Python 中创建一个会话，然后使用指定的域名或 IP 地址和端口号把该会话连接到 DolphinDB 服务器。
+
+请注意以下两点：
+* 建立连接前，需要先启动 DolphinDB 服务器。
+* 若当前 session 不再使用，Python 会自动释放连接，但存在延时，可以调用 `close()` 立即关闭会话。否则可能出现因连接数过多，导致其它会话无法连接服务器的问题。
+
 ```python
 import dolphindb as ddb
 s = ddb.session()
 s.connect("localhost", 8848)
 # output
 True
+
+s.close()   # 关闭会话
 ```
 
 #### connect <!-- omit in toc -->
 
 ```
-connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect])
+connect(host,port,[userid="",password="", startup=None, highAvailability=False, highAvailabilitySites=None, keepAliveTime=30, reconnect=False])
 ```
 
 * **host / port**：所连接的服务器的地址和端口。
-* **username / password**：登录时的用户名密码。
+* **userid / password**：登录时的用户名密码。
 * **startup**：启动脚本，可以用于执行一些预加载任务。它可以包含加载插件、加载分布式表、定义并加载流数据表等脚本。
 * **highAvailability / highAvailabilitySites**：API 高可用相关配置参数。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 True，*highAvailabilitySites* 里指定所有可用节点的 `ip:port`。
-* **keepAliveTime**：通过配置 *keepAliveTime* 参数可以设置 TCP 的存活检测机制的检测时长，从而能够在网络不稳定条件下，及时释放半打开的 TCP 连接。
+* **keepAliveTime**：通过配置 *keepAliveTime* 参数可以设置 TCP 的存活检测机制的检测时长，从而能够在网络不稳定条件下，及时释放半打开的 TCP 连接。默认值为30秒。
 * **reconnect**：该参数仅在指定 *highAvailability* = False 时有效。若设置 *reconnect* = True，则 API 在检测到连接异常时，会尝试进行重连。
 
 高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，不能保证连接的负载均衡。
@@ -2484,7 +2491,7 @@ print(s.run("select * from tglobal"))
 
 ## 7 多线程调用线程池对象
 
-DolphinDB Python API 中的 `Session` 调用 `run` 方法执行脚本时只能串行执行。如果需要并发地执行脚本，可以使用 `DBConnectionPool` 来提高任务运行的效率。`DBConnectionPool` 创建了多个线程（由 threadNum 参数指定）用于执行任务。可以通过调用 `DBConnectionPool` 对象的方法函数 `getSessionId()` 来获取其创建的所有线程会话的 session id。
+DolphinDB Python API 中的 `Session` 调用 `run` 方法执行脚本时只能串行执行。如果需要并发地执行脚本，可以使用 `DBConnectionPool` 来提高任务运行的效率。`DBConnectionPool` 创建了多个线程（由 threadNum 参数指定）用于执行任务。可以通过调用 `DBConnectionPool` 对象的方法函数 `getSessionId()` 来获取其创建的所有线程会话的 session id。请注意，若当前 DBConnectionPool 线程池不再使用，Python 会自动释放连接，但存在延时，可以通过调用 `shutDown()` 等待线程任务执行结束后立即释放连接。
 
 ```Python
 pool = ddb.DBConnectionPool(host, port, threadNum, userid, password, loadBalance, highAvailability, reConnectFlag, compress)
@@ -3714,7 +3721,7 @@ s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=Fals
 - **offset** 是整数，表示订阅任务开始后的第一条消息所在的位置。消息是流数据表中的行。如果没有指定 *offset*，或它为负数或超过了流数据表的记录行数，订阅将会从流数据表的当前行开始。*offset* 与流数据表创建时的第一行对应。如果某些行因为内存限制被删除，在决定订阅开始的位置时，这些行仍然考虑在内。
 - **resub** 是布尔值，表示订阅中断后，是否会自动重订阅。
 - **filter** 是一个向量，表示过滤条件。流数据表过滤列在 *filter* 中的数据才会发布到订阅端，不在 *filter* 中的数据不会发布。
-- **msgAsTable** 是布尔值。只有设置了 *batchSize* 参数，才会生效。设置为 True，订阅的数据会转换为 dataframe 格式。设置为 False，订阅的数据会转换成 list，list 里单条记录为 nparray 格式。
+- **msgAsTable** 是布尔值。只有设置了 *batchSize* 参数，才会生效。设置为 True，订阅的数据会转换为 dataframe 格式。设置为 False，订阅的数据会转换成 list，list 里单条记录为 nparray 格式。注意，若设置了 *streamDeserializer*，则该参数必须设置为 False。
 - **batchSize** 是一个整数，表示批处理的消息的数量。如果它是正数，直到消息的数量达到 *batchSize* 时，*handler* 才会处理进来的消息。如果它没有指定或者是非正数，消息到达之后，*handler* 就会马上处理消息。
 - **throttle** 是一个整数，表示 *handler* 处理到达的消息之前等待的时间，以秒为单位。默认值为 1。如果没有指定 *batchSize*，*throttle* 将不会起作用。
 - **userName** 是一个字符串，表示 API 所连接服务器的登录用户名。
