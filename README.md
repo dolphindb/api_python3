@@ -136,7 +136,7 @@ The following script first imports Python API, then creates a session in Python 
 Note:
 
 - Start a DolphinDB server before running the following Python script.
-- It may take a while before an inactive session is closed automatically. You can explicitly close the session once you are done with it by calling `close()` to release the connection.
+- It may take a while for an inactive session to be closed automatically. You can explicitly close the session once you are done with it by calling `close()` to release the connection.
 
 ```python
 import dolphindb as ddb
