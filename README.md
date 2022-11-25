@@ -79,7 +79,7 @@ If the installation or import still fails, please post your question on [StackOv
   - [9 SQL Queries](#9-sql-queries)
     - [9.1 `select`](#91-select)
     - [9.2 `exec`](#92-exec)
-    - [9.3 `top` & `limit`](#93-top--limit)
+    - [9.3 `top` \& `limit`](#93-top--limit)
     - [9.4 `where`](#94-where)
     - [9.5 `groupby`](#95-groupby)
     - [9.6 `contextby`](#96-contextby)
@@ -131,7 +131,12 @@ The most commonly used `Session` class methods are as follows:
 | getSessionId()                                               | Get the current session ID                                   |
 | close()                                                      | Close the session                                            |
 
-The following script first imports Python API, then creates a session in Python to connect to a DolphinDB server with the specified domain name/IP address and port number. Please start a DolphinDB server before running the following Python script.
+The following script first imports Python API, then creates a session in Python to connect to a DolphinDB server with the specified domain name/IP address and port number. 
+
+Note:
+
+- Start a DolphinDB server before running the following Python script.
+- It may take a while before an inactive session is closed automatically. You can explicitly close the session once you are done with it by calling `close()` to release the connection.
 
 ```python
 import dolphindb as ddb
@@ -139,6 +144,8 @@ s = ddb.session()
 s.connect("localhost", 8848)
 # output
 True
+
+s.close()  #close session
 ```
 
 #### connect
@@ -2348,7 +2355,7 @@ Note: When uploading an array vector with the data type INT128, UUID or IP, it m
 
 ## 7 Connection Pooling in Multi-Threaded Applications 
 
-When calling method `session.run` in DolphinDB Python API, the scripts can only be executed serially. To execute the scripts concurrently, you can use `DBConnectionPool` which creates multiple threads (specified by the *threadNum* parameter) to execute the tasks. You can obtain the session ID of all the threads with `getSessionId()` of the `DBConnectionPool` object.  
+When calling method `session.run` in DolphinDB Python API, the scripts can only be executed serially. To execute the scripts concurrently, you can use `DBConnectionPool` which creates multiple threads (specified by the *threadNum* parameter) to execute the tasks. You can obtain the session ID of all the threads with `getSessionId()` of the `DBConnectionPool` object. Note that it may take a while before an inactive `DBConnectionPool` is closed automatically. You can explicitly close a `DBConnectionPool` by calling `shutDown()` to release the connection resources upon the completion of thread tasks. 
 
 ```Python
 pool = ddb.DBConnectionPool(host, port, threadNum, userid, password, loadBalance, highAvailability, reConnectFlag, compress)
@@ -3456,7 +3463,7 @@ s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=Fals
 - **offset:** an integer indicating the position of the first message where the subscription begins. A message is a row of the stream table. If *offset* is unspecified, negative or exceeding the number of rows in the stream table, the subscription starts with the next new message. *offset* is relative to the first row of the stream table when it is created. If some rows were cleared from memory due to cache size limit, they are still considered in determining where the subscription starts.
 - **resub:** a Boolean value indicating whether to resubscribe after network disconnection.
 - **filter:** a vector indicating the filtering conditions. Only the rows with values of the filtering column in the vector specified by the parameter *filter* are published to the subscriber.
-- **msgAsTable:** a Boolean value. If *msgAsTable* = true, the subscribed data is ingested into *handler* as a DataFrame. The default value is false, which means the subscribed data is ingested into *handler* as a List of nparrays. This optional parameter has no effect if *batchSize* is not specified.
+- **msgAsTable:** a Boolean value. If *msgAsTable* = true, the subscribed data is ingested into *handler* as a DataFrame. The default value is false, which means the subscribed data is ingested into *handler* as a List of nparrays. This optional parameter has no effect if *batchSize* is not specified. If *streamDeserializer* is specified,  this parameter must be set to False. 
 - **batchSize:** an integer indicating the number of unprocessed messages to trigger the *handler*. If it is positive, the *handler* does not process messages until the number of unprocessed messages reaches *batchSize*. If it is unspecified or non-positive, the *handler* processes incoming messages as soon as they come in.
 - **throttle:** an integer indicating the maximum waiting time (in seconds) before the *handler* processes the incoming messages. The default value is 1. This optional parameter has no effect if *batchSize* is not specified.
 - **userName:** a string indicating the username used to connect to the server
