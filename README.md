@@ -13,7 +13,7 @@ DolphinDB Python API runs on the following operating systems:
 DolphinDB Python API has these library dependencies: 
 
 - future 
-- NumPy 1.18 - 1.22.3 (1.22.3 is recommended)
+- NumPy 1.18 - 1.23.4 
 - pandas 0.25.1 or higher (version 1.3.0 is not supported)
 
 Install DolphinDB Python API with the following command:
