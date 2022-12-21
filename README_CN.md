@@ -10,7 +10,7 @@
 | Mac(x86_64)   | Conda 环境下的 Python 3.6-3.9            |
 | Mac(arm64)    | Conda 环境下的 Python 3.8-3.9            |
 
-注意：DolphinDB Python API 需要以下依赖库：future, numpy 和 pandas。其中 numpy 版本号范围为1.18~1.22.3，pandas 版本号须不小 0.25.1（1.3.0 不支持）。
+注意：DolphinDB Python API 需要以下依赖库：future, NumPy 和 pandas。其中 NumPy 版本号范围为1.18~1.23.4，pandas 版本号须不小 0.25.1（1.3.0 不支持）。
 
 通过如下指令进行安装：
 
@@ -24,7 +24,7 @@ $ pip install dolphindb
    ```
    pip debug --verbose
    ```
-3. 根据 Compatible tags 的显示信息，将 DolphinDB 的 whl 包名修改为适合系统架构的名称。以 Mac(x86_64) 系统为例：安装包名为”dolphindb-1.30.19.2-cp37-cp37m-macosx_10_16_x86_64.whl“。但查询到 pip 支持的当前系统版本为10.13，则使用”10_13“替换 whl 包名中的”10_16“。
+3. 根据 Compatible tags 的显示信息，将 DolphinDB 的 whl 包名修改为适合系统架构的名称。以 Mac(x86_64) 系统为例：安装包名为“dolphindb-1.30.19.2-cp37-cp37m-macosx_10_16_x86_64.whl”。但查询到 pip 支持的当前系统版本为10.13，则使用“10_13”替换 whl 包名中的“10_16”。
 4. 尝试安装更名后的 whl 包。
 
 若执行完上述操作后，仍无法安装或导入，可在 [DolphinDB 社区](https://ask.dolphindb.net)中进行反馈。
