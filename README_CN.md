@@ -72,7 +72,7 @@ $ pip install dolphindb
   - [9 SQL 查询](#9-sql-查询)
     - [9.1 `select`](#91-select)
     - [9.2 `exec`](#92-exec)
-    - [9.3 `top` & `limit`](#93-top--limit)
+    - [9.3 `top` \& `limit`](#93-top--limit)
     - [9.4 `where`](#94-where)
     - [9.5 `groupby`](#95-groupby)
     - [9.6 `contextby`](#96-contextby)
@@ -1902,7 +1902,7 @@ MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL
 * **enableHighAvailability** 布尔值，默认为 False。若要开启 API 高可用，则需要指定 *highAvailability* 参数为 True。
 * **highAvailabilitySites** 列表类型，表示所有可用节点的 ip:port 构成的 list。
 * **batchSize** 整数，表示批处理的消息的数量，默认值是 1，表示客户端写入数据后就立即发送给服务器。如果该参数大于 1，表示数据量达到 *batchSize* 时，*客户端*才会将数据发送给服务器。
-* **throttle** 大于 0 的数，单位为秒。若客户端有数据写入，但数据量不足 batchSize，则等待 throttle的时间再发送数据。
+* **throttle** 大于 0 的浮点数，单位为秒。若客户端有数据写入，但数据量不足 batchSize，则等待 throttle的时间再发送数据。
 * **threadCount** 整数，表示创建的工作线程数量，默认为 1，表示单线程。对于维度表，其值必须为1。
 * **partitionCol** 字符串类型，默认为空，仅在 threadCount 大于1时起效。对于分区表，必须指定为分区字段名；如果是流表，必须指定为表的字段名；对于维度表，该参数不起效。
 * **compressMethods** 列表类型，用于指定每一列采用的压缩传输方式，为空表示不压缩。每一列可选的压缩方式（大小写不敏感）包括：
@@ -3722,8 +3722,12 @@ s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=Fals
 - **resub** 是布尔值，表示订阅中断后，是否会自动重订阅。
 - **filter** 是一个向量，表示过滤条件。流数据表过滤列在 *filter* 中的数据才会发布到订阅端，不在 *filter* 中的数据不会发布。
 - **msgAsTable** 是布尔值。只有设置了 *batchSize* 参数，才会生效。设置为 True，订阅的数据会转换为 dataframe 格式。设置为 False，订阅的数据会转换成 list，list 里单条记录为 nparray 格式。注意，若设置了 *streamDeserializer*，则该参数必须设置为 False。
-- **batchSize** 是一个整数，表示批处理的消息的数量。如果它是正数，直到消息的数量达到 *batchSize* 时，*handler* 才会处理进来的消息。如果它没有指定或者是非正数，消息到达之后，*handler* 就会马上处理消息。
-- **throttle** 是一个整数，表示 *handler* 处理到达的消息之前等待的时间，以秒为单位。默认值为 1。如果没有指定 *batchSize*，*throttle* 将不会起作用。
+- **batchSize** 是一个整数，表示批处理的消息的数量。
+  - 如果它是正数：
+    - 设置 *msgAsTable* = false 时，直到消息的数量达到 *batchSize* 时，*handler* 才会处理进来的 *batchSize* 条消息。
+    - 设置 *msgAsTable* = true 时，*handler* 会基于消息块（由 server 端 *maxMsgNumPerBlock* 配置）处理消息。当收到的记录总数大于等于 *batchSize* 时，*handler* 会对达到条件的所有消息块进行处理。举例说明：假设 *batchSize* = 1500，API 收到 server 端发送的第一个消息块（包含1024条记录），*handler* 不进行处理，再次收到第2个消息块（包含500条记录），此时，两个消息块中包含的记录数大于 *batchSize*，*handler* 开始处理这两个消息块中的1524条记录。
+  - 如果它没有指定或者是非正数，消息到达之后，*handler* 就会马上逐条处理消息。
+- **throttle** 是一个浮点数，表示 *handler* 处理到达的消息之前等待的时间。以秒为单位，默认值为 1。如果没有指定 *batchSize*，*throttle* 将不会起作用。
 - **userName** 是一个字符串，表示 API 所连接服务器的登录用户名。
 - **password** 是一个字符串，表示 API 所连接服务器的登录密码。
 - **streamDeserializer** 是订阅的异构流表对应的反序列化器。
