@@ -1864,7 +1864,7 @@ MultithreadedTableWriter(host, port, userId, password, dbPath, tableName, useSSL
 * **enableHighAvailability**: a Boolean value indicating whether to enable high availability. The default value is False.
 * **highAvailabilitySites**: a list of ip:port of all available nodes
 * **batchSize**: an integer indicating the number of messages in batch processing. The default value is 1, meaning the server processes the data as soon as they are written. If it is greater than 1, only when the number of data reaches *batchSize*, the client will send the data to the server.
-* **throttle**: a numeric scalar greater than 0 indicating the waiting time (in seconds) before the server processes the incoming data if the number of data written from the client does not reach *batchSize*.
+* **throttle**: a floating point number greater than 0 indicating the waiting time (in seconds) before the server processes the incoming data if the number of data written from the client does not reach *batchSize*.
 * **threadCount**: an integer indicating the number of working threads to be created. The default value is 1, indicating single-threaded process. It must be 1 for a dimension table.
 * **partitionCol**: a STRING indicating the partitioning column. It is None by default, and only works when *threadCount* is greater than 1. For a partitioned table, it must be the partitioning column; for a stream table, it must be a column name; for a dimension table, the parameter does not work.
 * **compressMethods** a list of the compression methods used for each column. If unspecified, the columns are not compressed. The compression methods include:
@@ -3464,8 +3464,12 @@ s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=Fals
 - **resub:** a Boolean value indicating whether to resubscribe after network disconnection.
 - **filter:** a vector indicating the filtering conditions. Only the rows with values of the filtering column in the vector specified by the parameter *filter* are published to the subscriber.
 - **msgAsTable:** a Boolean value. If *msgAsTable* = true, the subscribed data is ingested into *handler* as a DataFrame. The default value is false, which means the subscribed data is ingested into *handler* as a List of nparrays. This optional parameter has no effect if *batchSize* is not specified. If *streamDeserializer* is specified,  this parameter must be set to False. 
-- **batchSize:** an integer indicating the number of unprocessed messages to trigger the *handler*. If it is positive, the *handler* does not process messages until the number of unprocessed messages reaches *batchSize*. If it is unspecified or non-positive, the *handler* processes incoming messages as soon as they come in.
-- **throttle:** an integer indicating the maximum waiting time (in seconds) before the *handler* processes the incoming messages. The default value is 1. This optional parameter has no effect if *batchSize* is not specified.
+- **batchSize:** an integer indicating the number of unprocessed messages to trigger the *handler*. 
+    - If *batchSize* is positive: 
+        - and *msgAsTable* = false:  The handler does not process messages until the number of unprocessed messages reaches batchSize. The handler processes *batchSize* messages at a time.
+        - and *msgAsTable* = true:  the messages will be processed by block ([maxMsgNumPerBlock](https://dolphindb.com/help/DatabaseandDistributedComputing/Configuration/StandaloneMode.html) = 1024, by default). For example, there are a total of 1524 messages from the publisher side. By default, the messages will be sent in two blocks, the first contains 1024 messages and the second contains 500. Suppose *batchSize* is set to 1500, when the first batch arrives, the 1024 messages will not be processed as they haven't reached the batchSize. When the second block arrives, the handler processes the 2 blocks (totaling 1524 records) all at once.
+    - If it is unspecified or non-positive, the *handler* processes incoming messages one by one as soon as they come in.
+- **throttle:** a floating point number indicating the maximum waiting time (in seconds) before the *handler* processes the incoming messages. The default value is 1. This optional parameter has no effect if *batchSize* is not specified.
 - **userName:** a string indicating the username used to connect to the server
 - **password:** a string indicating the password used to connect to the server
 - **streamDeserializer:** the deserializer for the subscribed heterogeneous stream table
