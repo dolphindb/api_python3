@@ -103,7 +103,7 @@ $ pip install dolphindb
 Python 应用通过会话（Session）在 DolphinDB 服务器上执行脚本和函数，以及在两者之间双向传递数据。其接口如下：
 
 ```
-session(host, port, userid, password, enableSSL, enableASYNC, keepAliveTime, enableChunkGranularityConfig, compress, enablePickle, python)
+session(host=None, port=None, userid="", password="", enableSSL=False, enableASYNC=False, keepAliveTime=30, enableChunkGranularityConfig=False, compress=False, enablePickle=True, python=False)
 ```
 
 常用的 Session 类的函数如下：
@@ -111,7 +111,7 @@ session(host, port, userid, password, enableSSL, enableASYNC, keepAliveTime, ena
 | 方法名                                      | 详情                                       |
 | :--------------------------------------- | :--------------------------------------- |
 | connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect]) | 将会话连接到 DolphinDB 服务器                     |
-| login(username,password,[enableEncryption]) | 登录服务器                                    |
+| login(username,password,[enableEncryption=True]) | 登录服务器                                    |
 | run(DolphinDBScript)                     | 将脚本在 DolphinDB 服务器运行                     |
 | run(DolphinDBFunctionName,args)          | 调用 DolphinDB 服务器上的函数                     |
 | runFile(filePath)                        | 将本地的 DolphinDB 脚本文件传到服务器运行。请注意，对于Linux 系统，文件需使用 UTF-8 编码，对于 windows 系统，文件需使用 ASCII 编码 |
@@ -140,7 +140,7 @@ s.close()   # 关闭会话
 #### connect <!-- omit in toc -->
 
 ```
-connect(host,port,[userid="",password="", startup=None, highAvailability=False, highAvailabilitySites=None, keepAliveTime=30, reconnect=False])
+connect(host,port,[userid=None,password=None, startup=None, highAvailability=False, highAvailabilitySites=None, keepAliveTime=None, reconnect=False])
 ```
 
 * **host / port**：所连接的服务器的地址和端口。
@@ -784,7 +784,7 @@ Python API 中，通过 s.database 在 DolphinDB 中创建数据库，返回一�
 | 方法名                                                   |详情                                                                    |
 |----------------------------------------------------------|------------------------------------------------------------------------|
 |createTable(table, tableName, sortColumns=None)           |在分布式数据库中创建一个维度表（未分区）。返回一个 Table 表对象。<br>维度表适用于存储不频繁更新的小数据集。|
-|createPartitionedTable(table, tableName, partitionColumns, compressMethods={}, sortColumns=None,                               keepDuplicates=None, sortKeyMappingFunction=None)|在分布式数据库中创建一个分区表。返回一个 Table 表对象。 |
+|createPartitionedTable(table, tableName, partitionColumns, compressMethods={}, sortColumns=None, keepDuplicates=None, sortKeyMappingFunction=None)|在分布式数据库中创建一个分区表。返回一个 Table 表对象。 |
 
 可以使用 DolphinDB Python API 的原生方法或 `run` 方法，创建 DolphinDB 数据库。本章将分别介绍两种建库及各种建表方法。
 
@@ -1180,7 +1180,7 @@ DolphinDB 的分布式表支持并发写入。下面介绍如何在 python 客�
 请注意：DolphinDB 不允许多个 writer 同时将数据写入到同一个分区，因此在客户端多线程并行写入数据时，需要确保每个线程分别写入不同的分区。python API 提供了自动按分区分流数据并行写入的简便方法:
 
 ```python
-PartitionedTableAppender(dbPath, tableName, partitionColName, dbConnectionPool)
+PartitionedTableAppender(dbPath=None, tableName=None, partitionColName=None, dbConnectionPool=None)
 ```
 
 - dbPath: 分布式数据库地址
@@ -1587,7 +1587,7 @@ s.run(script)
 接口：
 
 ```
-tableAppender(dbPath="", tableName="", ddbSession=None, action="fitColumnType")
+tableAppender(dbPath=None, tableName=None, ddbSession=None, action="fitColumnType")
 
 ```
 
@@ -1623,7 +1623,7 @@ Python API 提供 `tableUpsert` 对象，可以向索引内存表、键值内存
 
 接口：
 ```
-tableUpsert(dbPath, tableName, ddbSession, ignoreNull, keyColNames, sortColumns)
+tableUpsert(dbPath=None, tableName=None, ddbSession=None, ignoreNull=False, keyColNames=[], sortColumns=[])
 ```
 - dbPath: 分布式数据库地址，内存表不用填
 - tableName: 分布式或索引内存表、键值内存表表名
@@ -2494,7 +2494,7 @@ print(s.run("select * from tglobal"))
 DolphinDB Python API 中的 `Session` 调用 `run` 方法执行脚本时只能串行执行。如果需要并发地执行脚本，可以使用 `DBConnectionPool` 来提高任务运行的效率。`DBConnectionPool` 创建了多个线程（由 threadNum 参数指定）用于执行任务。可以通过调用 `DBConnectionPool` 对象的方法函数 `getSessionId()` 来获取其创建的所有线程会话的 session id。请注意，若当前 DBConnectionPool 线程池不再使用，Python 会自动释放连接，但存在延时，可以通过调用 `shutDown()` 等待线程任务执行结束后立即释放连接。
 
 ```Python
-pool = ddb.DBConnectionPool(host, port, threadNum, userid, password, loadBalance, highAvailability, reConnectFlag, compress)
+pool = ddb.DBConnectionPool(host, port, threadNum=10, userid=None, password=None, loadBalance=False, highAvailability=False, compress=False,reConnectFlag=False, python=False)
 # userid 和 password 可以省略
 ```
 
@@ -3710,7 +3710,7 @@ s.enableStreaming(8000)
 使用 `subscribe` 函数来订阅 DolphinDB 中的流数据表，语法如下：
 
 ```python
-s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=False, filter=None, msgAsTable=False, [batchSize=0], [throttle=1], [userName=""],[password=""], [streamDeserializer=None])
+s.subscribe(host, port, handler, tableName, actionName=None, offset=-1, resub=False, filter=None, msgAsTable=False, [batchSize=0], [throttle=1], [userName=None],[password=None], [streamDeserializer=None])
 ```
 
 - **host** 是发布端节点的 IP 地址。
@@ -3789,7 +3789,7 @@ s.getSubscriptionTopics()
 使用 `unsubscribe` 取消订阅，语法如下：
 
 ```python
-s.unsubscribe(host,port,tableName,actionName="")
+s.unsubscribe(host,port,tableName,actionName=None)
 ```
 
 例如，取消示例中的订阅：
