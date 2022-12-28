@@ -3923,21 +3923,20 @@ import pandas as pd
 import numpy as np
 
 csv_file = WORK_DIR + "/trades.csv"
-csv_data = pd.read_csv(csv_file,parse_dates=['Time'], dtype={'Symbol':str})
+csv_data = pd.read_csv(csv_file,parse_dates=['Datetime'], dtype={'Symbol':str})
 csv_df = pd.DataFrame(csv_data)
 s = ddb.session()
 s.connect("192.168.1.103", 8921,"admin","123456")
 #上传 DataFrame 到 DolphinDB，并对 Datetime 字段做类型转换
 s.upload({"tmpData":csv_df})
-s.run("data = select Symbol, datetime(Time) as Datetime, Trade_Price, Trade_Volume from tmpData;tableInsert(Trade,data)")
+s.run("data = select Symbol, datetime(Datetime) as Datetime, Price, Volume from tmpData;tableInsert(Trade,data)")
 ```
 
-这个方法的缺点是，s.upload 和 s.run 涉及两次网络数据传输，有可能会出现网络延迟。可以考虑先在 Python 端中过滤数据，然后再单步 `tableInsert` 到服务器端。
+这个方法的缺点是，s.upload 和 s.run 涉及两次网络数据传输，有可能会出现网络延迟。可以考虑先在 Python 端中处理数据，然后再单步 `tableInsert` 到服务器端，减少网络传输次数。
 
 ```
-csv_df=csv_df[['Symbol', 'Time', 'Trade_Price', 'Trade_Volume']]
+csv_df=csv_df[['Symbol', 'Datetime', 'Price', 'Volume']]
 s.run("tableInsert{Trade}", csv_df)
-
 ```
 
 #### 10.4.2 实时计算 K 线 <!-- omit in toc -->
