@@ -113,7 +113,7 @@ DolphinDB Python API in essence encapsulates a subset of DolphinDB's scripting l
 Python interacts with DolphinDB through a `session` object:
 
 ```
-session(host, port, userid, password, enableSSL, enableASYNC, keepAliveTime, enableChunkGranularityConfig, compress, enablePickle, python)
+session(host=None, port=None, userid="", password="", enableSSL=False, enableASYNC=False, keepAliveTime=30, enableChunkGranularityConfig=False, compress=False, enablePickle=True, python=False)
 ```
 
 The most commonly used `Session` class methods are as follows:
@@ -121,7 +121,7 @@ The most commonly used `Session` class methods are as follows:
 | Method                                                       | Explanation                                                  |
 | :----------------------------------------------------------- | :----------------------------------------------------------- |
 | connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect]) | Connect a session to DolphinDB server                        |
-| login(username,password,[enableEncryption])                  | Log in DolphinDB server                                      |
+| login(username,password,[enableEncryption=True])                   | Log in DolphinDB server                                      |
 | run(DolphinDBScript)                                         | Execute scripts on DolphinDB server                          |
 | run(DolphinDBFunctionName,args)                              | Call functions on DolphinDB server                           |
 | runFile(filePath)                                            | Run a DolphinDB script file on the server. Please note that the file must be in UTF-8 encoding on Linux and ASCII encoding on Windows. |
@@ -151,7 +151,7 @@ s.close()  #close session
 #### connect
 
 ```
-connect(host,port,[username,password, startup, highAvailability, highAvailabilitySites, keepAliveTime, reconnect])
+connect(host,port,[userid=None,password=None, startup=None, highAvailability=False, highAvailabilitySites=None, keepAliveTime=None, reconnect=False])
 ```
 
 * **host/port**: IP address and port number of the host
@@ -745,7 +745,7 @@ To create a DFS table in the database, use the following methods of the Database
 | **Method**                                                   | **Description**                                              |
 | :----------------------------------------------------------- | :----------------------------------------------------------- |
 | createTable(table, tableName, sortColumns=None)              | Create a dimension (non-partitioned) table in a distributed database. Return a table object. A dimension table is used to store small datasets with infrequent updates. |
-| createPartitionedTable(table, tableName, partitionColumns,                               compressMethods={}, sortColumns=None, keepDuplicates=None, sortKeyMappingFunction=None) | Create a partitioned table in a distributed database. Return a table object. |
+| createPartitionedTable(table, tableName, partitionColumns, compressMethods={}, sortColumns=None, keepDuplicates=None, sortKeyMappingFunction=None) | Create a partitioned table in a distributed database. Return a table object. |
 
 ### 3.1 DolphinDB Python API Methods
 
@@ -1108,7 +1108,7 @@ Note that DolphinDB does not allow multiple writers to write to the same partiti
 With DolphinDB server version 1.30 or above, we can write to DFS tables with the `PartitionedTableAppender` object in Python API. The user needs to first specify a connection pool. The system then obtains information about partitions before assigning the partitions to the connection pool for concurrent writes. A partition can only be written to by one thread at a time. 
 
 ```python
-PartitionedTableAppender(dbPath, tableName, partitionColName, dbConnectionPool)
+PartitionedTableAppender(dbPath=None, tableName=None, partitionColName=None, dbConnectionPool=None)
 ```
 
 - **dbPath:** DFS database path
@@ -1549,7 +1549,7 @@ s.run(script)
 As [the only temporal data type in Python pandas is datetime64](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803), all temporal columns of a DataFrame are converted into nanotimestamp type after uploaded to DolphinDB. Each time we use `tableInsert` or `insert into` to append a DataFrame with a temporal column to an in-memory table or DFS table, we need to conduct a data type conversion for the time column.  With the `tableAppender` object, you will no longer have to do the conversion manually when you `append` local DataFrames to an in-memory table or a DFS table.
 
 ```
-tableAppender(dbPath="", tableName="", ddbSession=None, action="fitColumnType")
+tableAppender(dbPath=None, tableName=None, ddbSession=None, action="fitColumnType")
 ```
 
 - **dbPath:** the path of a DFS database. Leave it unspecified for in-memory tables. 
@@ -1583,7 +1583,7 @@ print(t)
 Use the `tableUpsert` object to update data in indexed in-memory tables, keyed in-memory tables and DFS tables. Like the `tableAppender` object, `tableUpsert` automatically converts the temporal data when writing local DataFrames to the target table.
 
 ```
-tableUpsert(dbPath, tableName, ddbSession, ignoreNull, keyColNames, sortColumns)
+tableUpsert(dbPath=None, tableName=None, ddbSession=None, ignoreNull=False, keyColNames=[], sortColumns=[])
 ```
 
 - **dbPath**: the path of a DFS database. Leave it unspecified for in-memory tables.
@@ -2358,7 +2358,7 @@ Note: When uploading an array vector with the data type INT128, UUID or IP, it m
 When calling method `session.run` in DolphinDB Python API, the scripts can only be executed serially. To execute the scripts concurrently, you can use `DBConnectionPool` which creates multiple threads (specified by the *threadNum* parameter) to execute the tasks. You can obtain the session ID of all the threads with `getSessionId()` of the `DBConnectionPool` object. Note that it may take a while before an inactive `DBConnectionPool` is closed automatically. You can explicitly close a `DBConnectionPool` by calling `shutDown()` to release the connection resources upon the completion of thread tasks. 
 
 ```Python
-pool = ddb.DBConnectionPool(host, port, threadNum, userid, password, loadBalance, highAvailability, reConnectFlag, compress)
+pool = ddb.DBConnectionPool(host, port, threadNum=10, userid=None, password=None, loadBalance=False, highAvailability=False, compress=False,reConnectFlag=False, python=False)
 ```
 
 The `run` method in `DBConnectionPool` is wrapped in a coroutine for efficiency. The scripts are passed to the connection pool via the `run` method and executed by the thread. For example:
@@ -3450,7 +3450,7 @@ Use function `subscribe` to subscribe to a DolphinDB stream table.
 **Syntax**
 
 ```python
-s.subscribe(host, port, handler, tableName, actionName="", offset=-1, resub=False, filter=None, msgAsTable=False, [batchSize=0], [throttle=1], [userName=""],[password=""], [streamDeserializer=None])
+s.subscribe(host, port, handler, tableName, actionName=None, offset=-1, resub=False, filter=None, msgAsTable=False, [batchSize=0], [throttle=1], [userName=None],[password=None], [streamDeserializer=None])
 ```
 
 **Parameters:**
@@ -3535,7 +3535,7 @@ Unsubscribe to tables with `unsubscribe`.
 **Syntax:**
 
 ```python
-s.unsubscribe(host,port,tableName,actionName="")
+s.unsubscribe(host,port,tableName,actionName=None)
 ```
 
 The following code unsubscribes to the table trades in the above example:
