@@ -1366,7 +1366,7 @@ DolphinDB Python API 使用 Python 原生的各种形式的数据对象来存放
 |matrix|Lists|1..6$2:3|[array([[1, 3, 5],[2, 4, 6]], dtype=int32), None, None]|
 |set|Sets|set(3 5 4 6)|{3, 4, 5, 6}|
 |dictionary|Dictionaries|dict(['IBM','MS','ORCL'], 170.5 56.2 49.5)|{'MS': 56.2, 'IBM': 170.5, 'ORCL': 49.5}|
-|table|pandas.DataFame | 见 [第 6.1 小节](#61-使用-loadtable-函数)| 见 [第 6.1 小节](#61-使用-loadtable-函数)|
+|table|pandas.DataFrame | 见 [第 6.1 小节](#61-使用-loadtable-函数)| 见 [第 6.1 小节](#61-使用-loadtable-函数)|
 
 #### 5.4.2 数据类型的转换 <!-- omit in toc -->
 
