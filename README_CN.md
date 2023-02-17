@@ -4,11 +4,11 @@
 
 | 操作系统      | Python 版本号                        |
 | :------------ | :--------------------------------------- |
-| Windows(amd64)| Python 3.6-3.9                           |
-| Linux(x86_64) | Python 3.6-3.9                           |
-| Linux(aarch64)| Conda 环境下的 Python 3.7-3.9            |
-| Mac(x86_64)   | Conda 环境下的 Python 3.6-3.9            |
-| Mac(arm64)    | Conda 环境下的 Python 3.8-3.9            |
+| Windows(amd64)| Python 3.6-3.10                           |
+| Linux(x86_64) | Python 3.6-3.10                           |
+| Linux(aarch64)| Conda 环境下的 Python 3.7-3.10            |
+| Mac(x86_64)   | Conda 环境下的 Python 3.6-3.10            |
+| Mac(arm64)    | Conda 环境下的 Python 3.8-3.10            |
 
 注意：DolphinDB Python API 需要以下依赖库：future, NumPy 和 pandas。其中 NumPy 版本号范围为1.18~1.23.4，pandas 版本号须不小 0.25.1（1.3.0 不支持）。
 
@@ -53,6 +53,7 @@ $ pip install dolphindb
     - [5.2 使用 `loadTableBySQL` 函数](#52-使用-loadtablebysql-函数)
     - [5.3 支持分段读取数据库表](#53-支持分段读取数据库表)
     - [5.4 从 DolphinDB 下载数据到 Python 时的数据转换](#54-从-dolphindb-下载数据到-python-时的数据转换)
+    - [5.5 数据格式协议 protocol](#55-数据格式协议-protocol)
   - [6 追加数据到 DolphinDB 数据表](#6-追加数据到-dolphindb-数据表)
     - [6.1 使用 `tableInsert` 函数追加多个 List 到内存表](#61-使用-tableinsert-函数追加多个-list-到内存表)
     - [6.2 使用 `tableInsert` 函数追加 DataFrame 到内存表](#62-使用-tableinsert-函数追加-dataframe-到内存表)
@@ -83,8 +84,6 @@ $ pip install dolphindb
   - [10 Python Streaming API](#10-python-streaming-api)
     - [10.1 指定订阅端口号](#101-指定订阅端口号)
     - [10.2 订阅与反订阅](#102-订阅与反订阅)
-      - [10.2.2 获取订阅主题](#1022-获取订阅主题)
-      - [10.2.3 取消订阅](#1023-取消订阅)
     - [10.3 订阅异构流表](#103-订阅异构流表)
     - [10.4 流数据应用](#104-流数据应用)
   - [11 更多实例](#11-更多实例)
@@ -1375,6 +1374,11 @@ DolphinDB Python API 使用 Python 原生的各种形式的数据对象来存放
 - DolphinDB CHAR 类型会被转换成 Python int64 类型。对此结果，用户可以使用 Python 的 `chr` 函数将其转换为字符。
 - 由于 Python pandas 中所有有关时间的数据类型均为 datetime64，DolphinDB 中的所有时间类型数据 [均会被转换为 datetime64 类型](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)。MONTH 类型，如 2012.06M，会被转换为 2012-06-01（即当月的第一天）。
 - TIME, MINUTE, SECOND 与 NANOTIME 类型不包含日期信息，转换时会自动添加 1970-01-01，例如 13:30m 会被转换为 1970-01-01 13:30:00。
+- 上传的表中包含 Python decimal.Decimal 对象时，必须确保 DECIMAL 类型列的所有数据具有相同的小数位数。可使用下述方式对齐小数位数：
+```
+b = decimal.Decimal("1.23")
+b = b.quantize(decimal.Decimal("0.000"))
+```
 
 | DolphinDB 类型  | Python 类型  | DolphinDB 数据                             | Python 数据                              |
 | ------------- | ---------- | ---------------------------------------- | -------------------------------------- |
@@ -1399,10 +1403,124 @@ DolphinDB Python API 使用 Python 原生的各种形式的数据对象来存放
 | UUID          | object     | 5d212a78-cc48-e3b1-4235-b4d91473ee87     | "5d212a78-cc48-e3b1-4235-b4d91473ee87" |
 | IPADDR        | object     | 192.168.1.13                             | "192.168.1.13"                         |
 | INT128        | object     | e1671797c52e15f763380b45e841ec32         | "e1671797c52e15f763380b45e841ec32"     |
+| DECIMAL32(S)  | object     | decimal32("12.3456", 4)                  | Decimal("12.3456")                     |
+| DECIMAL64(S)  | object     | decimal64("12.3456", 10)                 | Decimal("12.3456000000")               |
 
 #### 5.4.3 缺失值处理 <!-- omit in toc -->
 
 从 DolphinDB 下载数据到 Python，并使用 `toDF()` 方法把 DolphinDB 数据转换为 Python 的 DataFrame 时，DolphinDB 中的逻辑型、数值型和时序类型的 NULL 值默认情况下转换为 NaN 或 NaT，字符串的 NULL 值转换为空字符串。
+
+### 5.5 数据格式协议 protocol
+
+目前 DolphinDB Python API 已经支持 Pickle 协议和 DolphinDB 序列化协议，通过指定 session 中*enablePickle* 参数来选择序列化协议。在1.30.21.1版本中，Python API session 和 DBConnectionPool 新增 *protocol* 参数，目前已支持的参数选项包括 *PROTOCOL_DDB*、*PROTOCOL_PICKLE*、*PROTOCOL_ARROW*，其中默认使用 *PROTOCOL_PICKLE*。
+
+示例：
+```python
+import dolphindb as ddb
+import dolphindb.settings as keys
+s = ddb.session(protocol=keys.PROTOCOL_DDB)
+s = ddb.session(protocol=keys.PROTOCOL_PICKLE)
+s = ddb.session(protocol=keys.PROTOCOL_ARROW)
+```
+### 5.5.1 PROTOCOL_DDB<!-- omit in toc -->
+
+使用与 DolphinDB 的 C++ API、C# API、JAVA API 同样的数据序列化协议（参考 API 交互协议文档）
+
+数据形式对应关系参考章节5.4.1
+
+数据类型转换关系参考章节5.4.2
+
+示例：
+```python
+import dolphindb as ddb
+import dolphindb.settings as keys
+s = ddb.session(protocol=keys.PROTOCOL_DDB)
+s.connect("localhost", 8848, "admin", "123456")
+
+re = s.run("table(1..10 as a)")   # pandas.DataFrame
+```
+
+### 5.5.2 PROTOCOL_PICKLE<!-- omit in toc -->
+
+使用修改后的 Pickle 协议，支持的数据形式对应关系如下表所示：
+
+| **DolphinDB 数据形式**    | **DolphinDB->Python**       | **Python->DolphinDB**    | 
+| --------------------------|-----------------------------|------------------------- |
+| Matrix     | Matrix -> [numpy.ndarray, colName, rowName] | 使用 PROTOCOL_DDB |
+| Table | Table -> pandas.DataFrame   |使用 PROTOCOL_DDB|
+| 其他 | 使用 PROTOCOL_DDB |使用 PROTOCOL_DDB|
+
+如果在 `session.run` 中指定参数 `pickleTableToList=True`，将会修改部分协议流程，支持的数据形式对应关系如下表所示：
+
+| **DolphinDB 数据形式**    | **DolphinDB->Python**           | **Python->DolphinDB**| 
+| --------------------------|-------------------------------- | -------------------- |
+| Matrix         | 使用 PROTOCOL_PICKLE  | 使用 PROTOCOL_DDB |
+| Table | Table -> pandas.DataFrame |使用 PROTOCOL_DDB|
+| 其他 | 使用 PROTOCOL_DDB |使用 PROTOCOL_DDB|
+
+示例：
+
+```python
+import dolphindb as ddb
+import dolphindb.settings as keys
+s = ddb.session(protocol=keys.PROTOCOL_PICKLE)
+s.connect("localhost", 8848, "admin", "123456")
+
+# pickleTableToList = False (default)
+re1 = s.run("m=matrix(1 2, 3 4, 5 6);m.rename!(1 2, `a`b`x);m")
+re2 = s.run("table(1..3 as a)")
+print(re1)
+print(re2)
+-----------------------------
+[array([[1, 3, 5],
+       [2, 4, 6]], dtype=int32), 
+ array([1, 2], dtype=int32), 
+ array(['a', 'b', 'x'], dtype=object)]
+   a
+0  1
+1  2
+2  3
+
+# pickleTableToList = True
+re1 = s.run("m=matrix(1 2, 3 4, 5 6);m.rename!(1 2, `a`b`x);m", pickleTableToList=True)
+re2 = s.run("table(1..3 as a)", pickleTableToList=True)
+print(re1)
+print(re2)
+-----------------------------
+[array([[1, 3, 5],
+       [2, 4, 6]], dtype=int32), 
+ array([1, 2], dtype=int32), 
+ array(['a', 'b', 'x'], dtype=object)]
+[array([1, 2, 3], dtype=int32)]
+```
+### 5.5.3 PROTOCOL_ARROW <!-- omit in toc -->
+
+使用修改后的 Apache Arrow 协议，支持的数据形式对应关系如下表所示：
+
+| **DolphinDB 数据形式**    | **DolphinDB->Python**           | **Python->DolphinDB**| 
+| --------------------------|-------------------------------- | -------------------- |
+| Table | Table -> pyarrow.Table|使用 PROTOCOL_DDB|
+| 其他 | 使用 PROTOCOL_DDB |使用 PROTOCOL_DDB|
+
+注意：目前 *PROTOCOL_ARROW* 仅支持Linux x86_64，且需要安装 9.0.0 以上版本的 pyaarow.
+
+示例：
+
+```python
+import dolphindb as ddb
+import dolphindb.settings as keys
+s = ddb.session(protocol=keys.PROTOCOL_ARROW)
+s.connect("localhost", 8848, "admin", "123456")
+
+re = s.run("table(1..3 as a)")
+print(re)
+-----------------------------
+pyarrow.Table
+a: int32
+----
+a: [[1,2,3]]
+```
+数据类型对应关系参考 【formatArrow插件文档】
 
 ## 6 追加数据到 DolphinDB 数据表
 
@@ -3687,20 +3805,35 @@ Python API 支持流数据订阅的功能，以下介绍流数据订阅的相关
 使用 Python API 提供的 `enableStreaming` 函数启用流数据功能：
 
 ```python
-s.enableStreaming(port)
+s.enableStreaming(port=0)
 ```
 
-- *port* 是指定传入数据的订阅端口，每个 session 具备唯一的端口。在客户端指定订阅端口号的目的是用于订阅服务器端发送的数据。
+- *port* 指定开启数据订阅的端口，用于订阅服务器端发送的数据。
+
+### 10.1.1 正向订阅（1.30.20、2.00.8及之前版本的 DolphinDB server）<!-- omit in toc -->
+
+正向订阅时必须指定该端口，每个 session 具备唯一的端口。
 
 示例：
-
-在 Python 客户端中，导入 DolphinDB Python API，并启用流数据功能，指定订阅端口为 8000：
 
 ```python
 import dolphindb as ddb
 import numpy as np
 s = ddb.session()
-s.enableStreaming(8000)
+s.enableStreaming(8000)   # 正向订阅
+```
+
+### 10.1.2 反向订阅（1.30.21、2.00.9及之后版本的 DolphinDB server）<!-- omit in toc -->
+
+反向订阅时无需指定该端口（默认值为0）；如果指定，API 将会忽略该参数。
+
+示例：
+
+```python
+import dolphindb as ddb
+import numpy as np
+s = ddb.session()
+s.enableStreaming(0)      # 反向订阅
 ```
 
 ### 10.2 订阅与反订阅
@@ -3774,7 +3907,7 @@ Event().wait()                  # 加在最后一行
 
 否则订阅线程会在主线程退出前立刻终止，导致无法收到订阅消息。
 
-#### 10.2.2 获取订阅主题
+#### 10.2.2 获取订阅主题<!-- omit in toc -->
 
 通过 `getSubscriptionTopics` 函数可以获取所有订阅主题，主题的构成方式是：host/port/tableName/actionName，每个 session 的所有主题互不相同。
 
@@ -3784,7 +3917,7 @@ s.getSubscriptionTopics()
 ['192.168.1.103/8921/trades/action']
 ```
 
-#### 10.2.3 取消订阅
+#### 10.2.3 取消订阅<!-- omit in toc -->
 
 使用 `unsubscribe` 取消订阅，语法如下：
 
