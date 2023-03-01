@@ -187,6 +187,17 @@ s.connect(host="192.168.1.2", port=24120, userid="admin", password="123456", hig
 
 For sessions that are expired or initialized without username and password, use the method `login` to log in DolphinDB server. By default, the username and password are encrypted during connection.
 
+To check if connection has been successfully established, refer to the return value of `connect`. For example:
+
+```python
+import dolphindb as ddb
+s = ddb.session()
+conn = s.connect("xxx.xxx.xxx.xxx", 8848, "admin", "123456")
+print(conn)
+```
+
+If the conenection is successful, True is returned; otherwise False.
+
 After the session is connected, call function `getSessionId` to obtain the current session ID:
 
 ```python
