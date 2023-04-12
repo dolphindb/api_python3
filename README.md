@@ -14,7 +14,7 @@ DolphinDB Python API has these library dependencies:
 
 - future 
 - NumPy 1.18 - 1.23.4 
-- pandas 0.25.1 or higher (version 1.3.0 is not supported)
+- pandas 1.0.0 or higher (version 1.3.0 is not supported)
 
 Install DolphinDB Python API with the following command:
 ```Console
@@ -100,7 +100,6 @@ If the installation or import still fails, please post your question on [StackOv
   - [14 Other Features](#14-other-features)
     - [14.1 Forced Termination of Processes](#141-forced-termination-of-processes)
     - [14.2 Setting TCP Timeout](#142-setting-tcp-timeout)
-
 
 
 
