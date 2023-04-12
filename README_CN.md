@@ -10,7 +10,7 @@
 | Mac(x86_64)   | Conda 环境下的 Python 3.6-3.10            |
 | Mac(arm64)    | Conda 环境下的 Python 3.8-3.10            |
 
-注意：DolphinDB Python API 需要以下依赖库：future, NumPy 和 pandas。其中 NumPy 版本号范围为1.18~1.23.4，pandas 版本号须不小 0.25.1（1.3.0 不支持）。
+注意：DolphinDB Python API 需要以下依赖库：future, NumPy 和 pandas。其中 NumPy 版本号范围为1.18~1.23.4，pandas 版本号须不小 1.0.0（1.3.0 不支持）。
 
 通过如下指令进行安装：
 
@@ -1520,7 +1520,7 @@ a: int32
 ----
 a: [[1,2,3]]
 ```
-数据类型对应关系参考 【formatArrow插件文档】
+数据类型对应关系参考 [formatArrow插件文档](https://github.com/dolphindb/DolphinDBPlugin/blob/release200/formatArrow/README_CN.md)。
 
 ## 6 追加数据到 DolphinDB 数据表
 
