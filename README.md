@@ -14,7 +14,7 @@ DolphinDB Python API has these library dependencies:
 
 - future 
 - NumPy 1.18 - 1.23.4 
-- pandas 0.25.1 or higher (version 1.3.0 is not supported)
+- pandas 1.0.0 or higher (version 1.3.0 is not supported)
 
 Install DolphinDB Python API with the following command:
 ```Console
@@ -3564,7 +3564,7 @@ This section introduces the methods for streaming subscription in DolphinDB Pyth
 
 ### 10.1 `enableStreaming` 
 
-To enable streaming subscription, call method enableStreaming in DolphinDB Python API.
+To enable streaming subscription, call method `enableStreaming` in DolphinDB Python API.
 
 ```
 s.enableStreaming(port=0)
