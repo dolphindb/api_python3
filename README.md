@@ -14,7 +14,7 @@ DolphinDB Python API has these library dependencies:
 
 - future 
 - NumPy 1.18 - 1.23.4 
-- pandas 1.0.0 or higher (version 1.3.0 is not supported)
+- pandas 0.25.1 or higher (version 1.3.0 is not supported)
 
 Install DolphinDB Python API with the following command:
 ```Console
@@ -61,6 +61,7 @@ If the installation or import still fails, please post your question on [StackOv
     - [5.2 `loadTableBySQL`](#52-loadtablebysql)
     - [5.3 Load Tables in Blocks](#53-load-tables-in-blocks)
     - [5.4 Data Conversion](#54-data-conversion)
+    - [5.5 Data Format Protocols](#55-data-format-protocols)
   - [6 Append to DolphinDB Tables](#6-append-to-dolphindb-tables)
     - [6.1 Append Lists to In-memory Tables with the `tableInsert` Function](#61-append-lists-to-in-memory-tables-with-the-tableinsert-function)
     - [6.2 Append DataFrame to In-memory Tables with the `tableInsert` Function](#62-append-dataframe-to-in-memory-tables-with-the-tableinsert-function)
@@ -100,6 +101,7 @@ If the installation or import still fails, please post your question on [StackOv
   - [14 Other Features](#14-other-features)
     - [14.1 Forced Termination of Processes](#141-forced-termination-of-processes)
     - [14.2 Setting TCP Timeout](#142-setting-tcp-timeout)
+
 
 
 
@@ -1340,6 +1342,13 @@ The table below explains the data type conversion when data is downloaded from D
 - DolphinDB CHAR types are converted into Python int64 type. Use Python method `chr` to convert CHAR type into a character. 
 - As the temporal types in Python pandas are datetime64, all DolphinDB temporal types [are converted into datetime64 type](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803). MONTH type such as 2012.06M is converted into 2012-06-01 (the first day of the month). 
 - TIME, MINUTE, SECOND and NANOTIME types do not include information about date. 1970-01-01 is automatically added during conversion. For example, 13:30m is converted into 1970-01-01 13:30:00. 
+- If you are uploading a table that includes columns containing Python `decimal.Decimal` objects, ensure that all the values in a particular column have the same number of decimal places. The following script aligns the decimal digits of values:
+
+```
+b = decimal.Decimal("1.23")
+b = b.quantize(decimal.Decimal("0.000"))
+```
+
 
 | DolphinDB type | Python type | DolphinDB data                                  | Python data                             |
 | -------------- | ----------- | ----------------------------------------------- | --------------------------------------- |
@@ -1368,6 +1377,121 @@ The table below explains the data type conversion when data is downloaded from D
 #### 5.4.3 Missing Value Processing
 
 When data is downloaded from DolphinDB and converted into a Python DataFrame with function `toDF()`, NULLs of logical, temporal and numeric types are converted into NaN or NaT; NULLs of string types are converted into empty strings. 
+
+### 5.5 Data Format Protocols
+
+Before API version 1.30.21.1, DolphinDB Python API supported transferring data using the Pickle protocol and the DolphinDB serialization protocol, which you can specify through the *enablePickle* parameter of the session object. 
+
+Starting from API version 1.30.21.1, a new parameter *protocol* has been added to the session and DBConnectionPool classes. It can be PROTOCOL_DDB, PROTOCOL_PICKLE (default), or PROTOCOL_ARROW.
+
+**Example**
+
+```
+import dolphindb as ddb
+import dolphindb.settings as keys
+s = ddb.session(protocol=keys.PROTOCOL_DDB)
+s = ddb.session(protocol=keys.PROTOCOL_PICKLE)
+s = ddb.session(protocol=keys.PROTOCOL_ARROW)
+```
+
+#### 5.5.1 PROTOCOL_DDB
+
+PROTOCOL_DDB is the same data serialization protocol as used by the DolphinDB C++ API, C# API, and Java API. 
+
+For data form and data type mappings, see section 5.4.1 and 5.4.2.
+
+**Example**
+
+```
+import dolphindb as ddb
+import dolphindb.settings as keys
+s = ddb.session(protocol=keys.PROTOCOL_DDB)
+s.connect("localhost", 8848, "admin", "123456")
+
+re = s.run("table(1..10 as a)")   # pandas.DataFrame
+```
+
+#### 5.5.2 PROTOCOL_PICKLE
+
+PROTOCOL_PICKLE is adapted from the Python pickle protocol. Refer to the following table when transferring data:
+
+| **DolphinDB Data form** | **DolphinDB->Python**                       | **Python->DolphinDB** |
+| :---------------------- | :------------------------------------------ | :-------------------- |
+| Matrix                  | Matrix -> [numpy.ndarray, colName, rowName] | use PROTOCOL_DDB      |
+| Table                   | Table -> pandas.DataFrame                   | use PROTOCOL_DDB      |
+| Other forms             | use PROTOCOL_DDB                            | use PROTOCOL_DDB      |
+
+In `session.run`, if the parameter *pickleTableToList* is set to True, refer to the following table when transferring data:
+
+| **DolphinDB Data Form** | **DolphinDB->Python**     | **Python->DolphinDB** |
+| :---------------------- | :------------------------ | :-------------------- |
+| Matrix                  | use PROTOCOL_PICKLE       | use PROTOCOL_DDB      |
+| Table                   | Table -> pandas.DataFrame | use PROTOCOL_DDB      |
+| Other forms             | use PROTOCOL_DDB          | use PROTOCOL_DDB      |
+
+```
+import dolphindb as ddb
+import dolphindb.settings as keys
+s = ddb.session(protocol=keys.PROTOCOL_PICKLE)
+s.connect("localhost", 8848, "admin", "123456")
+
+# pickleTableToList = False (default)
+re1 = s.run("m=matrix(1 2, 3 4, 5 6);m.rename!(1 2, `a`b`x);m")
+re2 = s.run("table(1..3 as a)")
+print(re1)
+print(re2)
+-----------------------------
+[array([[1, 3, 5],
+       [2, 4, 6]], dtype=int32), 
+ array([1, 2], dtype=int32), 
+ array(['a', 'b', 'x'], dtype=object)]
+   a
+0  1
+1  2
+2  3
+
+# pickleTableToList = True
+re1 = s.run("m=matrix(1 2, 3 4, 5 6);m.rename!(1 2, `a`b`x);m", pickleTableToList=True)
+re2 = s.run("table(1..3 as a)", pickleTableToList=True)
+print(re1)
+print(re2)
+-----------------------------
+[array([[1, 3, 5],
+       [2, 4, 6]], dtype=int32), 
+ array([1, 2], dtype=int32), 
+ array(['a', 'b', 'x'], dtype=object)]
+[array([1, 2, 3], dtype=int32)]
+```
+
+#### 5.5.3 PROTOCOL_ARROW
+
+PROTOCOL_ARROW is adapted from the Apache Arrow protocol. Refer to the following table when transferring data:
+
+| **DolphinDB Data Form** | **DolphinDB->Python**  | **Python->DolphinDB** |
+| :---------------------- | :--------------------- | :-------------------- |
+| Table                   | Table -> pyarrow.Table | use PROTOCOL_DDB      |
+| Other forms             | use PROTOCOL_DDB       | use PROTOCOL_DDB      |
+
+Note: *PROTOCOL_ARROW* is only supported on Linux x86_64 with PyArrow 9.0.0 or later versions installed.
+
+**Example**
+
+```
+import dolphindb as ddb
+import dolphindb.settings as keys
+s = ddb.session(protocol=keys.PROTOCOL_ARROW)
+s.connect("localhost", 8848, "admin", "123456")
+
+re = s.run("table(1..3 as a)")
+print(re)
+-----------------------------
+pyarrow.Table
+a: int32
+----
+a: [[1,2,3]]
+```
+
+For more information, see [DolphinDB formatArrow Plugin](https://github.com/dolphindb/DolphinDBPlugin/blob/release200/formatArrow/README.md).
 
 
 ## 6 Append to DolphinDB Tables
@@ -3440,15 +3564,39 @@ This section introduces the methods for streaming subscription in DolphinDB Pyth
 
 ### 10.1 `enableStreaming` 
 
-To enable streaming subscription, call method `enableStreaming` in DolphinDB Python API.
+To enable streaming subscription, call method enableStreaming in DolphinDB Python API.
 
-```python
-s.enableStreaming(port)
+```
+s.enableStreaming(port=0)
 ```
 
 **Parameter:**
 
 - **port:** the unique port for each session that specifies the subscription port to ingest data. Specify the subscription port on the client to subscribe to the data sent from the server.
+
+the port for data subscription. It is used to subscribe to data sent from the DolphinDB server.
+
+**Note:**
+
+- DolphinDB server versions prior to 1.30.21/2.00.9 require the publisher to re-initiate a TCP connection for data transfer after the subscription request is submitted by the subscriber.
+- DolphinDB server version 1.30.21/2.00.9 and later support the publisher to push data through the requested connection on the subscriber side. Therefore, the subscriber does not need to specify a port (default value 0). If the parameter is specified, it will be ignored by the API.
+
+| DolphinDB Server        | Python API              | Port Number  |
+| ----------------------- | ----------------------- | ------------ |
+| Before 1.30.21/2.00.9   | Before 1.30.21/2.00.9   | Required     |
+| 1.30.21/2.00.9 or later | 1.30.21/2.00.9 or later | Not Required |
+
+*Compatibility note: Before upgrading the server or the API to version 1.30.21/2.00.9 or later, cancel your current subscriptions. Re-establish the subscriptions after the upgrade is complete.* 
+
+```
+import dolphindb as ddb
+import numpy as np
+s = ddb.session()
+# before 1.30.21/2.00.9, port number must be specified
+s.enableStreaming(8000)   
+# 1.30.21/2.00.9 or later, port number is not required
+s.enableStreaming() 
+```
 
 
 ### 10.2 Subscribe and Unsubscribe
