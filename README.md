@@ -17,6 +17,7 @@ DolphinDB Python API has these library dependencies:
 - pandas 1.0.0 or higher (version 1.3.0 is not supported)
 
 Install DolphinDB Python API with the following command:
+
 ```Console
 $ pip install dolphindb
 ```
@@ -187,17 +188,6 @@ s.connect(host="192.168.1.2", port=24120, userid="admin", password="123456", hig
 ```
 
 For sessions that are expired or initialized without username and password, use the method `login` to log in DolphinDB server. By default, the username and password are encrypted during connection.
-
-To check if connection has been successfully established, refer to the return value of `connect`. For example:
-
-```python
-import dolphindb as ddb
-s = ddb.session()
-conn = s.connect("xxx.xxx.xxx.xxx", 8848, "admin", "123456")
-print(conn)
-```
-
-If the conenection is successful, True is returned; otherwise False.
 
 After the session is connected, call function `getSessionId` to obtain the current session ID:
 
@@ -1349,7 +1339,6 @@ b = decimal.Decimal("1.23")
 b = b.quantize(decimal.Decimal("0.000"))
 ```
 
-
 | DolphinDB type | Python type | DolphinDB data                                  | Python data                             |
 | -------------- | ----------- | ----------------------------------------------- | --------------------------------------- |
 | BOOL           | bool        | [true,00b]                                      | [True, nan]                             |
@@ -1492,7 +1481,6 @@ a: [[1,2,3]]
 ```
 
 For more information, see [DolphinDB formatArrow Plugin](https://github.com/dolphindb/DolphinDBPlugin/blob/release200/formatArrow/README.md).
-
 
 ## 6 Append to DolphinDB Tables
 
