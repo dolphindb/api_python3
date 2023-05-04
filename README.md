@@ -1412,11 +1412,13 @@ PROTOCOL_PICKLE is adapted from the Python pickle protocol. Refer to the followi
 
 In `session.run`, if the parameter *pickleTableToList* is set to True, refer to the following table when transferring data:
 
+
 | **DolphinDB Data Form** | **DolphinDB->Python**     | **Python->DolphinDB** |
 | :---------------------- | :------------------------ | :-------------------- |
 | Matrix                  | use PROTOCOL_PICKLE       | use PROTOCOL_DDB      |
-| Table                   | Table -> pandas.DataFrame | use PROTOCOL_DDB      |
+| Table                   | Table ->  [np.ndarray, …] | use PROTOCOL_DDB      |
 | Other forms             | use PROTOCOL_DDB          | use PROTOCOL_DDB      |
+
 
 ```
 import dolphindb as ddb
