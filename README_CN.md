@@ -1469,7 +1469,7 @@ re = s.run("table(1..10 as a)")   # pandas.DataFrame
 | **DolphinDB 数据形式**    | **DolphinDB->Python**           | **Python->DolphinDB**| 
 | --------------------------|-------------------------------- | -------------------- |
 | Matrix         | 使用 PROTOCOL_PICKLE  | 使用 PROTOCOL_DDB |
-| Table | Table -> pandas.DataFrame |使用 PROTOCOL_DDB|
+| Table | Table -> [np.ndarray, …] |使用 PROTOCOL_DDB|
 | 其他 | 使用 PROTOCOL_DDB |使用 PROTOCOL_DDB|
 
 示例：
