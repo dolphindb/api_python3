@@ -1,7 +1,5 @@
 # Python API for DolphinDB
 
-> **注意：自1.30.22.1版本起，该 Readme 不再进行维护。用户可移步至[新 Python API 手册](./README_CN_NEW/Introduction.md)。**
-
 不同操作系统对应 API 支持的 Python 版本号：
 
 | 操作系统      | Python 版本号                        |
@@ -12,7 +10,7 @@
 | Mac(x86_64)   | Conda 环境下的 Python 3.6-3.10            |
 | Mac(arm64)    | Conda 环境下的 Python 3.8-3.10            |
 
-注意：DolphinDB Python API 需要以下依赖库：future, NumPy 和 pandas。其中 NumPy 版本号范围为1.18~1.23.4，pandas 版本号须不小 0.25.1（1.3.0 不支持）。
+注意：DolphinDB Python API 需要以下依赖库：future, NumPy 和 pandas。其中 NumPy 版本号范围为1.18~1.23.4，pandas 版本号须不小 1.0.0（1.3.0 不支持）。
 
 通过如下指令进行安装：
 
@@ -85,7 +83,7 @@ $ pip install dolphindb
     - [9.10 回归运算](#910-回归运算)
   - [10 Python Streaming API](#10-python-streaming-api)
     - [10.1 指定订阅端口号](#101-指定订阅端口号)
-    - [10.2 订阅与反订阅](#102-订阅与反订阅)
+    - [10.2 订阅与取消订阅](#102-订阅与取消订阅)
     - [10.3 订阅异构流表](#103-订阅异构流表)
     - [10.4 流数据应用](#104-流数据应用)
   - [11 更多实例](#11-更多实例)
@@ -125,6 +123,7 @@ session(host=None, port=None, userid="", password="", enableSSL=False, enableASY
 以下脚本中，通过 import 语句导入 API 以后，在 Python 中创建一个会话，然后使用指定的域名或 IP 地址和端口号把该会话连接到 DolphinDB 服务器。
 
 请注意以下两点：
+
 * 建立连接前，需要先启动 DolphinDB 服务器。
 * 若当前 session 不再使用，Python 会自动释放连接，但存在延时，可以调用 `close()` 立即关闭会话。否则可能出现因连接数过多，导致其它会话无法连接服务器的问题。
 
@@ -151,9 +150,7 @@ connect(host,port,[userid=None,password=None, startup=None, highAvailability=Fal
 * **keepAliveTime**：通过配置 *keepAliveTime* 参数可以设置 TCP 的存活检测机制的检测时长，从而能够在网络不稳定条件下，及时释放半打开的 TCP 连接。默认值为30秒。
 * **reconnect**：该参数仅在指定 *highAvailability* = False 时有效。若设置 *reconnect* = True，则 API 在检测到连接异常时，会尝试进行重连。
 
-高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，不能保证连接的负载均衡。
-
-高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，因为服务器响应存在时间差，不能保证连接的负载均衡。
+高可用模式下通过单线程方式创建多个 session 时，Python API 保证了所有可用节点上连接的负载均衡。多线程方式同时创建多个 session 时，因为服务器响应存在时间差，故不能保证连接的负载均衡。
 
 如果需要使用用户名和密码连接，可使用以下脚本。其中 "admin" 为 DolphinDB 默认的管理员用户名，"123456" 为密码。
 
@@ -178,6 +175,17 @@ s.connect(host="192.168.1.2", port=24120, userid="admin", password="123456", hig
 ```
 
 若会话过期，或者初始化会话时没有指定登录信息（用户名与密码），可使用 `login` 函数来登录服务器。默认在连接时对用户名与密码进行加密传输
+
+此外，可通过 `connect` 函数的返回值来确认是否连接成功，代码示例如下：
+
+```python
+import dolphindb as ddb
+s = ddb.session()
+conn = s.connect("xxx.xxx.xxx.xxx", 8848, "admin", "123456")
+print(conn)
+```
+
+若结果返回 Ture，则说明连接成功；若返回值为 False，则表示连接失败。
 
 会话连接后，调用 `getSessionId` 函数可以获取当前会话对象的 session id。
 
@@ -1376,6 +1384,7 @@ DolphinDB Python API 使用 Python 原生的各种形式的数据对象来存放
 - DolphinDB CHAR 类型会被转换成 Python int64 类型。对此结果，用户可以使用 Python 的 `chr` 函数将其转换为字符。
 - 由于 Python pandas 中所有有关时间的数据类型均为 datetime64，DolphinDB 中的所有时间类型数据 [均会被转换为 datetime64 类型](https://github.com/pandas-dev/pandas/issues/6741#issuecomment-39026803)。MONTH 类型，如 2012.06M，会被转换为 2012-06-01（即当月的第一天）。
 - TIME, MINUTE, SECOND 与 NANOTIME 类型不包含日期信息，转换时会自动添加 1970-01-01，例如 13:30m 会被转换为 1970-01-01 13:30:00。
+- DECIMAL 类型暂不支持 set, dictionary, array vector 的数据对象。
 - 上传的表中包含 Python decimal.Decimal 对象时，必须确保 DECIMAL 类型列的所有数据具有相同的小数位数。可使用下述方式对齐小数位数：
 ```
 b = decimal.Decimal("1.23")
@@ -1414,9 +1423,10 @@ b = b.quantize(decimal.Decimal("0.000"))
 
 ### 5.5 数据格式协议 protocol
 
-目前 DolphinDB Python API 已经支持 Pickle 协议和 DolphinDB 序列化协议，通过指定 session 中*enablePickle* 参数来选择序列化协议。在1.30.21.1版本中，Python API session 和 DBConnectionPool 新增 *protocol* 参数，目前已支持的参数选项包括 *PROTOCOL_DDB*、*PROTOCOL_PICKLE*、*PROTOCOL_ARROW*，其中默认使用 *PROTOCOL_PICKLE*。
+目前 DolphinDB Python API 已经支持 Pickle 协议和 DolphinDB 序列化协议，通过指定 session 中 *enablePickle* 参数来选择序列化协议。在1.30.21.1版本中，Python API session 和 DBConnectionPool 新增 *protocol* 参数，目前已支持的参数选项包括 *PROTOCOL_DDB*、*PROTOCOL_PICKLE*、*PROTOCOL_ARROW*，其中默认使用 *PROTOCOL_PICKLE*。
 
 示例：
+
 ```python
 import dolphindb as ddb
 import dolphindb.settings as keys
@@ -1424,6 +1434,7 @@ s = ddb.session(protocol=keys.PROTOCOL_DDB)
 s = ddb.session(protocol=keys.PROTOCOL_PICKLE)
 s = ddb.session(protocol=keys.PROTOCOL_ARROW)
 ```
+
 ### 5.5.1 PROTOCOL_DDB<!-- omit in toc -->
 
 使用与 DolphinDB 的 C++ API、C# API、JAVA API 同样的数据序列化协议（参考 API 交互协议文档）
@@ -1433,6 +1444,7 @@ s = ddb.session(protocol=keys.PROTOCOL_ARROW)
 数据类型转换关系参考章节5.4.2
 
 示例：
+
 ```python
 import dolphindb as ddb
 import dolphindb.settings as keys
@@ -1457,7 +1469,7 @@ re = s.run("table(1..10 as a)")   # pandas.DataFrame
 | **DolphinDB 数据形式**    | **DolphinDB->Python**           | **Python->DolphinDB**| 
 | --------------------------|-------------------------------- | -------------------- |
 | Matrix         | 使用 PROTOCOL_PICKLE  | 使用 PROTOCOL_DDB |
-| Table | Table -> pandas.DataFrame |使用 PROTOCOL_DDB|
+| Table | Table ->  [np.ndarray, …]  |使用 PROTOCOL_DDB|
 | 其他 | 使用 PROTOCOL_DDB |使用 PROTOCOL_DDB|
 
 示例：
@@ -1495,6 +1507,7 @@ print(re2)
  array(['a', 'b', 'x'], dtype=object)]
 [array([1, 2, 3], dtype=int32)]
 ```
+
 ### 5.5.3 PROTOCOL_ARROW <!-- omit in toc -->
 
 使用修改后的 Apache Arrow 协议，支持的数据形式对应关系如下表所示：
@@ -1504,7 +1517,10 @@ print(re2)
 | Table | Table -> pyarrow.Table|使用 PROTOCOL_DDB|
 | 其他 | 使用 PROTOCOL_DDB |使用 PROTOCOL_DDB|
 
-注意：目前 *PROTOCOL_ARROW* 仅支持Linux x86_64，且需要安装 9.0.0 以上版本的 pyaarow.
+注意：
+
+- 目前 *PROTOCOL_ARROW* 仅支持 Linux x86_64，且需要安装 9.0.0 以上版本的 pyaarow.
+- 现版本中 DolphinDB 服务器不支持使用 Arrow 协议时开启压缩。
 
 示例：
 
@@ -1522,6 +1538,7 @@ a: int32
 ----
 a: [[1,2,3]]
 ```
+
 数据类型对应关系参考 【formatArrow插件文档】
 
 ## 6 追加数据到 DolphinDB 数据表
@@ -3802,6 +3819,8 @@ result = s.loadTable(tableName="US",dbPath="dfs://US").select("select VOL\\SHROU
 
 Python API 支持流数据订阅的功能，以下介绍流数据订阅的相关方法与使用示例。
 
+发布端通过订阅端发起的连接发送流数据，订阅端不需要提供监听端口。
+
 ### 10.1 指定订阅端口号
 
 使用 Python API 提供的 `enableStreaming` 函数启用流数据功能：
@@ -3809,25 +3828,20 @@ Python API 支持流数据订阅的功能，以下介绍流数据订阅的相关
 ```python
 s.enableStreaming(port=0)
 ```
+注：*port* 指定开启数据订阅的端口，用于订阅服务器端发送的数据。
 
-- *port* 指定开启数据订阅的端口，用于订阅服务器端发送的数据。
+API 进行订阅时，订阅行为根据 DolphinDB server 的版本有所不同。
 
-### 10.1.1 正向订阅（1.30.20、2.00.8及之前版本的 DolphinDB server）<!-- omit in toc -->
+* 1.30 版本、2.00.9 之前的版本在订阅端提交订阅请求后，发布端需要重新发起一个 TCP 连接用于传输数据。
+* 2.00.9 及之后的版本支持发布端通过订阅端的请求连接推送数据。因此，订阅端无需指定端口（默认值为0）；如果指定，该参数无效，会被 API 忽略。
 
-正向订阅时必须指定该端口，每个 session 具备唯一的端口。
+|DolphinDB Server 版本|Python API 版本|是否需要指定端口|
+|---------------|--------------------|------------|
+|1.30 版本，2.00.9 之前的版本|与 DolphinDB Server 版本对应的版本|是|
+|2.00.9 及之后的版本|与 DolphinDB Server 版本对应的版本|否|
 
-示例：
-
-```python
-import dolphindb as ddb
-import numpy as np
-s = ddb.session()
-s.enableStreaming(8000)   # 正向订阅
-```
-
-### 10.1.2 反向订阅（1.30.21、2.00.9及之后版本的 DolphinDB server）<!-- omit in toc -->
-
-反向订阅时无需指定该端口（默认值为0）；如果指定，API 将会忽略该参数。
+注意：
+* 若同时升级 API 和 Server 至 2.00.9 及之后的版本，必须先在升级前取消订阅，升级后再重新订阅。
 
 示例：
 
@@ -3835,10 +3849,13 @@ s.enableStreaming(8000)   # 正向订阅
 import dolphindb as ddb
 import numpy as np
 s = ddb.session()
-s.enableStreaming(0)      # 反向订阅
+# 1.30 版本、2.00.9 之前的版本，开启订阅，指定端口8000
+s.enableStreaming(8000)   
+# 2.00.9 及之后的版本，开启订阅，无需指定端口
+s.enableStreaming() 
 ```
 
-### 10.2 订阅与反订阅
+### 10.2 订阅与取消订阅
 
 #### 10.2.1 使用订阅函数 <!-- omit in toc -->
 
