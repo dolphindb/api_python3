@@ -1,5 +1,7 @@
 # Python API for DolphinDB
 
+> **注意：自1.30.22.1版本起，该 Readme 不再进行维护。用户可移步至[新 Python API 手册](./README_CN_NEW/Introduction.md)。**
+
 不同操作系统对应 API 支持的 Python 版本号：
 
 | 操作系统      | Python 版本号                        |
