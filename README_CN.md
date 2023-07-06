@@ -1521,7 +1521,7 @@ print(re2)
 
 注意：
 
-- 目前 *PROTOCOL_ARROW* 仅支持 Linux x86_64，且需要安装 9.0.0 以上版本的 pyaarow.
+- 目前 *PROTOCOL_ARROW* 仅支持 Linux x86_64，且需要安装 9.0.0 以上版本的 pyarrow.
 - 现版本中 DolphinDB 服务器不支持使用 Arrow 协议时开启压缩。
 
 示例：
