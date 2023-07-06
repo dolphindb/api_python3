@@ -4,11 +4,11 @@ DolphinDB Python API runs on the following operating systems:
 
 | Operating System | Supported Python Versions                      |
 | :--------------- | :--------------------------------------------- |
-| Windows          | Python 3.6-3.9                                 |
-| Linux            | Python 3.6-3.9                                 |
-| Linux(aarch64)   | Python 3.7-3.9 in conda environment            |
-| Mac(x86-64)      | Python 3.6-3.9 in conda environment            |
-| Mac(arm64)       | Python 3.8-3.9 in conda environment            |
+| Windows          | Python 3.6-3.10                                 |
+| Linux            | Python 3.6-3.10                                 |
+| Linux(aarch64)   | Python 3.7-3.10 in conda environment            |
+| Mac(x86-64)      | Python 3.6-3.10 in conda environment            |
+| Mac(arm64)       | Python 3.8-3.10 in conda environment            |
 
 DolphinDB Python API has these library dependencies: 
 
