@@ -5,7 +5,7 @@
 本手册共提供三大章节——快速开始，基本操作和进阶操作。
 
 * 快速开始章节将介绍 dolphindb 的安装说明、简单示例和常用操作。
-* 基本操作章节将介绍使用 dolphindb 的基本操作，如 Session(会话)、DBConnectionPool（连接池）、追加数据、流订阅（基本）和异步写入的相关方法、注意事项和使用示例等。
+* 基本操作章节将介绍使用 dolphindb 的基本操作，如 session(会话)、DBConnectionPool（连接池）、追加数据、流订阅（基本）和异步写入的相关方法、注意事项和使用示例等。
 * 进阶操作章节将详细说明类型转换、多种上传和写入数据方法、流订阅（进阶）、面向对象操作数据库的方法，以及其他功能。
 
 dolphindb 提供了多种接口函数，可用于连接服务器、执行脚本、发送消息等。此外，dolphindb 支持数据的批量处理和异步执行，以及多种数据类型的交互，如 pandas.DataFrame、arrow.Table 等。dolphindb 支持 Linux(x86_64, arm)、Windows、MacOS(arm64, x86_64) 平台和 Python 3.6 - 3.10 版本，其使用 Pybind11 编写 C++ 库，从而优化后台多线程的处理，极大提高了数据交互的性能。
@@ -21,7 +21,7 @@ dolphindb 提供了多种接口函数，可用于连接服务器、执行脚本�
 
 **第二章 基本操作**
 
-* 2.1 Session（会话）
+* 2.1 session（会话）
   * 2.1.1 [创建](./2_BasicOperations/2.1_Session/2.1.1_Constructor.md)
   * 2.1.2 [连接](./2_BasicOperations/2.1_Session/2.1.2_Connect.md)
   * 2.1.3 [常用方法](./2_BasicOperations/2.1_Session/2.1.3_OtherParams.md)
@@ -29,12 +29,12 @@ dolphindb 提供了多种接口函数，可用于连接服务器、执行脚本�
   * 2.2.1 [创建](./2_BasicOperations/2.2_DBConnectionPool/2.2.1_Constructor.md)
   * 2.2.2 [方法介绍](./2_BasicOperations/2.2_DBConnectionPool/2.2.2_AsyncMethodsAndOthers.md)
 * 2.3 追加数据
-  * 2.3.1 [TableAppender](./2_BasicOperations/2.3_AutoFitTableAppender/2.3.1_TableAppender.md)
-  * 2.3.2 [TableUpserter](./2_BasicOperations/2.3_AutoFitTableAppender/2.3.2_TableUpserter.md)
+  * 2.3.1 [tableAppender](./2_BasicOperations/2.3_AutoFitTableAppender/2.3.1_TableAppender.md)
+  * 2.3.2 [tableUpsert](./2_BasicOperations/2.3_AutoFitTableAppender/2.3.2_TableUpserter.md)
   * 2.3.3 [PartitionedTableAppender](./2_BasicOperations/2.3_AutoFitTableAppender/2.3.3_PartitionedTableAppender.md)
 * 2.4 [流订阅（基本）](./2_BasicOperations/2.4_Subscription/2.4_Subscription.md)
 * 2.5 同步写入
-  * 2.5.1 [Session 异步提交](./2_BasicOperations/2.5_AsyncWrites/2.5.1_SessionAsyncMode.md)
+  * 2.5.1 [session 异步提交](./2_BasicOperations/2.5_AsyncWrites/2.5.1_SessionAsyncMode.md)
   * 2.5.2 [MultithreadedTableWriter](./2_BasicOperations/2.5_AsyncWrites/2.5.2_MultithreadedTableWriter.md)
   * 2.5.3 [BatchTableWriter](./2_BasicOperations/2.5_AsyncWrites/2.5.3_BatchTableWriter.md)
 
