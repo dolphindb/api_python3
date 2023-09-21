@@ -2,7 +2,7 @@
 
 =====================================================================================
 
-> **Note:** This README file is no longer maintained starting in DolphinDB Python API version *1.30.22.1*. Please refer to the [new DolphinDB Python API manual](https://www.dolphindb.com/pydoc/webhelp/) going forward for up-to-date documentation.
+> **Note:** This README documents DolphinDB Python API version **1.30.21.2** and earlier. As of version **1.30.22.1**, this README is no longer maintained. For documentation on the latest DolphinDB Python API, please refer to the [new DolphinDB Python API manual](https://www.dolphindb.com/pydoc/webhelp/chap1_quickstart_landingpage.html).
 
 =====================================================================================
 
