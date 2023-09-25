@@ -1,6 +1,6 @@
 # Python API for DolphinDB
 
-> **注意：自1.30.22.1版本起，该 Readme 不再进行维护。用户可移步至[新 Python API 手册](./README_CN_NEW/Introduction.md)。**
+> **注意：自1.30.22.1版本起，该 Readme 不再进行维护。用户可移步至[新 Python API 手册](./README_CN/Introduction.md)。**
 
 不同操作系统对应 API 支持的 Python 版本号：
 
@@ -2013,7 +2013,7 @@ s.run("appendStreamingData(tb)")
 
 ### 6.8 批量异步追加数据
 
-针对单条数据批量写入的场景，DolphinDB Python API 提供 `MultithreadedTableWriter`（**推荐**）, `BatchTableWrite` （**不推荐**） 类对象用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络 I/O 时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，`BatchTableWrite` 支持批量写入数据到内存表、分区表；而 `MultithreadedTableWriter` 支持批量写入数据到内存表、分区表和维度表。
+针对单条数据批量写入的场景，DolphinDB Python API 提供 `MultithreadedTableWriter`（**推荐**）, `BatchTableWrite` （**不推荐，目前已停止维护**） 类对象用于批量异步追加数据，并在客户端维护了一个数据缓冲队列。当服务器端忙于网络 I/O 时，客户端写线程仍然可以将数据持续写入缓冲队列（该队列由客户端维护）。写入队列后即可返回，从而避免了写线程的忙等。目前，`BatchTableWrite` 支持批量写入数据到内存表、分区表（**已停止维护**）；而 `MultithreadedTableWriter` 支持批量写入数据到内存表、分区表和维度表。
 
 注意对于异步写入：
 
@@ -2482,6 +2482,8 @@ status=writer.getStatus()
 print("test exit",status)
 ```
 #### 6.8.2 BatchTableWriter (不推荐使用) <!-- omit in toc -->
+
+> 注意：目前已经停止维护 BatchTableWriter。推荐用户使用 MultithreadedTableWriter，详见 6.8.1 小节。
 
 `BatchTableWriter` 对象及主要方法介绍如下：
 
