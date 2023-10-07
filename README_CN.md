@@ -1521,7 +1521,8 @@ print(re2)
 
 注意：
 
-- 目前 *PROTOCOL_ARROW* 仅支持 Linux x86_64，且需要安装 9.0.0 以上版本的 pyarrow.
+- 目前 *PROTOCOL_ARROW* 仅支持 Linux x86_64，且需要安装 [formatArrow 插件](https://github.com/dolphindb/DolphinDBPlugin/tree/release200/formatArrow)和 9.0.0 版本的 [pyarrow](https://pypi.org/project/pyarrow/)。
+- 若用户未安装 [formatArrow 插件](https://github.com/dolphindb/DolphinDBPlugin/tree/release200/formatArrow)，即便已指定启用 PROTOCOL_ARROW 协议，API 将默认使用 PROTOCOL_DDB 协议进行传输，并返回 DataFrame。
 - 现版本中 DolphinDB 服务器不支持使用 Arrow 协议时开启压缩。
 
 示例：
