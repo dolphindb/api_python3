@@ -8,7 +8,7 @@
 * 基本操作章节将介绍使用 dolphindb 的基本操作，如 session(会话)、DBConnectionPool（连接池）、追加数据、流订阅（基本）和异步写入的相关方法、注意事项和使用示例等。
 * 进阶操作章节将详细说明类型转换、多种上传和写入数据方法、流订阅（进阶）、面向对象操作数据库的方法，以及其他功能。
 
-dolphindb 提供了多种接口函数，可用于连接服务器、执行脚本、发送消息等。此外，dolphindb 支持数据的批量处理和异步执行，以及多种数据类型的交互，如 pandas.DataFrame、arrow.Table 等。dolphindb 支持 Linux(x86_64, arm)、Windows、MacOS(arm64, x86_64) 平台和 Python 3.6 - 3.10 版本，其使用 Pybind11 编写 C++ 库，从而优化后台多线程的处理，极大提高了数据交互的性能。
+dolphindb 提供了多种接口函数，可用于连接服务器、执行脚本、发送消息等。此外，dolphindb 支持数据的批量处理和异步执行，以及多种数据类型的交互，如 pandas.DataFrame、arrow.Table 等。dolphindb 支持 Linux(x86_64, arm)、Windows、MacOS(arm64, x86_64) 平台和 Python 3.6 - 3.11 版本，其使用 Pybind11 编写 C++ 库，从而优化后台多线程的处理，极大提高了数据交互的性能。
 
 若您对本手册有任何宝贵意见，诚邀您通过 [DolphinDB 社区](https://ask.dolphindb.net) 与我们进行反馈交流。
 
