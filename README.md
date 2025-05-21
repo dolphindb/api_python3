@@ -1,5 +1,5 @@
 # Python API for DolphinDB
-
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/dolphindb/api_python3)
 =====================================================================================
 
 > **Note:** This README documents DolphinDB Python API version **1.30.21.2** and earlier. As of version **1.30.22.1**, this README is no longer maintained. For documentation on the latest DolphinDB Python API, please refer to the [new DolphinDB Python API manual](https://docs.dolphindb.com/en/pydoc/chap1_quickstart_landingpage.html).
